@@ -28,6 +28,7 @@
           <li><RouterLink to="/resumes" :class="linkClasses('/resumes')"><span>📄</span>Resumes</RouterLink></li>
           <li class="mt-4 text-xs text-blue-300 px-4">Organization</li>
           <li v-if="isAdmin"><RouterLink to="/alumni-management" :class="linkClasses('/alumni-management')"><span>🏢</span>Alumni Management</RouterLink></li>
+          <li v-if="isAdmin"><RouterLink to="/analytics" :class="linkClasses('/analytics')"><span>📊</span>AI Analytics</RouterLink></li>
           <li><RouterLink to="/events" :class="linkClasses('/events')"><span>📅</span>Events</RouterLink></li>
           <li><RouterLink to="/mentorship" :class="linkClasses('/mentorship')"><span>🧭</span>Mentorship</RouterLink></li>
           <li><RouterLink to="/communities" :class="linkClasses('/communities')"><span>🌐</span>Communities</RouterLink></li>

@@ -149,6 +149,9 @@
 
       <!-- Right Column - Quick Panels -->
       <div class="space-y-6">
+        <!-- Recommended Jobs -->
+        <JobRecommendations />
+        
         <!-- Saved Jobs -->
         <div class="bg-white rounded-lg shadow-md p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Saved Jobs</h3>
@@ -392,6 +395,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import JobRecommendations from '../components/JobRecommendations.vue'
 
 // Reactive data
 const searchQuery = ref('')

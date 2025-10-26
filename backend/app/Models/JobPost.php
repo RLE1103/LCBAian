@@ -20,6 +20,13 @@ class JobPost extends Model
         'description',
         'company_name',
         'location',
+        'work_type',
+        'required_skills',
+        'preferred_skills',
+        'industry',
+        'experience_level',
+        'salary_range',
+        'is_active',
     ];
 
     protected function casts(): array
@@ -27,6 +34,9 @@ class JobPost extends Model
         return [
             'posted_by_admin' => 'boolean',
             'created_at' => 'datetime',
+            'required_skills' => 'array',
+            'preferred_skills' => 'array',
+            'is_active' => 'boolean',
         ];
     }
 

@@ -22,6 +22,12 @@ class User extends Authenticatable
         'profile_picture',
         'headline',
         'bio',
+        'skills',
+        'cluster_group',
+        'career_interests',
+        'current_job_title',
+        'industry',
+        'experience_level',
     ];
 
     protected $hidden = [
@@ -33,6 +39,8 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'skills' => 'array',
+            'career_interests' => 'array',
         ];
     }
 

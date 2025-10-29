@@ -3,10 +3,10 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-800">Jobs</h1>
-      <div class="flex items-center space-x-4">
-        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-          Post a Job
-        </button>
+    <div class="flex items-center space-x-4">
+      <button @click="showCreateJobModal = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+        Post a Job
+      </button>
         <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
           Saved Jobs
             </button>
@@ -84,11 +84,11 @@
 
           <div 
             v-for="job in filteredJobs" 
-            :key="job.id"
+            :key="job.job_id"
             @click="selectJob(job)"
             :class="[
               'bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow border-l-4',
-              selectedJob?.id === job.id ? 'border-blue-500' : 'border-transparent'
+              selectedJob?.job_id === job.job_id ? 'border-blue-500' : 'border-transparent'
             ]"
           >
             <div class="flex items-start justify-between">
@@ -122,7 +122,7 @@
                   </div>
 
                   <div class="flex items-center space-x-2">
-                    <button class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                    <button @click.stop="toggleSaveJob(job)" :title="isJobSaved(job) ? 'Unsave' : 'Save'" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
                       </svg>
@@ -391,10 +391,85 @@
       </div>
     </div>
   </div>
+  
+  <!-- Create Job Modal -->
+  <div v-if="showCreateJobModal" class="fixed inset-0 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-2xl border-4 border-gray-300 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Post a Job</h3>
+        <button @click="showCreateJobModal = false" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+          <input v-model="newJob.title" type="text" placeholder="Job title" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Company</label>
+          <input v-model="newJob.company_name" type="text" placeholder="Company name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+          <input v-model="newJob.location" type="text" placeholder="Location (e.g. Manila, Remote)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Work Type</label>
+          <select v-model="newJob.work_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select...</option>
+            <option value="full-time">Full-time</option>
+            <option value="part-time">Part-time</option>
+            <option value="internship">Internship</option>
+            <option value="contract">Contract</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Industry</label>
+          <input v-model="newJob.industry" type="text" placeholder="Industry" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Experience Level</label>
+          <select v-model="newJob.experience_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select...</option>
+            <option value="entry">Entry</option>
+            <option value="mid">Mid</option>
+            <option value="senior">Senior</option>
+            <option value="executive">Executive</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Salary Range</label>
+          <input v-model="newJob.salary_range" type="text" placeholder="e.g. 40k-60k" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Required Skills (comma-separated)</label>
+          <input v-model="requiredSkillsInput" type="text" placeholder="e.g. Vue, Laravel, MySQL" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+          <textarea v-model="newJob.description" rows="4" placeholder="Job description..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 mt-6">
+        <button @click="showCreateJobModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Cancel
+        </button>
+        <button @click="createJob" :disabled="!newJob.title || !newJob.description" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+          Post Job
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import axios from '../config/api'
 import JobRecommendations from '../components/JobRecommendations.vue'
 
 // Reactive data
@@ -406,100 +481,59 @@ const selectedExperience = ref('')
 const selectedJob = ref(null)
 const showJobModal = ref(false)
 const showApplyModal = ref(false)
+const showCreateJobModal = ref(false)
 const activeTab = ref('overview')
 const selectedResume = ref('')
 const coverLetter = ref('')
+const loading = ref(false)
 
-// Sample data - replace with API calls
-const jobs = ref([
-  {
-    id: 1,
-    title: 'Senior Software Engineer',
-    company_name: 'Tech Corp',
-    location: 'San Francisco, CA',
-    description: 'We are looking for a Senior Software Engineer to join our growing team. You will be responsible for developing and maintaining our core platform.',
-    work_type: 'Full-time',
-    industry: 'Technology',
-    experience_level: 'Senior',
-    posted_by_admin: true,
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    applications_count: 15
-  },
-  {
-    id: 2,
-    title: 'Frontend Developer',
-    company_name: 'StartupXYZ',
-    location: 'Remote',
-    description: 'Join our innovative startup as a Frontend Developer. Work with React, TypeScript, and modern web technologies.',
-    work_type: 'Full-time',
-    industry: 'Technology',
-    experience_level: 'Mid',
-    posted_by_admin: false,
-    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-    applications_count: 8
-  },
-  {
-    id: 3,
-    title: 'Data Scientist',
-    company_name: 'Data Inc',
-    location: 'New York, NY',
-    description: 'We are seeking a Data Scientist to help us extract insights from large datasets and build machine learning models.',
-    work_type: 'Full-time',
-    industry: 'Technology',
-    experience_level: 'Mid',
-    posted_by_admin: true,
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-    applications_count: 12
-  },
-  {
-    id: 4,
-    title: 'Product Manager',
-    company_name: 'InnovateCo',
-    location: 'Chicago, IL',
-    description: 'Lead product development initiatives and work closely with engineering and design teams to deliver exceptional user experiences.',
-    work_type: 'Full-time',
-    industry: 'Technology',
-    experience_level: 'Senior',
-    posted_by_admin: false,
-    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-    applications_count: 20
+// Fetch jobs from API
+const jobs = ref([])
+
+const fetchJobs = async () => {
+  loading.value = true
+  try {
+    const params = {
+      search: searchQuery.value || undefined,
+      location: selectedLocation.value || undefined,
+      work_type: selectedWorkType.value || undefined,
+      industry: selectedIndustry.value || undefined,
+      experience_level: selectedExperience.value || undefined
+    }
+    
+    const response = await axios.get('/api/job-posts', { params })
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      jobs.value = response.data.data
+    } else {
+      jobs.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching jobs:', error)
+    jobs.value = []
+  } finally {
+    loading.value = false
   }
-])
+}
 
-const savedJobs = ref([
-  { id: 1, title: 'Senior Software Engineer', company_name: 'Tech Corp' },
-  { id: 2, title: 'Frontend Developer', company_name: 'StartupXYZ' }
-])
+const savedJobs = ref([])
+const recommendedJobs = ref([])
+const userJobPosts = ref([])
+const jobApplicants = ref([])
+const userResumes = ref([])
 
-const recommendedJobs = ref([
-  { id: 5, title: 'Full Stack Developer', company_name: 'WebCorp', location: 'Remote', match_score: 95 },
-  { id: 6, title: 'React Developer', company_name: 'AppStudio', location: 'Austin, TX', match_score: 88 },
-  { id: 7, title: 'Software Engineer', company_name: 'CloudTech', location: 'Seattle, WA', match_score: 82 }
-])
-
-const userJobPosts = ref([
-  { id: 8, title: 'Junior Developer', applications_count: 5 },
-  { id: 9, title: 'UI/UX Designer', applications_count: 12 }
-])
-
-const jobApplicants = ref([
-  {
-    id: 1,
-    user: { first_name: 'John', last_name: 'Doe', full_name: 'John Doe', headline: 'Software Engineer' },
-    status: 'pending'
-  },
-  {
-    id: 2,
-    user: { first_name: 'Jane', last_name: 'Smith', full_name: 'Jane Smith', headline: 'Frontend Developer' },
-    status: 'reviewed'
-  }
-])
-
-const userResumes = ref([
-  { id: 1, title: 'Software Engineer Resume' },
-  { id: 2, title: 'Frontend Developer Resume' },
-  { id: 3, title: 'Full Stack Developer Resume' }
-])
+// New job form state
+const newJob = ref({
+  title: '',
+  description: '',
+  company_name: '',
+  location: '',
+  work_type: '',
+  required_skills: [],
+  industry: '',
+  experience_level: '',
+  salary_range: ''
+})
+const requiredSkillsInput = ref('')
 
 const jobDetailTabs = [
   { key: 'overview', label: 'Overview' },
@@ -509,46 +543,8 @@ const jobDetailTabs = [
 
 // Computed properties
 const filteredJobs = computed(() => {
-  let filtered = jobs.value
-
-  // Apply search filter
-  if (searchQuery.value) {
-    filtered = filtered.filter(job => 
-      job.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      job.company_name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      job.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-  }
-
-  // Apply location filter
-  if (selectedLocation.value) {
-    filtered = filtered.filter(job => 
-      job.location.toLowerCase().includes(selectedLocation.value.toLowerCase())
-    )
-  }
-
-  // Apply work type filter
-  if (selectedWorkType.value) {
-    filtered = filtered.filter(job => 
-      job.work_type.toLowerCase() === selectedWorkType.value.toLowerCase()
-    )
-  }
-
-  // Apply industry filter
-  if (selectedIndustry.value) {
-    filtered = filtered.filter(job => 
-      job.industry.toLowerCase() === selectedIndustry.value.toLowerCase()
-    )
-  }
-
-  // Apply experience filter
-  if (selectedExperience.value) {
-    filtered = filtered.filter(job => 
-      job.experience_level.toLowerCase() === selectedExperience.value.toLowerCase()
-    )
-  }
-
-  return filtered
+  // Since we're filtering on the backend, just return the jobs
+  return jobs.value
 })
 
 // Methods
@@ -563,19 +559,64 @@ const applyForJob = () => {
   showApplyModal.value = true
 }
 
-const submitApplication = () => {
-  if (!selectedResume.value) return
+const submitApplication = async () => {
+  if (!selectedJob.value) return
+  try {
+    const payload = {
+      job_id: selectedJob.value.job_id,
+      resume_path: selectedResume.value || null,
+      cover_letter: coverLetter.value || ''
+    }
+    const response = await axios.post('/api/applications', payload)
+    if (response?.data?.success) {
+      showApplyModal.value = false
+      selectedResume.value = ''
+      coverLetter.value = ''
+    }
+  } catch (error) {
+    console.error('Error submitting application:', error)
+  }
+}
 
-  // Submit application logic here
-  console.log('Submitting application:', {
-    jobId: selectedJob.value.id,
-    resumeId: selectedResume.value,
-    coverLetter: coverLetter.value
-  })
+// Save/Unsave jobs via localStorage
+const STORAGE_KEY = 'saved_jobs'
+const loadSavedJobs = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    savedJobs.value = raw ? JSON.parse(raw) : []
+  } catch {
+    savedJobs.value = []
+  }
+}
+const persistSavedJobs = () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(savedJobs.value))
+}
+const isJobSaved = (job) => savedJobs.value.some(j => j.job_id === job.job_id)
+const toggleSaveJob = (job) => {
+  if (isJobSaved(job)) {
+    savedJobs.value = savedJobs.value.filter(j => j.job_id !== job.job_id)
+  } else {
+    savedJobs.value.unshift({ job_id: job.job_id, title: job.title, company_name: job.company_name })
+  }
+  persistSavedJobs()
+}
 
-  showApplyModal.value = false
-  selectedResume.value = ''
-  coverLetter.value = ''
+// Create job via backend
+const createJob = async () => {
+  try {
+    newJob.value.required_skills = requiredSkillsInput.value
+      ? requiredSkillsInput.value.split(',').map(s => s.trim()).filter(Boolean)
+      : []
+    const response = await axios.post('/api/job-posts', newJob.value)
+    if (response?.data?.success) {
+      showCreateJobModal.value = false
+      newJob.value = { title: '', description: '', company_name: '', location: '', work_type: '', required_skills: [], industry: '', experience_level: '', salary_range: '' }
+      requiredSkillsInput.value = ''
+      await fetchJobs()
+    }
+  } catch (error) {
+    console.error('Error creating job:', error)
+  }
 }
 
 const formatTime = (date) => {
@@ -595,7 +636,13 @@ const formatTime = (date) => {
 }
 
 onMounted(() => {
-  // Load initial data
+  fetchJobs()
+  loadSavedJobs()
+})
+
+// Watch for filter changes and refetch
+watch([searchQuery, selectedLocation, selectedWorkType, selectedIndustry, selectedExperience], () => {
+  fetchJobs()
 })
 </script>
 

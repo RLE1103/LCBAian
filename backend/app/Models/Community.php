@@ -25,7 +25,8 @@ class Community extends Model
 
     public function members(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'community_members')->withTimestamps();
+        return $this->belongsToMany(User::class, 'community_members')
+                    ->withPivot('joined_at');
     }
 
     public function posts(): HasMany

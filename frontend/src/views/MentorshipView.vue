@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">Mentorship Hub</h1>
-        <p class="text-gray-600 mt-1">Connect with mentors and grow your career</p>
+        <p class="text-gray-600 mt-1">Connect with fellow alumni mentors and grow your career</p>
           </div>
         </div>
         
@@ -178,6 +178,9 @@
             Update Profile
           </button>
           </div>
+        <div class="mb-4">
+          <button @click="activeTab = 'find'" class="text-blue-600 hover:text-blue-800 text-sm font-medium">← Back to Find a Mentor</button>
+        </div>
 
         <!-- Mentorship Dashboard -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -324,6 +327,9 @@
             </select>
         </div>
       </div>
+        <div class="mb-4">
+          <button @click="activeTab = 'find'" class="text-blue-600 hover:text-blue-800 text-sm font-medium">← Back to Find a Mentor</button>
+        </div>
 
         <!-- Sessions Table -->
         <div class="overflow-x-auto">
@@ -345,10 +351,10 @@
                 class="hover:bg-gray-50"
               >
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ formatDate(session.date) }}
+                  {{ session.preferred_slot ? formatDate(session.preferred_slot) : 'Not set' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ formatTime(session.time) }}
+                  {{ session.preferred_slot ? formatTime(session.preferred_slot) : 'Not set' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
@@ -356,13 +362,13 @@
                       {{ session.mentor.first_name[0] }}{{ session.mentor.last_name[0] }}
           </div>
               <div>
-                      <div class="text-sm font-medium text-gray-900">{{ session.mentor.full_name }}</div>
-                      <div class="text-sm text-gray-500">{{ session.mentee.full_name }}</div>
+                      <div class="text-sm font-medium text-gray-900">{{ session.mentor.first_name }} {{ session.mentor.last_name }}</div>
+                      <div class="text-sm text-gray-500">{{ session.mentee.first_name }} {{ session.mentee.last_name }}</div>
                     </div>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ session.topic }}
+                  {{ session.goal || 'General mentorship' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span :class="[
@@ -477,7 +483,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import axios from '../config/api'
 
 // Reactive data
 const activeTab = ref('find')
@@ -494,6 +501,7 @@ const preferredSlot = ref('')
 const additionalMessage = ref('')
 const newExpertise = ref('')
 const mentoringStyle = ref('1-on-1')
+const loading = ref(false)
 
 const currentExpertise = ref(['Software Engineering', 'Product Management', 'Data Science'])
 const availabilitySettings = ref({
@@ -504,136 +512,90 @@ const availabilitySettings = ref({
   friday: false
 })
 
-// Sample data - replace with API calls
-const mentors = ref([
-  {
-    id: 1,
-    first_name: 'Ryan',
-    last_name: 'Ebrada',
-    full_name: 'Ryan Ebrada',
-    headline: 'UX Designer at Google',
-    batch: '2020',
-    skills: ['Frontend Development', 'UI/UX Design', 'React', 'Figma'],
-    availability: 'available',
-    next_available: null,
-    rating: 4.8,
-    reviews_count: 24,
-    industry: 'technology',
-    expertise: 'ui-ux'
-  },
-  {
-    id: 2,
-    first_name: 'Sarah',
-    last_name: 'Martinez',
-    full_name: 'Sarah Martinez',
-    headline: 'Senior Software Engineer at Microsoft',
-    batch: '2019',
-    skills: ['Backend Development', 'Python', 'AWS', 'Machine Learning'],
-    availability: 'busy',
-    next_available: '2025-09-15',
-    rating: 4.9,
-    reviews_count: 31,
-    industry: 'technology',
-    expertise: 'software-engineering'
-  },
-  {
-    id: 3,
-    first_name: 'Mike',
-    last_name: 'Johnson',
-    full_name: 'Mike Johnson',
-    headline: 'Product Manager at Amazon',
-    batch: '2021',
-    skills: ['Product Management', 'Analytics', 'Leadership', 'Agile'],
-    availability: 'available',
-    next_available: null,
-    rating: 4.7,
-    reviews_count: 18,
-    industry: 'technology',
-    expertise: 'product-management'
-  },
-  {
-    id: 4,
-    first_name: 'Alice',
-    last_name: 'Lee',
-    full_name: 'Alice Lee',
-    headline: 'Data Scientist at Netflix',
-    batch: '2018',
-    skills: ['Data Science', 'Python', 'R', 'Machine Learning', 'Statistics'],
-    availability: 'unavailable',
-    next_available: '2025-10-01',
-    rating: 4.6,
-    reviews_count: 22,
-    industry: 'technology',
-    expertise: 'data-science'
-  }
-])
+// Fetch mentors from API
+const mentors = ref([])
 
-const sessions = ref([
-  {
-    id: 1,
-    date: new Date('2025-08-30'),
-    time: new Date('2025-08-30T16:00:00'),
-    mentor: { first_name: 'John', last_name: 'Cruz', full_name: 'John Cruz' },
-    mentee: { first_name: 'Current', last_name: 'User', full_name: 'Current User' },
-    topic: 'Resume Review',
-    status: 'upcoming'
-  },
-  {
-    id: 2,
-    date: new Date('2025-08-25'),
-    time: new Date('2025-08-25T14:00:00'),
-    mentor: { first_name: 'Jane', last_name: 'Smith', full_name: 'Jane Smith' },
-    mentee: { first_name: 'Current', last_name: 'User', full_name: 'Current User' },
-    topic: 'Career Guidance',
-    status: 'completed'
-  },
-  {
-    id: 3,
-    date: new Date('2025-09-05'),
-    time: new Date('2025-09-05T10:00:00'),
-    mentor: { first_name: 'Mike', last_name: 'Johnson', full_name: 'Mike Johnson' },
-    mentee: { first_name: 'Current', last_name: 'User', full_name: 'Current User' },
-    topic: 'Mock Interview',
-    status: 'pending'
+const fetchMentors = async () => {
+  loading.value = true
+  try {
+    const params = {
+      search: mentorSearch.value || undefined,
+      role: 'alumni'
+    }
+    
+    const response = await axios.get('/api/users', { params })
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      mentors.value = response.data.data.map(user => ({
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        full_name: `${user.first_name} ${user.last_name}`,
+        headline: user.headline || 'Alumni Mentor',
+        batch: user.batch,
+        skills: user.skills || [],
+        availability: 'available',
+        next_available: null,
+        rating: 4.5,
+        reviews_count: 0,
+        industry: user.industry || 'technology',
+        expertise: 'software-engineering'
+      }))
+    } else {
+      mentors.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching mentors:', error)
+    mentors.value = []
+  } finally {
+    loading.value = false
   }
-])
+}
 
-const tabs = [
-  { key: 'find', label: 'Find a Mentor', count: mentors.value.length },
-  { key: 'offer', label: 'Offer Mentorship', count: null },
-  { key: 'sessions', label: 'My Sessions', count: sessions.value.length }
-]
+// Fetch mentorship sessions from API
+const sessions = ref([])
+
+const fetchSessions = async () => {
+  try {
+    const response = await axios.get('/api/mentorships')
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      sessions.value = response.data.data
+    } else {
+      sessions.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching sessions:', error)
+    sessions.value = []
+  }
+}
+
+const submitMentorshipRequest = async () => {
+  try {
+    const response = await axios.post('/api/mentorships', {
+      mentor_id: selectedMentor.value.id,
+      goal: mentorshipGoal.value,
+      preferred_slot: preferredSlot.value,
+      additional_message: additionalMessage.value
+    })
+    
+    if (response.data.success) {
+      showRequestModal.value = false
+      mentorshipGoal.value = ''
+      preferredSlot.value = ''
+      additionalMessage.value = ''
+      selectedMentor.value = {}
+      
+      // Refresh sessions
+      await fetchSessions()
+    }
+  } catch (error) {
+    console.error('Error submitting mentorship request:', error)
+  }
+}
 
 // Computed properties
 const filteredMentors = computed(() => {
-  let filtered = mentors.value
-
-  // Apply search filter
-  if (mentorSearch.value) {
-    filtered = filtered.filter(mentor => 
-      mentor.full_name.toLowerCase().includes(mentorSearch.value.toLowerCase()) ||
-      mentor.headline.toLowerCase().includes(mentorSearch.value.toLowerCase()) ||
-      mentor.skills.some(skill => skill.toLowerCase().includes(mentorSearch.value.toLowerCase())) ||
-      mentor.batch.includes(mentorSearch.value)
-    )
-  }
-
-  // Apply expertise filter
-  if (selectedExpertise.value) {
-    filtered = filtered.filter(mentor => mentor.expertise === selectedExpertise.value)
-  }
-
-  // Apply industry filter
-  if (selectedIndustry.value) {
-    filtered = filtered.filter(mentor => mentor.industry === selectedIndustry.value)
-  }
-
-  // Apply batch filter
-  if (selectedBatch.value) {
-    filtered = filtered.filter(mentor => mentor.batch === selectedBatch.value)
-  }
-
-  return filtered
+  // Since we're filtering on the backend, just return the mentors
+  return mentors.value
 })
 
 const filteredSessions = computed(() => {
@@ -646,17 +608,30 @@ const filteredSessions = computed(() => {
   return filtered
 })
 
-const pendingRequests = computed(() => 5)
-const averageRating = computed(() => 4.8)
-const totalMentees = computed(() => 12)
+const tabs = [
+  { key: 'find', label: 'Find a Mentor', count: mentors.value.length },
+  { key: 'sessions', label: 'My Sessions', count: sessions.value.length },
+  { key: 'offer', label: 'Offer Mentorship', count: null }
+]
 
 // Methods
-const getAvailabilityLabel = (availability, nextAvailable) => {
-  switch (availability) {
-    case 'available': return 'Available Now'
-    case 'busy': return `Next Available: ${formatDate(nextAvailable)}`
-    case 'unavailable': return 'Fully Booked'
-    default: return availability
+const requestMentorship = (mentor) => {
+  selectedMentor.value = mentor
+  showRequestModal.value = true
+}
+
+const updateMentorshipStatus = async (sessionId, status) => {
+  try {
+    const response = await axios.put(`/api/mentorships/${sessionId}`, { status })
+    if (response.data.success) {
+      // Update the session status
+      const session = sessions.value.find(s => s.id === sessionId)
+      if (session) {
+        session.status = status
+      }
+    }
+  } catch (error) {
+    console.error('Error updating mentorship status:', error)
   }
 }
 
@@ -678,60 +653,13 @@ const formatTime = (date) => {
   })
 }
 
-const viewMentorProfile = (mentor) => {
-  console.log('View mentor profile:', mentor.full_name)
-}
-
-const requestMentorship = (mentor) => {
-  selectedMentor.value = mentor
-  showRequestModal.value = true
-}
-
-const submitMentorshipRequest = () => {
-  if (!mentorshipGoal.value) return
-
-  console.log('Submit mentorship request:', {
-    mentor: selectedMentor.value.full_name,
-    goal: mentorshipGoal.value,
-    preferredSlot: preferredSlot.value,
-    message: additionalMessage.value
-  })
-
-  // Reset form
-  showRequestModal.value = false
-  selectedMentor.value = {}
-  mentorshipGoal.value = ''
-  preferredSlot.value = ''
-  additionalMessage.value = ''
-}
-
-const addExpertise = () => {
-  if (newExpertise.value.trim() && !currentExpertise.value.includes(newExpertise.value.trim())) {
-    currentExpertise.value.push(newExpertise.value.trim())
-    newExpertise.value = ''
-  }
-}
-
-const removeExpertise = (expertise) => {
-  const index = currentExpertise.value.indexOf(expertise)
-  if (index > -1) {
-    currentExpertise.value.splice(index, 1)
-  }
-}
-
-const viewSession = (session) => {
-  console.log('View session:', session.id)
-}
-
-const rescheduleSession = (session) => {
-  console.log('Reschedule session:', session.id)
-}
-
-const giveFeedback = (session) => {
-  console.log('Give feedback for session:', session.id)
-}
-
 onMounted(() => {
-  // Load initial data
+  fetchMentors()
+  fetchSessions()
+})
+
+// Watch for search changes and refetch
+watch(mentorSearch, () => {
+  fetchMentors()
 })
 </script>

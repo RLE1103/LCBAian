@@ -13,7 +13,7 @@ class AuthController extends Controller
     /**
      * Register a new user
      * Note: Admin role is not available for public registration
-     * Only 'mentor' and 'alumni' roles are allowed
+     * Only 'alumni' role is allowed
      */
     public function register(Request $request)
     {
@@ -22,7 +22,7 @@ class AuthController extends Controller
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|string|in:mentor,alumni',
+            'role' => 'required|string|in:alumni',
             'program' => 'nullable|string|max:255',
             'batch' => 'nullable|integer|min:1990|max:' . date('Y'),
         ]);

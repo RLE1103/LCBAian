@@ -39,9 +39,9 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
         </div>
-      </div>
-    </div>
-
+          </div>
+        </div>
+        
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Left Column - Resume List -->
       <div class="lg:col-span-2">
@@ -56,7 +56,7 @@
               ]"
             >
               Table View
-            </button>
+          </button>
             <button 
               @click="viewMode = 'cards'"
               :class="[
@@ -65,12 +65,12 @@
               ]"
             >
               Card View
-            </button>
-          </div>
+          </button>
+        </div>
           <div class="text-sm text-gray-600">
             {{ filteredResumes.length }} resumes
-          </div>
-        </div>
+      </div>
+    </div>
 
         <!-- Empty State -->
         <div v-if="filteredResumes.length === 0" class="text-center py-12 text-gray-500">
@@ -250,19 +250,19 @@
             <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
               <h4 class="font-medium text-gray-900">Minimal</h4>
               <p class="text-sm text-gray-600">Clean and simple design</p>
-            </div>
+              </div>
             <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
               <h4 class="font-medium text-gray-900">Professional</h4>
               <p class="text-sm text-gray-600">Traditional corporate style</p>
-            </div>
+              </div>
             <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer">
               <h4 class="font-medium text-gray-900">Modern</h4>
               <p class="text-sm text-gray-600">Contemporary and creative</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Quick Links -->
+          <!-- Quick Links -->
         <div class="bg-white rounded-lg shadow-md p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
             <div class="space-y-2">
@@ -535,11 +535,11 @@
                 </button>
               </div>
             </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>

@@ -1,44 +1,51 @@
 <template>
   <div class="p-6">
     <!-- Page Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">Communities</h1>
-        <p class="text-gray-600 mt-1">Connect with alumni through shared interests</p>
-      </div>
-      <button 
-        @click="showCreateModal = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-      >
-        Create Community
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg p-8 mb-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold text-white mb-2">Communities</h1>
+          <p class="text-blue-100">Connect with alumni through shared interests and passions</p>
+        </div>
+        <button 
+          @click="showCreateModal = true"
+          class="bg-white text-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50 font-semibold shadow-lg transition-all transform hover:scale-105"
+        >
+          + Create Community
             </button>
           </div>
-
-    <!-- Search and Filters -->
-    <div class="flex items-center gap-4 mb-6">
-      <div class="flex-1">
-            <input 
-          v-model="searchQuery"
-              type="text" 
-          placeholder="Search communities by name, description, or tags..."
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-      <select v-model="selectedCategory" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-        <option value="">All Categories</option>
-        <option value="professional">Professional</option>
-        <option value="academic">Academic</option>
-        <option value="hobby">Hobby</option>
-        <option value="location">Location</option>
-        <option value="batch">Batch</option>
-      </select>
-      <select v-model="selectedVisibility" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-        <option value="">All Types</option>
-        <option value="public">Public</option>
-        <option value="private">Private</option>
-      </select>
     </div>
 
+    <!-- Search and Filters -->
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+      <div class="flex flex-col lg:flex-row gap-4">
+        <div class="flex-1 relative">
+          <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+            <input 
+            v-model="searchQuery"
+              type="text" 
+            placeholder="Search communities by name, description, or tags..."
+            class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <select v-model="selectedCategory" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white font-medium">
+          <option value="">All Categories</option>
+          <option value="professional">Professional</option>
+          <option value="academic">Academic</option>
+          <option value="hobby">Hobby</option>
+          <option value="location">Location</option>
+          <option value="batch">Batch</option>
+        </select>
+        <select v-model="selectedVisibility" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white font-medium">
+          <option value="">All Types</option>
+          <option value="public">Public</option>
+          <option value="private">Private</option>
+        </select>
+          </div>
+        </div>
+        
     <!-- Communities Grid -->
     <div v-if="filteredCommunities.length === 0" class="text-center py-12 text-gray-500">
       <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,97 +59,106 @@
       <div 
         v-for="community in filteredCommunities" 
         :key="community.id"
-        class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-        @click="viewCommunity(community)"
+        class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
       >
         <!-- Community Banner -->
-        <div class="h-32 bg-gradient-to-r from-blue-500 to-purple-600 relative">
-          <div class="absolute inset-0 bg-black bg-opacity-20"></div>
-          <div class="absolute bottom-4 left-4">
-            <h3 class="text-xl font-bold text-white">{{ community.name }}</h3>
-            <p class="text-sm text-blue-100">{{ community.category }}</p>
-          </div>
+        <div class="h-36 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 relative overflow-hidden">
+          <div class="absolute inset-0 bg-black bg-opacity-10"></div>
           <div class="absolute top-4 right-4">
             <span :class="[
-              'px-2 py-1 text-xs font-semibold rounded-full',
-              community.visibility === 'public' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+              'px-3 py-1 text-xs font-bold rounded-full shadow-sm',
+              community.visibility === 'public' ? 'bg-white text-green-600' : 'bg-white text-yellow-600'
             ]">
-              {{ community.visibility }}
+              {{ community.visibility === 'public' ? '✓ Public' : '🔒 Private' }}
             </span>
-          </div>
         </div>
-        
+          <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/40 to-transparent">
+            <h3 class="text-xl font-bold text-white mb-1">{{ community.name }}</h3>
+            <p class="text-white/90 text-sm font-medium capitalize">{{ community.category || 'General' }}</p>
+      </div>
+    </div>
+
         <!-- Community Info -->
         <div class="p-6">
           <p class="text-gray-600 text-sm mb-4 line-clamp-2">{{ community.description }}</p>
           
           <!-- Tags -->
-          <div class="flex flex-wrap gap-2 mb-4">
+          <div v-if="community.tags && community.tags.length > 0" class="flex flex-wrap gap-2 mb-4">
             <span 
               v-for="tag in community.tags.slice(0, 3)" 
               :key="tag"
-              class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full"
+              class="bg-blue-50 text-blue-700 text-xs px-3 py-1 rounded-full font-medium border border-blue-200"
             >
-              {{ tag }}
+              #{{ tag }}
             </span>
-            <span v-if="community.tags.length > 3" class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+            <span v-if="community.tags.length > 3" class="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
               +{{ community.tags.length - 3 }} more
             </span>
-          </div>
+    </div>
 
           <!-- Stats -->
-          <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
-            <div class="flex items-center">
-              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-              </svg>
-              {{ community.member_count }} members
+          <div class="flex items-center justify-between text-sm mb-4 bg-gray-50 rounded-lg p-3">
+            <div class="flex items-center text-gray-700">
+              <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="font-bold text-gray-900">{{ community.member_count }}</div>
+                <div class="text-xs text-gray-500">members</div>
+              </div>
             </div>
-            <div class="flex items-center">
-              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-              </svg>
-              {{ community.post_count }} posts
-            </div>
-          </div>
+            <div class="flex items-center text-gray-700">
+              <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-2">
+                <svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="font-bold text-gray-900">{{ community.post_count }}</div>
+                <div class="text-xs text-gray-500">posts</div>
+        </div>
+      </div>
+    </div>
 
           <!-- Owner -->
-          <div class="flex items-center mb-4">
-            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs mr-2">
+          <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3 ring-2 ring-white shadow-lg">
               {{ community.owner.first_name[0] }}{{ community.owner.last_name[0] }}
-            </div>
-            <div>
-              <div class="text-sm font-medium text-gray-900">{{ community.owner.full_name }}</div>
-              <div class="text-xs text-gray-500">Created {{ formatDate(community.created_at) }}</div>
+          </div>
+          <div class="flex-1">
+              <div class="text-sm font-semibold text-gray-900">{{ community.owner.full_name }}</div>
+              <div class="text-xs text-gray-500">{{ formatDate(community.created_at) }}</div>
             </div>
           </div>
-
+        
           <!-- Action Buttons -->
           <div class="flex gap-2">
             <button 
               v-if="!community.is_member"
               @click.stop="joinCommunity(community)"
-              class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 text-sm"
+              class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 text-sm font-semibold shadow-md transition-all"
             >
               Join Community
-          </button>
+            </button>
             <button 
               v-else
               @click.stop="leaveCommunity(community)"
-              class="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 text-sm"
+              class="flex-1 bg-gray-100 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-200 text-sm font-semibold border-2 border-gray-200 transition-all"
             >
-              Leave Community
-          </button>
+              ✓ Member
+            </button>
             <button 
               @click.stop="viewCommunity(community)"
-              class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+              class="px-4 py-2.5 border-2 border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-semibold transition-all"
             >
-              View
-          </button>
+              View Details
+            </button>
+          </div>
           </div>
         </div>
       </div>
-    </div>
 
     <!-- Community Detail Modal -->
     <div v-if="showCommunityModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -157,13 +173,13 @@
               <h2 class="text-xl font-bold text-gray-900">{{ selectedCommunity.name }}</h2>
               <p class="text-sm text-gray-600">{{ selectedCommunity.category }} • {{ selectedCommunity.member_count }} members</p>
             </div>
-    </div>
+          </div>
           <button @click="showCommunityModal = false" class="text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
-        </button>
-        </div>
+            </button>
+          </div>
 
         <!-- Modal Content -->
         <div class="flex h-[calc(90vh-120px)]">
@@ -195,7 +211,7 @@
                 <li>• No spam or self-promotion</li>
                 <li>• Follow community guidelines</li>
               </ul>
-            </div>
+    </div>
 
             <div class="mb-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-2">Recent Members</h3>
@@ -213,9 +229,9 @@
                     <div class="text-xs text-gray-500">{{ member.batch }} • {{ member.role }}</div>
                   </div>
                 </div>
-              </div>
-            </div>
           </div>
+        </div>
+      </div>
 
           <!-- Right Panel - Posts and Discussions -->
           <div class="flex-1 p-6 overflow-y-auto">
@@ -337,8 +353,8 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
-          </button>
-        </div>
+            </button>
+          </div>
         
         <div class="space-y-4">
           <div>
@@ -396,7 +412,7 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-        </div>
+          </div>
         
         <div class="flex justify-end space-x-2 mt-6">
           <button @click="showCreateModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
@@ -416,7 +432,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import axios from '../config/api'
+import { useAuthStore } from '../stores/auth'
+
+const authStore = useAuthStore()
 
 // Reactive data
 const searchQuery = ref('')
@@ -427,6 +447,7 @@ const showCreateModal = ref(false)
 const showCreatePostModal = ref(false)
 const selectedCommunity = ref({})
 const newPostContent = ref('')
+const currentUser = computed(() => authStore.user)
 
 const newCommunity = ref({
   name: '',
@@ -436,137 +457,57 @@ const newCommunity = ref({
   tags: ''
 })
 
-// Sample data - replace with API calls
-const communities = ref([
-  {
-    id: 1,
-    name: 'LCBA Tech Professionals',
-    description: 'A community for LCBA alumni working in technology and software development. Share experiences, job opportunities, and technical discussions.',
-    category: 'professional',
-    visibility: 'public',
-    tags: ['technology', 'software', 'career', 'networking'],
-    member_count: 156,
-    post_count: 89,
-    created_at: new Date('2024-01-15'),
-    is_member: true,
-    owner: {
-      first_name: 'Ryan',
-      last_name: 'Ebrada',
-      full_name: 'Ryan Ebrada'
-    },
-    recent_members: [
-      { id: 1, first_name: 'John', last_name: 'Cruz', full_name: 'John Cruz', batch: '2020', role: 'Software Engineer' },
-      { id: 2, first_name: 'Sarah', last_name: 'Martinez', full_name: 'Sarah Martinez', batch: '2019', role: 'Product Manager' },
-      { id: 3, first_name: 'Mike', last_name: 'Johnson', full_name: 'Mike Johnson', batch: '2021', role: 'Data Scientist' }
-    ],
-    posts: [
-      {
-        id: 1,
-        content: 'Just landed a new role as Senior Software Engineer at Google! Thanks to everyone who helped with interview prep.',
-        author: { first_name: 'John', last_name: 'Cruz', full_name: 'John Cruz' },
-        created_at: new Date('2025-08-20'),
-        likes_count: 24,
-        comments_count: 8
-      },
-      {
-        id: 2,
-        content: 'Looking for recommendations on good online courses for machine learning. Any suggestions?',
-        author: { first_name: 'Sarah', last_name: 'Martinez', full_name: 'Sarah Martinez' },
-        created_at: new Date('2025-08-19'),
-        likes_count: 12,
-        comments_count: 15
-      }
-    ]
-  },
-  {
-    id: 2,
-    name: 'LCBA Entrepreneurs',
-    description: 'Connect with fellow LCBA alumni who are building their own businesses and startups. Share resources, advice, and success stories.',
-    category: 'professional',
-    visibility: 'public',
-    tags: ['entrepreneurship', 'startup', 'business', 'innovation'],
-    member_count: 89,
-    post_count: 45,
-    created_at: new Date('2024-03-10'),
-    is_member: false,
-    owner: {
-      first_name: 'Alice',
-      last_name: 'Lee',
-      full_name: 'Alice Lee'
-    },
-    recent_members: [
-      { id: 4, first_name: 'David', last_name: 'Kim', full_name: 'David Kim', batch: '2018', role: 'Founder' },
-      { id: 5, first_name: 'Emma', last_name: 'Wilson', full_name: 'Emma Wilson', batch: '2020', role: 'CEO' }
-    ],
-    posts: []
-  },
-  {
-    id: 3,
-    name: 'LCBA Manila Chapter',
-    description: 'Alumni based in Manila and nearby areas. Organize meetups, networking events, and local activities.',
-    category: 'location',
-    visibility: 'public',
-    tags: ['manila', 'networking', 'events', 'local'],
-    member_count: 234,
-    post_count: 67,
-    created_at: new Date('2024-02-20'),
-    is_member: true,
-    owner: {
-      first_name: 'Maria',
-      last_name: 'Santos',
-      full_name: 'Maria Santos'
-    },
-    recent_members: [
-      { id: 6, first_name: 'Carlos', last_name: 'Reyes', full_name: 'Carlos Reyes', batch: '2019', role: 'Marketing Manager' },
-      { id: 7, first_name: 'Ana', last_name: 'Garcia', full_name: 'Ana Garcia', batch: '2021', role: 'UX Designer' }
-    ],
-    posts: []
-  },
-  {
-    id: 4,
-    name: 'LCBA Batch 2020',
-    description: 'Exclusive community for LCBA Batch 2020 graduates. Stay connected with your batchmates and share memories.',
-    category: 'batch',
-    visibility: 'private',
-    tags: ['batch-2020', 'memories', 'friendship', 'reunion'],
-    member_count: 45,
-    post_count: 23,
-    created_at: new Date('2024-01-01'),
-    is_member: true,
-    owner: {
-      first_name: 'Batch',
-      last_name: 'Rep',
-      full_name: 'Batch Rep'
-    },
-    recent_members: [
-      { id: 8, first_name: 'Luis', last_name: 'Fernandez', full_name: 'Luis Fernandez', batch: '2020', role: 'Developer' },
-      { id: 9, first_name: 'Sofia', last_name: 'Lopez', full_name: 'Sofia Lopez', batch: '2020', role: 'Designer' }
-    ],
-    posts: []
-  },
-  {
-    id: 5,
-    name: 'LCBA Photography Club',
-    description: 'For photography enthusiasts among LCBA alumni. Share photos, techniques, and organize photo walks.',
-    category: 'hobby',
-    visibility: 'public',
-    tags: ['photography', 'art', 'creative', 'hobby'],
-    member_count: 67,
-    post_count: 34,
-    created_at: new Date('2024-04-05'),
-    is_member: false,
-    owner: {
-      first_name: 'Photo',
-      last_name: 'Club',
-      full_name: 'Photo Club'
-    },
-    recent_members: [
-      { id: 10, first_name: 'Roberto', last_name: 'Silva', full_name: 'Roberto Silva', batch: '2019', role: 'Photographer' },
-      { id: 11, first_name: 'Isabella', last_name: 'Torres', full_name: 'Isabella Torres', batch: '2021', role: 'Graphic Designer' }
-    ],
-    posts: []
+// Fetch communities from API
+const communities = ref([])
+const loading = ref(false)
+
+const fetchCommunities = async () => {
+  loading.value = true
+  try {
+    const params = {
+      search: searchQuery.value || undefined,
+      category: selectedCategory.value || undefined,
+      visibility: selectedVisibility.value || undefined,
+    }
+    
+    const response = await axios.get('/api/communities', { params })
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      communities.value = response.data.data.map(community => ({
+        id: community.id,
+        name: community.name,
+        description: community.description,
+        category: community.category || 'professional',
+        visibility: community.visibility || 'public',
+        tags: community.tags ? (typeof community.tags === 'string' ? JSON.parse(community.tags) : community.tags) : [],
+        member_count: community.members ? community.members.length : 0,
+        post_count: 0, // Will be updated when posts are implemented
+        created_at: new Date(community.created_at),
+        is_member: community.members ? community.members.some(member => member.id === currentUser.value?.id) : false,
+        owner: community.creator ? {
+          first_name: community.creator.first_name || 'Unknown',
+          last_name: community.creator.last_name || 'User',
+          full_name: `${community.creator.first_name || 'Unknown'} ${community.creator.last_name || 'User'}`
+        } : { first_name: 'Unknown', last_name: 'User', full_name: 'Unknown User' },
+        recent_members: community.members && community.members.length > 0 ? community.members.slice(0, 3).map(member => ({
+          id: member.id,
+          first_name: member.first_name || '',
+          last_name: member.last_name || '',
+          full_name: `${member.first_name || ''} ${member.last_name || ''}`,
+          batch: member.batch || 'Unknown',
+          role: member.current_job_title || 'Alumni'
+        })) : [],
+        posts: [] // Will be implemented later
+      }))
+    } else {
+      communities.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching communities:', error)
+    communities.value = []
+  } finally {
+    loading.value = false
   }
-])
+}
 
 // Computed properties
 const filteredCommunities = computed(() => {
@@ -609,78 +550,86 @@ const viewCommunity = (community) => {
   showCommunityModal.value = true
 }
 
-const joinCommunity = (community) => {
-  community.is_member = true
-  community.member_count++
-  console.log('Joined community:', community.name)
+const joinCommunity = async (community) => {
+  try {
+    const response = await axios.post(`/api/communities/${community.id}/join`)
+    if (response?.data?.success) {
+      community.is_member = true
+      community.member_count++
+    }
+  } catch (error) {
+    console.error('Error joining community:', error)
+  }
 }
 
-const leaveCommunity = (community) => {
-  community.is_member = false
-  community.member_count--
-  console.log('Left community:', community.name)
+const leaveCommunity = async (community) => {
+  try {
+    const response = await axios.post(`/api/communities/${community.id}/leave`)
+    if (response?.data?.success) {
+      community.is_member = false
+      community.member_count--
+    }
+  } catch (error) {
+    console.error('Error leaving community:', error)
+  }
 }
 
-const createCommunity = () => {
+const createCommunity = async () => {
   if (!newCommunity.value.name || !newCommunity.value.description) return
-
-  const tags = newCommunity.value.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-  
-  const community = {
-    id: communities.value.length + 1,
-    name: newCommunity.value.name,
-    description: newCommunity.value.description,
-    category: newCommunity.value.category,
-    visibility: newCommunity.value.visibility,
-    tags: tags,
-    member_count: 1,
-    post_count: 0,
-    created_at: new Date(),
-    is_member: true,
-    owner: {
-      first_name: 'Current',
-      last_name: 'User',
-      full_name: 'Current User'
-    },
-    recent_members: [],
-    posts: []
-  }
-
-  communities.value.unshift(community)
-  showCreateModal.value = false
-
-  // Reset form
-  newCommunity.value = {
-    name: '',
-    description: '',
-    category: '',
-    visibility: 'public',
-    tags: ''
+  try {
+    const payload = {
+      name: newCommunity.value.name,
+      description: newCommunity.value.description,
+      category: newCommunity.value.category || null,
+      visibility: newCommunity.value.visibility || 'public',
+      tags: newCommunity.value.tags
+        ? newCommunity.value.tags.split(',').map(t => t.trim()).filter(Boolean)
+        : []
+    }
+    const response = await axios.post('/api/communities', payload)
+    if (response?.data?.success) {
+      showCreateModal.value = false
+      newCommunity.value = { name: '', description: '', category: '', visibility: 'public', tags: '' }
+      await fetchCommunities()
+    }
+  } catch (error) {
+    console.error('Error creating community:', error)
   }
 }
 
-const createPost = () => {
+const createPost = async () => {
   if (!newPostContent.value.trim()) return
-
-  const post = {
-    id: Date.now(),
-    content: newPostContent.value,
-    author: {
-      first_name: 'Current',
-      last_name: 'User',
-      full_name: 'Current User'
-    },
-    created_at: new Date(),
-    likes_count: 0,
-    comments_count: 0
+  try {
+    const response = await axios.post('/api/posts', { content: newPostContent.value })
+    if (response?.data?.success) {
+      const p = response.data.data
+      const post = {
+        id: p.post_id || Date.now(),
+        content: p.content,
+        author: {
+          first_name: authStore.user?.first_name || 'Current',
+          last_name: authStore.user?.last_name || 'User',
+          full_name: `${authStore.user?.first_name || 'Current'} ${authStore.user?.last_name || 'User'}`
+        },
+        created_at: p.created_at || new Date(),
+        likes_count: 0,
+        comments_count: 0
+      }
+      selectedCommunity.value.posts.unshift(post)
+      selectedCommunity.value.post_count++
+      newPostContent.value = ''
+    }
+  } catch (error) {
+    console.error('Error creating post:', error)
   }
-
-  selectedCommunity.value.posts.unshift(post)
-  selectedCommunity.value.post_count++
-  newPostContent.value = ''
 }
 
 onMounted(() => {
-  // Load initial data
+  fetchCommunities()
+})
+
+// Watch for filter changes and refetch
+watch([searchQuery, selectedCategory, selectedVisibility], () => {
+  fetchCommunities()
 })
 </script>

@@ -21,14 +21,14 @@
         <ul class="space-y-2">
           <li class="mt-4 text-xs text-blue-300 px-4">Features</li>
           <li><RouterLink to="/" :class="linkClasses('/')"><span>🏠</span>Dashboard</RouterLink></li>
-          <li><RouterLink to="/messages" :class="linkClasses('/messages', 'relative')"><span>✉️</span>Messages <span class="ml-auto text-xs bg-red-500 text-white rounded-full px-2 absolute right-4">1</span></RouterLink></li>
+          <li><RouterLink to="/messages" :class="linkClasses('/messages', 'relative')"><span>✉️</span>Messages <span v-if="unreadCount > 0" class="ml-auto text-xs bg-red-500 text-white rounded-full px-2 absolute right-4">{{ unreadCount }}</span></RouterLink></li>
           <li class="mt-4 text-xs text-blue-300 px-4">Recruitment</li>
           <li><RouterLink to="/jobs" :class="linkClasses('/jobs')"><span>💼</span>Jobs</RouterLink></li>
           <li><RouterLink to="/alumni" :class="linkClasses('/alumni')"><span>👥</span>Alumni</RouterLink></li>
           <li><RouterLink to="/resumes" :class="linkClasses('/resumes')"><span>📄</span>Resumes</RouterLink></li>
           <li class="mt-4 text-xs text-blue-300 px-4">Organization</li>
           <li v-if="isAdmin"><RouterLink to="/alumni-management" :class="linkClasses('/alumni-management')"><span>🏢</span>Alumni Management</RouterLink></li>
-          <li v-if="isAdmin"><RouterLink to="/analytics" :class="linkClasses('/analytics')"><span>📊</span>AI Analytics</RouterLink></li>
+          <li><RouterLink to="/analytics" :class="linkClasses('/analytics')"><span>📊</span>AI Analytics</RouterLink></li>
           <li><RouterLink to="/events" :class="linkClasses('/events')"><span>📅</span>Events</RouterLink></li>
           <li><RouterLink to="/mentorship" :class="linkClasses('/mentorship')"><span>🧭</span>Mentorship</RouterLink></li>
           <li><RouterLink to="/communities" :class="linkClasses('/communities')"><span>🌐</span>Communities</RouterLink></li>
@@ -45,7 +45,8 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import axios from '../config/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -55,6 +56,25 @@ const authStore = useAuthStore()
 const userFullName = computed(() => authStore.fullName || 'User')
 const userRole = computed(() => authStore.userRole || 'User')
 const isAdmin = computed(() => authStore.isAdmin)
+
+// Unread messages count
+const unreadCount = ref(0)
+
+// Fetch unread messages count
+const fetchUnreadCount = async () => {
+  try {
+    const response = await axios.get('/api/messages')
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      unreadCount.value = response.data.data.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)
+    }
+  } catch (error) {
+    console.error('Error fetching unread count:', error)
+  }
+}
+
+onMounted(() => {
+  fetchUnreadCount()
+})
 
 const userAvatar = computed(() => {
   const name = userFullName.value

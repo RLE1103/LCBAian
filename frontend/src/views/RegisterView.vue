@@ -110,7 +110,6 @@
           >
             <option value="">Select your role</option>
             <option value="alumni">Alumni</option>
-            <option value="mentor">Mentor</option>
           </select>
           <p v-if="errors.role" class="text-red-500 text-sm mt-1">{{ errors.role }}</p>
         </div>

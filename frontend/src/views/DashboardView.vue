@@ -13,11 +13,11 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
             Refresh
-          </button>
+            </button>
+          </div>
+          </div>
         </div>
-      </div>
-    </div>
-
+        
     <!-- Stats Overview -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <RouterLink to="/messages" class="group">
@@ -120,11 +120,11 @@
               <div v-if="activity.action" class="flex-shrink-0">
                 <button @click="handleActivityAction(activity)" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
                   {{ activity.action }}
-                </button>
+          </button>
               </div>
-            </div>
-          </div>
         </div>
+      </div>
+    </div>
 
         <!-- Quick Actions -->
         <div class="bg-white rounded-xl shadow-lg p-6">
@@ -144,7 +144,7 @@
                   </div>
                 </div>
               </div>
-            </RouterLink>
+      </RouterLink>
 
             <RouterLink to="/alumni" class="group">
               <div class="p-4 border border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all duration-200">
@@ -160,7 +160,7 @@
                   </div>
                 </div>
               </div>
-            </RouterLink>
+      </RouterLink>
 
             <RouterLink to="/mentorship" class="group">
               <div class="p-4 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-200">
@@ -176,7 +176,7 @@
                   </div>
                 </div>
               </div>
-            </RouterLink>
+      </RouterLink>
 
             <RouterLink to="/communities" class="group">
               <div class="p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all duration-200">
@@ -192,7 +192,7 @@
                   </div>
                 </div>
               </div>
-            </RouterLink>
+      </RouterLink>
           </div>
         </div>
       </div>
@@ -262,7 +262,7 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
       </div>
 </template>
 
@@ -270,6 +270,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
+import axios from '../config/api'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -279,146 +280,215 @@ const userFullName = computed(() => authStore.fullName || 'User')
 
 // Dashboard statistics
 const stats = ref({
-  messages: 12,
-  unreadMessages: 3,
-  jobApplications: 8,
-  pendingApplications: 2,
-  connections: 156,
-  newConnections: 5,
-  events: 4,
-  upcomingEvents: 2
+  messages: 0,
+  unreadMessages: 0,
+  jobApplications: 0,
+  pendingApplications: 0,
+  connections: 0,
+  newConnections: 0,
+  events: 0,
+  upcomingEvents: 0
 })
 
 // Recent activity data
-const recentActivity = ref([
-  {
-    id: 1,
-    type: 'message',
-    icon: '💬',
-    title: 'New message from John Doe',
-    description: 'Thanks for the job referral!',
-    timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-    action: 'Reply'
-  },
-  {
-    id: 2,
-    type: 'job',
-    icon: '💼',
-    title: 'Application status updated',
-    description: 'Software Engineer at Google - Under Review',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    action: 'View'
-  },
-  {
-    id: 3,
-    type: 'connection',
-    icon: '👥',
-    title: 'New connection request',
-    description: 'Sarah Martinez wants to connect',
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-    action: 'Accept'
-  },
-  {
-    id: 4,
-    type: 'event',
-    icon: '📅',
-    title: 'Event reminder',
-    description: 'LCBA Alumni Meetup 2024 starts in 2 days',
-    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-    action: 'RSVP'
-  }
-])
+const recentActivity = ref([])
 
 // Notifications data
-const notifications = ref([
-  {
-    id: 1,
-    title: 'New Job Match',
-    message: '3 new jobs match your profile',
-    timestamp: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
-    read: false
-  },
-  {
-    id: 2,
-    title: 'Mentorship Request',
-    message: 'Someone requested you as a mentor',
-    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-    read: false
-  },
-  {
-    id: 3,
-    title: 'Event Update',
-    message: 'LCBA Tech Conference schedule updated',
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-    read: true
-  },
-  {
-    id: 4,
-    title: 'Connection Accepted',
-    message: 'Mike Johnson accepted your connection request',
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-    read: true
-  }
-])
+const notifications = ref([])
 
 // Upcoming events
-const upcomingEvents = ref([
-  {
-    id: 1,
-    title: 'LCBA Alumni Meetup 2024',
-    date: 'Dec 15, 2024',
-    time: '6:00 PM',
-    location: 'Manila Hotel'
-  },
-  {
-    id: 2,
-    title: 'Tech Career Workshop',
-    date: 'Dec 20, 2024',
-    time: '2:00 PM',
-    location: 'Online'
-  },
-  {
-    id: 3,
-    title: 'Networking Mixer',
-    date: 'Dec 28, 2024',
-    time: '7:00 PM',
-    location: 'Makati City'
-  }
-])
+const upcomingEvents = ref([])
 
 // Network updates
-const networkUpdates = ref([
-  {
-    id: 1,
-    user: {
-      first_name: 'John',
-      last_name: 'Doe',
-      full_name: 'John Doe'
-    },
-    action: 'got a new job at Microsoft',
-    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000) // 1 hour ago
-  },
-  {
-    id: 2,
-    user: {
-      first_name: 'Sarah',
-      last_name: 'Martinez',
-      full_name: 'Sarah Martinez'
-    },
-    action: 'shared a job posting',
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000) // 3 hours ago
-  },
-  {
-    id: 3,
-    user: {
-      first_name: 'Mike',
-      last_name: 'Johnson',
-      full_name: 'Mike Johnson'
-    },
-    action: 'became a mentor',
-    timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000) // 6 hours ago
+const networkUpdates = ref([])
+
+// Loading state
+const loading = ref(false)
+
+// Fetch dashboard data
+const fetchDashboardData = async () => {
+  loading.value = true
+  try {
+    // Fetch messages count
+    const messagesResponse = await axios.get('/api/messages')
+    const messagesPayload = messagesResponse?.data
+    let messagesData = []
+    if (Array.isArray(messagesPayload?.data)) {
+      messagesData = messagesPayload.data
+    } else if (Array.isArray(messagesPayload?.data?.data)) {
+      messagesData = messagesPayload.data.data
+    } else if (Array.isArray(messagesPayload)) {
+      messagesData = messagesPayload
+    }
+    
+    if (messagesResponse.data.success) {
+      stats.value.messages = messagesData.length
+      stats.value.unreadMessages = messagesData.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)
+    }
+
+    // Fetch job applications count (if we have an applications endpoint)
+    // For now, we'll use job posts count as a placeholder
+    const jobsResponse = await axios.get('/api/job-posts')
+    const jobsPayload = jobsResponse?.data
+    let jobsData = []
+    if (Array.isArray(jobsPayload?.data)) {
+      jobsData = jobsPayload.data
+    } else if (Array.isArray(jobsPayload?.data?.data)) {
+      jobsData = jobsPayload.data.data
+    } else if (Array.isArray(jobsPayload)) {
+      jobsData = jobsPayload
+    }
+    
+    if (jobsResponse.data.success) {
+      stats.value.jobApplications = jobsData.length
+      stats.value.pendingApplications = Math.floor(jobsData.length * 0.3)
+    }
+
+    // Fetch events count
+    const eventsResponse = await axios.get('/api/events')
+    const eventsPayload = eventsResponse?.data
+    let eventsData = []
+    if (Array.isArray(eventsPayload?.data)) {
+      eventsData = eventsPayload.data
+    } else if (Array.isArray(eventsPayload?.data?.data)) {
+      eventsData = eventsPayload.data.data
+    } else if (Array.isArray(eventsPayload)) {
+      eventsData = eventsPayload
+    }
+    
+    if (eventsResponse.data.success) {
+      stats.value.events = eventsData.length
+      stats.value.upcomingEvents = eventsData.filter(event => new Date(event.start_date) > new Date()).length
+    }
+
+    // Fetch upcoming events (next 7 days)
+    const upcomingResponse = await axios.get('/api/events', {
+      params: { upcoming: true }
+    })
+    const upcomingPayload = upcomingResponse?.data
+    let upcomingData = []
+    if (Array.isArray(upcomingPayload?.data)) {
+      upcomingData = upcomingPayload.data
+    } else if (Array.isArray(upcomingPayload?.data?.data)) {
+      upcomingData = upcomingPayload.data.data
+    } else if (Array.isArray(upcomingPayload)) {
+      upcomingData = upcomingPayload
+    }
+    
+    if (upcomingResponse.data.success) {
+      upcomingEvents.value = upcomingData.slice(0, 3).map(event => ({
+        id: event.id,
+        title: event.title,
+        date: new Date(event.start_date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        }),
+        time: new Date(event.start_date).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }),
+        location: event.location
+      }))
+    }
+
+    // Fetch alumni connections count
+    const usersResponse = await axios.get('/api/users', { params: { role: 'alumni' } })
+    const usersPayload = usersResponse?.data
+    let usersData = []
+    if (Array.isArray(usersPayload?.data)) {
+      usersData = usersPayload.data
+    } else if (Array.isArray(usersPayload?.data?.data)) {
+      usersData = usersPayload.data.data
+    } else if (Array.isArray(usersPayload)) {
+      usersData = usersPayload
+    }
+    
+    if (usersResponse.data.success) {
+      stats.value.connections = usersData.length
+      stats.value.newConnections = Math.floor(usersData.length * 0.1) // 10% as "new connections"
+    }
+
+    // Fetch recent activity (messages, job applications, etc.)
+    // For now, we'll create a simple activity feed based on available data
+    const activity = []
+    
+    // Add recent messages as activity
+    if (messagesData.length > 0) {
+      const recentMessage = messagesData[0]
+      activity.push({
+        id: 1,
+        type: 'message',
+        icon: '💬',
+        title: 'New message received',
+        description: `From ${recentMessage.other_user?.first_name} ${recentMessage.other_user?.last_name || 'someone'}`,
+        timestamp: new Date(recentMessage.sent_at),
+        action: 'Reply'
+      })
+    }
+
+    // Add recent job applications as activity
+    if (jobsData.length > 0) {
+      const recentJob = jobsData[0]
+      activity.push({
+        id: 2,
+        type: 'job',
+        icon: '💼',
+        title: 'New job posted',
+        description: `${recentJob.title} at ${recentJob.company_name}`,
+        timestamp: new Date(recentJob.created_at),
+        action: 'View'
+      })
+    }
+
+    // Add recent events as activity
+    if (eventsData.length > 0) {
+      const recentEvent = eventsData[0]
+      activity.push({
+        id: 3,
+        type: 'event',
+        icon: '📅',
+        title: 'New event posted',
+        description: recentEvent.title,
+        timestamp: new Date(recentEvent.created_at),
+        action: 'View'
+      })
+    }
+
+    recentActivity.value = activity
+
+    // Fetch network updates (recent posts)
+    const postsResponse = await axios.get('/api/posts')
+    const postsPayload = postsResponse?.data
+    let postsData = []
+    if (Array.isArray(postsPayload?.data)) {
+      postsData = postsPayload.data
+    } else if (Array.isArray(postsPayload?.data?.data)) {
+      postsData = postsPayload.data.data
+    } else if (Array.isArray(postsPayload)) {
+      postsData = postsPayload
+    }
+    
+    if (postsResponse.data.success) {
+      networkUpdates.value = postsData.slice(0, 3).map(post => ({
+        id: post.post_id,
+        user: {
+          first_name: post.user?.first_name,
+          last_name: post.user?.last_name,
+          full_name: `${post.user?.first_name} ${post.user?.last_name}`
+        },
+        action: 'shared a post',
+        timestamp: new Date(post.created_at)
+      }))
+    }
+
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error)
+  } finally {
+    loading.value = false
   }
-])
+}
 
 // Methods
 const formatTime = (timestamp) => {
@@ -456,15 +526,13 @@ const handleActivityAction = (activity) => {
 }
 
 const refreshData = () => {
-  // Simulate data refresh
-  console.log('Refreshing dashboard data...')
-  // In a real app, this would fetch fresh data from the API
+  // Refresh dashboard data
+  fetchDashboardData()
 }
 
 // Load initial data
 onMounted(() => {
-  // Load dashboard data
-  console.log('Dashboard mounted, loading data...')
+  fetchDashboardData()
 })
 </script>
 

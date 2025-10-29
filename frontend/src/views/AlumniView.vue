@@ -10,10 +10,7 @@
         <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
           Export Directory
         </button>
-        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-          Add Alumni
-            </button>
-          </div>
+      </div>
     </div>
 
     <!-- Search and Filters -->
@@ -135,12 +132,12 @@
               <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl mr-4">
                 {{ alumni.first_name[0] }}{{ alumni.last_name[0] }}
               </div>
-              <div>
+                <div>
                 <h3 class="text-lg font-semibold text-gray-900">{{ alumni.full_name }}</h3>
                 <p class="text-sm text-gray-600">{{ alumni.program }} {{ alumni.batch }}</p>
                 <p class="text-sm text-gray-500">{{ alumni.headline || 'Alumni' }}</p>
+                </div>
               </div>
-            </div>
 
             <div class="mb-4">
               <div class="flex flex-wrap gap-2 mb-2">
@@ -177,8 +174,8 @@
                 View Profile
               </button>
             </div>
-          </div>
-        </div>
+                </div>
+              </div>
 
         <!-- List View -->
         <div v-else class="space-y-4">
@@ -205,9 +202,9 @@
                       {{ skill }}
                     </span>
                   </div>
-                </div>
               </div>
-              
+            </div>
+
               <div class="flex items-center space-x-4">
                 <div class="flex items-center gap-2">
                   <span v-if="alumni.is_verified" class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">🏅 Verified</span>
@@ -231,8 +228,8 @@
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+                </div>
+              </div>
 
         <!-- Pagination -->
         <div class="mt-6 flex justify-center">
@@ -278,8 +275,8 @@
                 </button>
               </div>
             </div>
+                </div>
               </div>
-            </div>
 
         <!-- Quick Actions -->
         <div class="bg-white rounded-lg shadow-md p-6">
@@ -320,8 +317,8 @@
               <span class="mr-2">🏢</span>
               Company Networks
             </button>
-                </div>
               </div>
+            </div>
 
         <!-- Recent Activity -->
         <div class="bg-white rounded-lg shadow-md p-6">
@@ -339,8 +336,8 @@
               <p class="text-gray-700">Mike Johnson became a mentor</p>
               <p class="text-gray-500 text-xs">3 days ago</p>
             </div>
-          </div>
-        </div>
+                </div>
+              </div>
               </div>
             </div>
 
@@ -354,12 +351,12 @@
               <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mr-4">
                 {{ selectedAlumni.first_name[0] }}{{ selectedAlumni.last_name[0] }}
               </div>
-              <div>
+                <div>
                 <h2 class="text-2xl font-bold text-gray-900">{{ selectedAlumni.full_name }}</h2>
                 <p class="text-gray-600">{{ selectedAlumni.program }} {{ selectedAlumni.batch }}</p>
                 <p class="text-gray-500">{{ selectedAlumni.headline || 'Alumni' }}</p>
+                </div>
               </div>
-            </div>
             <button @click="showProfileModal = false" class="text-gray-400 hover:text-gray-600">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -400,9 +397,9 @@
                     <div class="border border-gray-200 rounded-lg p-4">
                       <h4 class="font-medium text-gray-900">LCBA (La Consolacion College Bacolod)</h4>
                       <p class="text-sm text-gray-600">{{ selectedAlumni.program }} • {{ selectedAlumni.batch }}</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
                 <div>
                   <h3 class="text-lg font-semibold text-gray-900 mb-4">Skills</h3>
@@ -423,9 +420,9 @@
                     <span v-if="selectedAlumni.is_hiring" class="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">📢 Hiring</span>
                     <span v-if="selectedAlumni.is_open_to_work" class="bg-orange-100 text-orange-800 text-sm px-3 py-1 rounded-full">💼 Open to Work</span>
                   </div>
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+      </div>
 
             <!-- Experience Tab -->
             <div v-if="activeProfileTab === 'experience'">
@@ -437,8 +434,8 @@
                   <p class="text-sm text-gray-500">2020 - Present</p>
                   <p class="text-gray-700 mt-2">Description of current role and responsibilities...</p>
                 </div>
+                </div>
               </div>
-            </div>
 
             <!-- Posts Tab -->
             <div v-if="activeProfileTab === 'posts'">
@@ -451,10 +448,10 @@
                 <div class="border border-gray-200 rounded-lg p-4">
                   <p class="text-gray-700">Attended the Alumni Meetup 2024</p>
                   <p class="text-sm text-gray-500">1 week ago</p>
-                </div>
               </div>
             </div>
-          </div>
+                </div>
+              </div>
 
           <!-- Action Buttons -->
           <div class="flex justify-end space-x-4">
@@ -467,15 +464,16 @@
             <button @click="requestMentorship(selectedAlumni)" class="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
               Request Mentorship
             </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import axios from '../config/api'
 
 // Reactive data
 const searchQuery = ref('')
@@ -488,95 +486,48 @@ const viewMode = ref('grid')
 const showProfileModal = ref(false)
 const selectedAlumni = ref({})
 const activeProfileTab = ref('about')
+const loading = ref(false)
 
-// Sample data - replace with API calls
-const alumni = ref([
-  {
-    id: 1,
-    first_name: 'John',
-    last_name: 'Doe',
-    full_name: 'John Doe',
-    program: 'BSCS',
-    batch: '2020',
-    headline: 'Software Engineer at Google',
-    company: 'Google',
-    location: 'San Francisco, CA',
-    bio: 'Passionate about technology and helping others grow in their careers. Experienced in full-stack development.',
-    skills: ['JavaScript', 'React', 'Node.js', 'Python', 'AWS'],
-    is_verified: true,
-    is_mentor: true,
-    is_hiring: false,
-    is_open_to_work: false
-  },
-  {
-    id: 2,
-    first_name: 'Jane',
-    last_name: 'Smith',
-    full_name: 'Jane Smith',
-    program: 'BSCpE',
-    batch: '2019',
-    headline: 'Senior Developer at Microsoft',
-    company: 'Microsoft',
-    location: 'Seattle, WA',
-    bio: 'Experienced mentor and tech enthusiast. Love working with emerging technologies.',
-    skills: ['Python', 'Django', 'AWS', 'Machine Learning', 'Docker'],
-    is_verified: true,
-    is_mentor: false,
-    is_hiring: true,
-    is_open_to_work: false
-  },
-  {
-    id: 3,
-    first_name: 'Mike',
-    last_name: 'Johnson',
-    full_name: 'Mike Johnson',
-    program: 'BSIT',
-    batch: '2021',
-    headline: 'Product Manager at Amazon',
-    company: 'Amazon',
-    location: 'New York, NY',
-    bio: 'Building products that matter. Focused on user experience and business growth.',
-    skills: ['Product Management', 'Analytics', 'Leadership', 'Agile', 'User Research'],
-    is_verified: true,
-    is_mentor: true,
-    is_hiring: false,
-    is_open_to_work: false
-  },
-  {
-    id: 4,
-    first_name: 'Alice',
-    last_name: 'Lee',
-    full_name: 'Alice Lee',
-    program: 'BSCS',
-    batch: '2022',
-    headline: 'UX Designer at Spotify',
-    company: 'Spotify',
-    location: 'Stockholm, Sweden',
-    bio: 'Creative designer passionate about creating intuitive user experiences.',
-    skills: ['UI/UX Design', 'Figma', 'User Research', 'Prototyping', 'Design Systems'],
-    is_verified: true,
-    is_mentor: false,
-    is_hiring: false,
-    is_open_to_work: true
-  },
-  {
-    id: 5,
-    first_name: 'Bob',
-    last_name: 'Wilson',
-    full_name: 'Bob Wilson',
-    program: 'BSCpE',
-    batch: '2018',
-    headline: 'Data Scientist at Netflix',
-    company: 'Netflix',
-    location: 'Los Gatos, CA',
-    bio: 'Data-driven professional with expertise in machine learning and analytics.',
-    skills: ['Python', 'R', 'Machine Learning', 'SQL', 'Statistics'],
-    is_verified: true,
-    is_mentor: true,
-    is_hiring: false,
-    is_open_to_work: false
+// Fetch alumni from API
+const alumni = ref([])
+
+const fetchAlumni = async () => {
+  loading.value = true
+  try {
+    const params = {
+      search: searchQuery.value || undefined,
+      program: selectedProgram.value || undefined,
+      batch: selectedBatch.value || undefined,
+      role: 'alumni',
+    }
+    
+    const response = await axios.get('/api/users', { params })
+    if (response.data.success) {
+      // Format the data for the view
+      alumni.value = response.data.data.map(user => ({
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        full_name: `${user.first_name} ${user.last_name}`,
+        program: user.program,
+        batch: user.batch,
+        headline: user.headline,
+        company: user.current_job_title,
+        bio: user.bio,
+        skills: user.skills || [],
+        is_verified: true,
+        is_mentor: user.role === 'mentor',
+        is_hiring: false,
+        is_open_to_work: !user.current_job_title
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching alumni:', error)
+    alumni.value = []
+  } finally {
+    loading.value = false
   }
-])
+}
 
 const suggestedConnections = ref([
   {
@@ -705,6 +656,11 @@ const viewCompanyNetworks = () => {
 }
 
 onMounted(() => {
-  // Load initial data
+  fetchAlumni()
+})
+
+// Watch for filter changes and refetch
+watch([searchQuery, selectedProgram, selectedBatch], () => {
+  fetchAlumni()
 })
 </script>

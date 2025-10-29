@@ -10,6 +10,8 @@ class Message extends Model
 {
     use HasFactory;
 
+    public $timestamps = false;
+
     protected $fillable = [
         'sender_id',
         'receiver_id',

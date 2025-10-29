@@ -49,9 +49,46 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/match-score/{jobId}', [App\Http\Controllers\JobRecommendationController::class, 'getJobMatchScore']);
     });
     
-    // Add other protected routes here as needed
-    // Route::apiResource('jobs', JobController::class);
-    // Route::apiResource('events', EventController::class);
-    // etc.
+    // User routes
+    Route::get('/users', [App\Http\Controllers\UserController::class, 'index']);
+    Route::get('/users/{id}', [App\Http\Controllers\UserController::class, 'show']);
+    Route::put('/users/{id}', [App\Http\Controllers\UserController::class, 'update']);
+    
+    // Job routes
+    Route::get('/job-posts', [App\Http\Controllers\JobPostController::class, 'index']);
+    Route::get('/job-posts/{id}', [App\Http\Controllers\JobPostController::class, 'show']);
+    Route::post('/job-posts', [App\Http\Controllers\JobPostController::class, 'store']);
+    
+    // Message routes
+    Route::get('/messages', [App\Http\Controllers\MessageController::class, 'index']);
+    Route::get('/messages/conversation/{userId}', [App\Http\Controllers\MessageController::class, 'getConversation']);
+    Route::post('/messages', [App\Http\Controllers\MessageController::class, 'store']);
+    
+    // Post routes (social posts)
+    Route::get('/posts', [App\Http\Controllers\PostController::class, 'index']);
+    Route::post('/posts', [App\Http\Controllers\PostController::class, 'store']);
+    Route::post('/posts/{id}/like', [App\Http\Controllers\PostController::class, 'toggleLike']);
+    Route::post('/posts/{id}/comment', [App\Http\Controllers\PostController::class, 'addComment']);
+    
+    // Event routes
+    Route::get('/events', [App\Http\Controllers\EventController::class, 'index']);
+    Route::get('/events/{id}', [App\Http\Controllers\EventController::class, 'show']);
+    Route::post('/events', [App\Http\Controllers\EventController::class, 'store']);
+    Route::post('/events/{id}/rsvp', [App\Http\Controllers\EventController::class, 'rsvp']);
+    
+    // Mentorship routes
+    Route::get('/mentorships', [App\Http\Controllers\MentorshipController::class, 'index']);
+    Route::post('/mentorships', [App\Http\Controllers\MentorshipController::class, 'store']);
+    Route::put('/mentorships/{id}', [App\Http\Controllers\MentorshipController::class, 'update']);
+    
+    // Applications
+    Route::post('/applications', [App\Http\Controllers\ApplicationController::class, 'store']);
+
+    // Community routes
+    Route::get('/communities', [App\Http\Controllers\CommunityController::class, 'index']);
+    Route::get('/communities/{id}', [App\Http\Controllers\CommunityController::class, 'show']);
+    Route::post('/communities', [App\Http\Controllers\CommunityController::class, 'store']);
+    Route::post('/communities/{id}/join', [App\Http\Controllers\CommunityController::class, 'join']);
+    Route::post('/communities/{id}/leave', [App\Http\Controllers\CommunityController::class, 'leave']);
 });
 

@@ -33,7 +33,7 @@ const router = createRouter({
 		
 		// Admin only routes
 		{ path: '/alumni-management', name: 'alumni-management', component: AlumniManagementView, meta: { requiresAuth: true, requiresRole: 'admin' } },
-		{ path: '/analytics', name: 'analytics', component: AnalyticsView, meta: { requiresAuth: true, requiresRole: 'admin' } },
+		{ path: '/analytics', name: 'analytics', component: AnalyticsView, meta: { requiresAuth: true } },
 	],
 })
 

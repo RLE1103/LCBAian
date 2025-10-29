@@ -77,7 +77,7 @@
           >
             <div class="relative">
               <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                {{ conversation.user.first_name[0] }}{{ conversation.user.last_name[0] }}
+                {{ conversation.other_user?.first_name?.[0] }}{{ conversation.other_user?.last_name?.[0] }}
               </div>
               <div v-if="conversation.unread_count > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {{ conversation.unread_count }}
@@ -87,7 +87,7 @@
             <div class="ml-3 flex-1 min-w-0">
               <div class="flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-gray-900 truncate">
-                  {{ conversation.user.full_name }}
+                  {{ conversation.other_user?.first_name }} {{ conversation.other_user?.last_name }}
                 </h3>
                 <span class="text-xs text-gray-500">
                   {{ formatTime(conversation.last_message?.sent_at) }}
@@ -120,11 +120,11 @@
               <div class="flex items-center justify-between">
             <div class="flex items-center">
               <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
-                {{ selectedConversation.user.first_name[0] }}{{ selectedConversation.user.last_name[0] }}
+                {{ selectedConversation.other_user?.first_name?.[0] }}{{ selectedConversation.other_user?.last_name?.[0] }}
               </div>
               <div>
-                <h3 class="font-semibold text-gray-900">{{ selectedConversation.user.full_name }}</h3>
-                <p class="text-sm text-gray-500">{{ selectedConversation.user.headline || 'Alumni' }}</p>
+                <h3 class="font-semibold text-gray-900">{{ selectedConversation.other_user?.first_name }} {{ selectedConversation.other_user?.last_name }}</h3>
+                <p class="text-sm text-gray-500">Alumni</p>
               </div>
             </div>
             
@@ -220,11 +220,11 @@
       <!-- Profile Card -->
       <div class="text-center mb-6">
         <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-3">
-          {{ selectedConversation.user.first_name[0] }}{{ selectedConversation.user.last_name[0] }}
+          {{ selectedConversation.other_user?.first_name?.[0] }}{{ selectedConversation.other_user?.last_name?.[0] }}
         </div>
-        <h3 class="font-semibold text-gray-900">{{ selectedConversation.user.full_name }}</h3>
-        <p class="text-sm text-gray-500">{{ selectedConversation.user.headline || 'Alumni' }}</p>
-        <p class="text-sm text-gray-500">{{ selectedConversation.user.bio || 'No bio available' }}</p>
+        <h3 class="font-semibold text-gray-900">{{ selectedConversation.other_user?.first_name }} {{ selectedConversation.other_user?.last_name }}</h3>
+        <p class="text-sm text-gray-500">Alumni</p>
+        <p class="text-sm text-gray-500">No bio available</p>
       </div>
 
       <!-- Quick Actions -->
@@ -321,7 +321,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import axios from '../config/api'
+import { useAuthStore } from '../stores/auth'
+
+const authStore = useAuthStore()
+
+// Current user ID
+const currentUserId = computed(() => authStore.user?.id)
 
 // Reactive data
 const searchQuery = ref('')
@@ -333,68 +340,57 @@ const isTyping = ref(false)
 const showNewMessageModal = ref(false)
 const newMessageRecipient = ref('')
 const newMessageContent = ref('')
-const currentUserId = ref(1) // This would come from auth
+const loading = ref(false)
 
-// Sample data - replace with API calls
-const conversations = ref([
-  {
-    id: 1,
-    user: {
-      id: 2,
-      first_name: 'John',
-      last_name: 'Doe',
-      full_name: 'John Doe',
-      headline: 'Software Engineer at Google',
-      bio: 'Passionate about technology and helping others grow in their careers.'
-    },
-    last_message: {
-      id: 1,
-      content: 'Hey! How\'s the job search going?',
-      sent_at: new Date(Date.now() - 2 * 60 * 1000) // 2 minutes ago
-    },
-    unread_count: 2
-  },
-  {
-    id: 2,
-    user: {
-      id: 3,
-      first_name: 'Jane',
-      last_name: 'Smith',
-      full_name: 'Jane Smith',
-      headline: 'Senior Developer at Microsoft',
-      bio: 'Experienced mentor and tech enthusiast.'
-    },
-    last_message: {
-      id: 2,
-      content: 'Thanks for the mentorship session!',
-      sent_at: new Date(Date.now() - 60 * 60 * 1000) // 1 hour ago
-    },
-    unread_count: 0
-  },
-  {
-    id: 3,
-    user: {
-      id: 4,
-      first_name: 'Mike',
-      last_name: 'Johnson',
-      full_name: 'Mike Johnson',
-      headline: 'Product Manager at Amazon',
-      bio: 'Building products that matter.'
-    },
-    last_message: {
-      id: 3,
-      content: 'Let\'s connect for the upcoming event!',
-      sent_at: new Date(Date.now() - 3 * 60 * 60 * 1000) // 3 hours ago
-    },
-    unread_count: 1
+// Fetch conversations from API
+const conversations = ref([])
+
+// Helper function to sort messages chronologically
+const sortMessages = (messages) => {
+  return [...messages].sort((a, b) => {
+    const dateA = new Date(a.sent_at)
+    const dateB = new Date(b.sent_at)
+    // If dates are equal (same time), sort by ID as fallback
+    if (dateA.getTime() === dateB.getTime()) {
+      return a.id - b.id
+    }
+    return dateA - dateB
+  })
+}
+
+const fetchConversations = async () => {
+  loading.value = true
+  try {
+    const response = await axios.get('/api/messages')
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      conversations.value = response.data.data
+    } else {
+      conversations.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching conversations:', error)
+    conversations.value = []
+  } finally {
+    loading.value = false
   }
-])
+}
 
-const availableUsers = ref([
-  { id: 5, first_name: 'Alice', last_name: 'Brown', full_name: 'Alice Brown', headline: 'UX Designer' },
-  { id: 6, first_name: 'Bob', last_name: 'Wilson', full_name: 'Bob Wilson', headline: 'Data Scientist' },
-  { id: 7, first_name: 'Carol', last_name: 'Davis', full_name: 'Carol Davis', headline: 'Marketing Manager' }
-])
+const loadMessages = async (otherUserId) => {
+  try {
+    const response = await axios.get(`/api/messages/conversation/${otherUserId}`)
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      // Sort messages by sent_at to ensure correct chronological order
+      conversationMessages.value = sortMessages(response.data.data)
+    } else {
+      conversationMessages.value = []
+    }
+  } catch (error) {
+    console.error('Error loading messages:', error)
+    conversationMessages.value = []
+  }
+}
+
+const availableUsers = ref([])
 
 // Computed properties
 const messageFilters = computed(() => [
@@ -410,8 +406,9 @@ const filteredConversations = computed(() => {
   // Apply search filter
   if (searchQuery.value) {
     filtered = filtered.filter(conv => 
-      conv.user.full_name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      conv.last_message?.content.toLowerCase().includes(searchQuery.value.toLowerCase())
+      conv.other_user?.first_name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      conv.other_user?.last_name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      conv.last_message?.content?.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
   }
 
@@ -435,90 +432,59 @@ const filteredConversations = computed(() => {
 const selectConversation = (conversation) => {
   selectedConversation.value = conversation
   // Load messages for this conversation
-  loadMessages(conversation.id)
+  loadMessages(conversation.other_user.id)
 }
 
-const loadMessages = (conversationId) => {
-  // Sample messages - replace with API call
-  conversationMessages.value = [
-    {
-      id: 1,
-      sender_id: 2,
-      receiver_id: 1,
-      content: 'Hey! How\'s the job search going?',
-      sent_at: new Date(Date.now() - 2 * 60 * 1000),
-      is_read: false
-    },
-    {
-      id: 2,
-      sender_id: 1,
-      receiver_id: 2,
-      content: 'It\'s going well! I have a few interviews lined up.',
-      sent_at: new Date(Date.now() - 1 * 60 * 1000),
-      is_read: true
-    },
-    {
-      id: 3,
-      sender_id: 2,
-      receiver_id: 1,
-      content: 'That\'s great! Let me know if you need any preparation tips.',
-      sent_at: new Date(Date.now() - 30 * 1000),
-      is_read: false
-    }
-  ]
-}
-
-const sendMessage = () => {
+const sendMessage = async () => {
   if (!newMessage.value.trim() || !selectedConversation.value) return
 
-  const message = {
-    id: Date.now(),
-    sender_id: currentUserId.value,
-    receiver_id: selectedConversation.value.user.id,
-    content: newMessage.value,
-    sent_at: new Date(),
-    is_read: false
+  try {
+    const response = await axios.post('/api/messages', {
+      receiver_id: selectedConversation.value.other_user.id,
+      content: newMessage.value
+    })
+    
+    if (response.data.success) {
+      // Add message to conversation
+      conversationMessages.value.push(response.data.data)
+      
+      // Sort messages by sent_at to maintain chronological order
+      conversationMessages.value = sortMessages(conversationMessages.value)
+      
+      // Update last message in conversation
+      selectedConversation.value.last_message = {
+        content: newMessage.value,
+        sent_at: new Date(),
+        is_read: false
+      }
+      
+      newMessage.value = ''
+    }
+  } catch (error) {
+    console.error('Error sending message:', error)
   }
-
-  conversationMessages.value.push(message)
-  
-  // Update last message in conversation
-  selectedConversation.value.last_message = message
-  
-  newMessage.value = ''
-  
-  // Simulate typing indicator
-  isTyping.value = true
-  setTimeout(() => {
-    isTyping.value = false
-  }, 1000)
 }
 
-const sendNewMessage = () => {
+const sendNewMessage = async () => {
   if (!newMessageRecipient.value || !newMessageContent.value.trim()) return
 
-  // Create new conversation
-  const recipient = availableUsers.value.find(u => u.id === newMessageRecipient.value)
-  const newConversation = {
-    id: Date.now(),
-    user: recipient,
-    last_message: {
-      id: Date.now(),
-      content: newMessageContent.value,
-      sent_at: new Date()
-    },
-    unread_count: 0
+  try {
+    const response = await axios.post('/api/messages', {
+      receiver_id: newMessageRecipient.value,
+      content: newMessageContent.value
+    })
+    
+    if (response.data.success) {
+      showNewMessageModal.value = false
+      newMessageRecipient.value = ''
+      newMessageContent.value = ''
+      
+      // Refresh conversations
+      await fetchConversations()
+    }
+  } catch (error) {
+    console.error('Error sending new message:', error)
   }
-
-  conversations.value.unshift(newConversation)
-  
-  // Select the new conversation
-  selectConversation(newConversation)
-  
-  // Reset modal
-  showNewMessageModal.value = false
-  newMessageRecipient.value = ''
-  newMessageContent.value = ''
 }
 
 const formatTime = (date) => {
@@ -539,6 +505,6 @@ const formatTime = (date) => {
 }
 
 onMounted(() => {
-  // Load initial data
+  fetchConversations()
 })
 </script>

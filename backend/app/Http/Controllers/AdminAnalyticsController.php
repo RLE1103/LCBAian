@@ -126,15 +126,16 @@ class AdminAnalyticsController extends Controller
     {
         try {
             $totalUsers = \App\Models\User::where('role', 'alumni')->count();
-            $totalJobs = \App\Models\JobPost::where('is_active', true)->count();
+            $totalJobs = \App\Models\JobPost::count();
             $totalApplications = \App\Models\Application::count();
             
             // Get cluster analytics
             $clusterAnalytics = $this->clusteringService->getClusterAnalytics();
             
-            // Get skill trends
-            $trendingSkills = \App\Models\JobPost::where('is_active', true)
-                ->pluck('required_skills')
+            // Get skill trends - get skills from all users
+            $trendingSkills = \App\Models\User::where('role', 'alumni')
+                ->whereNotNull('skills')
+                ->pluck('skills')
                 ->filter()
                 ->flatten()
                 ->countBy()

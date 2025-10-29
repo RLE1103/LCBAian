@@ -7,7 +7,7 @@
         <p class="text-gray-600 mt-1">Manage alumni verification, reports, and analytics</p>
       </div>
       <div class="flex items-center space-x-4">
-        <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
+        <button @click="exportDirectoryCsv" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
           Export Data
         </button>
         <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
@@ -179,9 +179,9 @@
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-lg font-semibold text-gray-900">User Directory</h2>
           <div class="flex items-center space-x-4">
-            <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
+            <button @click="exportDirectoryCsv" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
               Export CSV
-      </button>
+            </button>
             <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
               Add User
       </button>
@@ -478,66 +478,69 @@
               </button>
             </div>
           </div>
-
-          <!-- Send Invitations -->
-          <div class="border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Send Invitations</h3>
-            <p class="text-gray-600 mb-4">Send email invitations to alumni to join the platform.</p>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Email List</label>
-                <textarea 
-                  rows="4"
-                  placeholder="Enter email addresses separated by commas..."
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                ></textarea>
-              </div>
-              <button class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700">
-                Send Invitations
-              </button>
-            </div>
-          </div>
-
-          <!-- Export Directory -->
-          <div class="border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Export Directory</h3>
-            <p class="text-gray-600 mb-4">Export the alumni directory for backups or printing.</p>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Export Format</label>
-                <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="csv">CSV</option>
-                  <option value="pdf">PDF</option>
-                  <option value="excel">Excel</option>
-                </select>
-              </div>
-              <button class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700">
-                Export Directory
-              </button>
-            </div>
-          </div>
-
-          <!-- System Backup -->
-          <div class="border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">System Backup</h3>
-            <p class="text-gray-600 mb-4">Create a complete backup of the system data.</p>
-            <div class="space-y-4">
-              <div class="text-sm text-gray-500">
-                Last backup: Never
-              </div>
-              <button class="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700">
-                Create Backup
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   </div>
+
+<!-- Edit User Modal -->
+<div v-if="showEditModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-lg w-full max-w-xl border-4 border-gray-300 shadow-2xl">
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">Edit User</h3>
+        <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+          <input v-model="editUserForm.first_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+          <input v-model="editUserForm.last_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+          <input v-model="editUserForm.email" type="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
+          <input v-model="editUserForm.program" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Batch</label>
+          <input v-model="editUserForm.batch" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Headline</label>
+          <input v-model="editUserForm.headline" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Industry</label>
+          <input v-model="editUserForm.industry" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Experience Level</label>
+          <input v-model="editUserForm.experience_level" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+      </div>
+      <div class="flex justify-end space-x-2 mt-6">
+        <button @click="showEditModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+        <button @click="saveUserEdits" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+      </div>
+    </div>
+  </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import axios from '../config/api'
 
 // Reactive data
 const activeTab = ref('verification')
@@ -550,7 +553,7 @@ const directoryStatus = ref('')
 const selectAll = ref(false)
 const selectedRequests = ref([])
 
-// Sample data - replace with API calls
+// Verification queue placeholder (no backend yet)
 const verificationRequests = ref([
   {
     id: 1,
@@ -590,44 +593,7 @@ const verificationRequests = ref([
   }
 ])
 
-const directoryUsers = ref([
-  {
-    id: 1,
-    first_name: 'John',
-    last_name: 'Doe',
-    full_name: 'John Doe',
-    email: 'john.doe@example.com',
-    role: 'alumni',
-    program: 'BSCS',
-    batch: '2020',
-    headline: 'Software Engineer at Google',
-    status: 'active'
-  },
-  {
-    id: 2,
-    first_name: 'Jane',
-    last_name: 'Smith',
-    full_name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    role: 'mentor',
-    program: 'BSCpE',
-    batch: '2019',
-    headline: 'Senior Developer at Microsoft',
-    status: 'active'
-  },
-  {
-    id: 3,
-    first_name: 'Admin',
-    last_name: 'User',
-    full_name: 'Admin User',
-    email: 'admin@lcbaian.com',
-    role: 'admin',
-    program: 'BSCS',
-    batch: '2018',
-    headline: 'System Administrator',
-    status: 'active'
-  }
-])
+const directoryUsers = ref([])
 
 const reports = ref([
   {
@@ -653,13 +619,13 @@ const reports = ref([
   }
 ])
 
-const tabs = [
-  { key: 'verification', label: 'Verification Queue', count: verificationRequests.value.filter(r => r.status === 'pending').length },
-  { key: 'directory', label: 'User Directory', count: directoryUsers.value.length },
-  { key: 'reports', label: 'Reports & Moderation', count: reports.value.filter(r => r.status === 'pending').length },
+const tabs = ref([
+  { key: 'verification', label: 'Verification Queue', count: 0 },
+  { key: 'directory', label: 'User Directory', count: 0 },
+  { key: 'reports', label: 'Reports & Moderation', count: 0 },
   { key: 'analytics', label: 'Analytics', count: null },
   { key: 'tools', label: 'Data Tools', count: null }
-]
+])
 
 // Computed properties
 const filteredVerificationRequests = computed(() => {
@@ -766,8 +732,38 @@ const viewDetails = (request) => {
   console.log('View details for:', request.full_name)
 }
 
+// Edit user modal
+const showEditModal = ref(false)
+const editUserForm = ref({ id: null, first_name: '', last_name: '', email: '', program: '', batch: '', headline: '', industry: '', experience_level: '' })
 const editUser = (user) => {
-  console.log('Edit user:', user.full_name)
+  editUserForm.value = {
+    id: user.id,
+    first_name: user.first_name || '',
+    last_name: user.last_name || '',
+    email: user.email || '',
+    program: user.program || '',
+    batch: user.batch || '',
+    headline: user.headline || '',
+    industry: user.industry || '',
+    experience_level: user.experience_level || ''
+  }
+  showEditModal.value = true
+}
+const saveUserEdits = async () => {
+  try {
+    const { id, ...payload } = editUserForm.value
+    const response = await axios.put(`/api/users/${id}`, payload)
+    if (response?.data?.success) {
+      // update local row
+      const idx = directoryUsers.value.findIndex(u => u.id === id)
+      if (idx !== -1) {
+        directoryUsers.value[idx] = { ...directoryUsers.value[idx], ...payload }
+      }
+      showEditModal.value = false
+    }
+  } catch (e) {
+    console.error('Error updating user:', e)
+  }
 }
 
 const resetPassword = (user) => {
@@ -797,7 +793,73 @@ const warnUser = (report) => {
   console.log('Warn user for report:', report.id)
 }
 
+// Fetch users from backend
+const fetchUsers = async () => {
+  try {
+    const params = {
+      role: directoryRole.value || undefined,
+      search: directorySearch.value || undefined
+    }
+    const response = await axios.get('/api/users', { params })
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      directoryUsers.value = response.data.data.map(u => ({
+        id: u.id,
+        first_name: u.first_name,
+        last_name: u.last_name,
+        full_name: `${u.first_name} ${u.last_name}`,
+        email: u.email,
+        role: u.role,
+        program: u.program,
+        batch: u.batch,
+        headline: u.headline,
+        industry: u.industry,
+        experience_level: u.experience_level,
+        status: 'active'
+      }))
+      // update tab counts
+      tabs.value = [
+        { key: 'verification', label: 'Verification Queue', count: verificationRequests.value.filter(r => r.status === 'pending').length },
+        { key: 'directory', label: 'User Directory', count: directoryUsers.value.length },
+        { key: 'reports', label: 'Reports & Moderation', count: reports.value.filter(r => r.status === 'pending').length },
+        { key: 'analytics', label: 'Analytics', count: null },
+        { key: 'tools', label: 'Data Tools', count: null }
+      ]
+    } else {
+      directoryUsers.value = []
+    }
+  } catch (e) {
+    console.error('Error fetching users:', e)
+    directoryUsers.value = []
+  }
+}
+
+// Export CSV for filtered directory
+const exportDirectoryCsv = () => {
+  const rows = filteredDirectoryUsers.value
+  if (rows.length === 0) return
+  const headers = ['id','first_name','last_name','email','role','program','batch','headline','industry','experience_level']
+  const csv = [headers.join(',')]
+  rows.forEach(r => {
+    const vals = headers.map(h => {
+      const val = (r[h] ?? '').toString().replace(/"/g,'""')
+      return `"${val}` + `"`
+    })
+    csv.push(vals.join(','))
+  })
+  const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'alumni_directory.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 onMounted(() => {
-  // Load initial data
+  fetchUsers()
+})
+
+watch([directoryRole, directorySearch], () => {
+  fetchUsers()
 })
 </script>

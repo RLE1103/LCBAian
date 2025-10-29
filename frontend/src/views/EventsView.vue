@@ -524,7 +524,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import axios from '../config/api'
 
 // Reactive data
 const searchQuery = ref('')
@@ -536,6 +537,7 @@ const showEventModal = ref(false)
 const showCreateModal = ref(false)
 const selectedEvent = ref(null)
 const currentDate = ref(new Date())
+const loading = ref(false)
 
 const newEvent = ref({
   title: '',
@@ -546,107 +548,54 @@ const newEvent = ref({
   type: 'webinar'
 })
 
-// Sample data - replace with API calls
-const events = ref([
-  {
-    id: 1,
-    title: 'DECS General Assembly 2025',
-    description: 'Annual general assembly for the Department of Computer Science alumni. Join us for updates, networking, and planning for the upcoming year.',
-    start_date: new Date('2025-11-15T08:00:00'),
-    end_date: new Date('2025-11-15T17:00:00'),
-    location: 'LCBA MPH',
-    type: 'reunion',
-    creator: {
-      id: 1,
-      first_name: 'Yanet',
-      last_name: 'Mekuriya',
-      full_name: 'Yanet Mekuriya'
-    },
-    attendees_count: 45,
-    interested_count: 23,
-    user_rsvp: null,
-    created_at: new Date(Date.now() - 5 * 60 * 1000),
-    attendees: [
-      { id: 1, first_name: 'John', last_name: 'Doe', full_name: 'John Doe' },
-      { id: 2, first_name: 'Jane', last_name: 'Smith', full_name: 'Jane Smith' },
-      { id: 3, first_name: 'Mike', last_name: 'Johnson', full_name: 'Mike Johnson' },
-      { id: 4, first_name: 'Alice', last_name: 'Lee', full_name: 'Alice Lee' }
-    ]
-  },
-  {
-    id: 2,
-    title: 'Career Development Seminar',
-    description: 'Learn about career advancement strategies, networking tips, and industry trends from successful alumni.',
-    start_date: new Date('2025-09-05T08:00:00'),
-    end_date: new Date('2025-09-05T17:00:00'),
-    location: 'LCBA MPH',
-    type: 'seminar',
-    creator: {
-      id: 2,
-      first_name: 'Lorem',
-      last_name: 'Ipsum',
-      full_name: 'Lorem Ipsum'
-    },
-    attendees_count: 32,
-    interested_count: 18,
-    user_rsvp: 'interested',
-    created_at: new Date(Date.now() - 10 * 60 * 1000),
-    attendees: [
-      { id: 1, first_name: 'John', last_name: 'Doe', full_name: 'John Doe' },
-      { id: 2, first_name: 'Jane', last_name: 'Smith', full_name: 'Jane Smith' }
-    ]
-  },
-  {
-    id: 3,
-    title: 'Cybersecurity Awareness Seminar',
-    description: 'Understanding modern cybersecurity threats and best practices for personal and professional security.',
-    start_date: new Date('2025-09-25T08:00:00'),
-    end_date: new Date('2025-09-25T12:00:00'),
-    location: 'Zoom',
-    type: 'webinar',
-    creator: {
-      id: 3,
-      first_name: 'Lorem',
-      last_name: 'Ipsum',
-      full_name: 'Lorem Ipsum'
-    },
-    attendees_count: 28,
-    interested_count: 15,
-    user_rsvp: 'going',
-    created_at: new Date(Date.now() - 20 * 60 * 1000),
-    attendees: [
-      { id: 1, first_name: 'John', last_name: 'Doe', full_name: 'John Doe' },
-      { id: 2, first_name: 'Jane', last_name: 'Smith', full_name: 'Jane Smith' },
-      { id: 3, first_name: 'Mike', last_name: 'Johnson', full_name: 'Mike Johnson' }
-    ]
-  }
-])
+// Fetch events from API
+const events = ref([])
 
-const userRsvpEvents = ref([
-  {
-    id: 4,
-    title: 'LCBA Job Fair',
-    start_date: new Date('2025-12-15T08:00:00'),
-    user_rsvp: 'going'
+const fetchEvents = async () => {
+  loading.value = true
+  try {
+    const params = {
+      search: searchQuery.value || undefined,
+      upcoming: selectedDateRange.value === 'upcoming' ? true : undefined
+    }
+    
+    const response = await axios.get('/api/events', { params })
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      events.value = response.data.data
+    } else {
+      events.value = []
+    }
+  } catch (error) {
+    console.error('Error fetching events:', error)
+    events.value = []
+  } finally {
+    loading.value = false
   }
-])
+}
 
-const featuredEvents = ref([
-  {
-    id: 5,
-    title: 'Calamba Job Fair',
-    start_date: new Date('2025-10-15T08:00:00'),
-    location: 'Calamba City Hall'
+const createEvent = async () => {
+  try {
+    const response = await axios.post('/api/events', newEvent.value)
+    if (response.data.success) {
+      showCreateModal.value = false
+      newEvent.value = {
+        title: '',
+        description: '',
+        start_date: '',
+        end_date: '',
+        location: '',
+        type: 'webinar'
+      }
+      await fetchEvents()
+    }
+  } catch (error) {
+    console.error('Error creating event:', error)
   }
-])
+}
 
-const pastEvents = ref([
-  {
-    id: 6,
-    title: 'Generative AI Seminar',
-    start_date: new Date('2024-12-15T08:00:00')
-  }
-])
+const userRsvpEvents = ref([])
+const featuredEvents = ref([])
+const pastEvents = ref([])
 
 // Computed properties
 const filteredEvents = computed(() => {
@@ -764,53 +713,18 @@ const viewEvent = (event) => {
   showEventModal.value = true
 }
 
-const rsvpEvent = (event, rsvp) => {
+const rsvpEvent = async (event, rsvp) => {
   if (!event) return
-  
-  event.user_rsvp = rsvp
-  
-  // Update counts
-  if (rsvp === 'going') {
-    event.attendees_count += 1
-  } else if (rsvp === 'interested') {
-    event.interested_count += 1
-  }
-  
-  console.log(`RSVP ${rsvp} for event:`, event.title)
-}
-
-const createEvent = () => {
-  if (!newEvent.value.title.trim()) return
-
-  const event = {
-    id: Date.now(),
-    ...newEvent.value,
-    start_date: new Date(newEvent.value.start_date),
-    end_date: new Date(newEvent.value.end_date),
-    creator: {
-      id: 1,
-      first_name: 'Current',
-      last_name: 'User',
-      full_name: 'Current User'
-    },
-    attendees_count: 0,
-    interested_count: 0,
-    user_rsvp: null,
-    created_at: new Date(),
-    attendees: []
-  }
-
-  events.value.unshift(event)
-  
-  // Reset form
-  showCreateModal.value = false
-  newEvent.value = {
-    title: '',
-    description: '',
-    start_date: '',
-    end_date: '',
-    location: '',
-    type: 'webinar'
+  try {
+    await axios.post(`/api/events/${event.id}/rsvp`, { status: rsvp })
+    event.user_rsvp = rsvp
+    if (rsvp === 'going') {
+      event.attendees_count += 1
+    } else if (rsvp === 'interested') {
+      event.interested_count += 1
+    }
+  } catch (error) {
+    console.error('Error RSVP:', error)
   }
 }
 
@@ -827,7 +741,12 @@ const nextMonth = () => {
 }
 
 onMounted(() => {
-  // Load initial data
+  fetchEvents()
+})
+
+// Watch for filter changes and refetch
+watch([searchQuery, selectedEventType, selectedLocation, selectedDateRange], () => {
+  fetchEvents()
 })
 </script>
 
@@ -837,5 +756,6 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-clamp: 2;
 }
 </style>

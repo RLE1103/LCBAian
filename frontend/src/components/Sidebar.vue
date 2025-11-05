@@ -22,16 +22,15 @@
           <li class="mt-4 text-xs text-blue-300 px-4">Features</li>
           <li><RouterLink to="/" :class="linkClasses('/')"><span>🏠</span>Dashboard</RouterLink></li>
           <li><RouterLink to="/messages" :class="linkClasses('/messages', 'relative')"><span>✉️</span>Messages <span v-if="unreadCount > 0" class="ml-auto text-xs bg-red-500 text-white rounded-full px-2 absolute right-4">{{ unreadCount }}</span></RouterLink></li>
+          <li><RouterLink to="/profile" :class="linkClasses('/profile')"><span>👤</span>Profile</RouterLink></li>
           <li class="mt-4 text-xs text-blue-300 px-4">Recruitment</li>
           <li><RouterLink to="/jobs" :class="linkClasses('/jobs')"><span>💼</span>Jobs</RouterLink></li>
           <li><RouterLink to="/alumni" :class="linkClasses('/alumni')"><span>👥</span>Alumni</RouterLink></li>
-          <li><RouterLink to="/resumes" :class="linkClasses('/resumes')"><span>📄</span>Resumes</RouterLink></li>
           <li class="mt-4 text-xs text-blue-300 px-4">Organization</li>
           <li v-if="isAdmin"><RouterLink to="/alumni-management" :class="linkClasses('/alumni-management')"><span>🏢</span>Alumni Management</RouterLink></li>
-          <li><RouterLink to="/analytics" :class="linkClasses('/analytics')"><span>📊</span>AI Analytics</RouterLink></li>
+          <li v-if="isAdmin"><RouterLink to="/intelligent-tracker" :class="linkClasses('/intelligent-tracker')"><span>📊</span>Alumni Tracker</RouterLink></li>
           <li><RouterLink to="/events" :class="linkClasses('/events')"><span>📅</span>Events</RouterLink></li>
-          <li><RouterLink to="/mentorship" :class="linkClasses('/mentorship')"><span>🧭</span>Mentorship</RouterLink></li>
-          <li><RouterLink to="/communities" :class="linkClasses('/communities')"><span>🌐</span>Communities</RouterLink></li>
+          <li><RouterLink to="/news" :class="linkClasses('/news')"><span>📰</span>News and Announcements</RouterLink></li>
         </ul>
       </nav>
     </div>

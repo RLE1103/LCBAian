@@ -41,9 +41,9 @@
         <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white hover:from-green-600 hover:to-green-700 transition-all duration-200 transform group-hover:scale-105">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-green-100 text-sm font-medium">Job Applications</p>
+              <p class="text-green-100 text-sm font-medium">Jobs listed in the last 30 days</p>
               <p class="text-3xl font-bold">{{ stats.jobApplications }}</p>
-              <p class="text-green-200 text-xs">{{ stats.pendingApplications }} pending</p>
+              <p class="text-green-200 text-xs">Updated daily</p>
             </div>
             <div class="bg-green-400 bg-opacity-30 rounded-full p-3">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,7 +144,7 @@
                   </div>
                 </div>
               </div>
-      </RouterLink>
+            </RouterLink>
 
             <RouterLink to="/alumni" class="group">
               <div class="p-4 border border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all duration-200">
@@ -160,39 +160,88 @@
                   </div>
                 </div>
               </div>
-      </RouterLink>
+            </RouterLink>
 
-            <RouterLink to="/mentorship" class="group">
-              <div class="p-4 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-200">
-                <div class="flex items-center space-x-3">
-                  <div class="bg-green-100 rounded-lg p-2">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 class="font-medium text-gray-900 group-hover:text-green-600">Mentorship</h3>
-                    <p class="text-sm text-gray-600">Find or offer guidance</p>
-                  </div>
-                </div>
-              </div>
-      </RouterLink>
-
-            <RouterLink to="/communities" class="group">
+            <RouterLink to="/events" class="group">
               <div class="p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all duration-200">
                 <div class="flex items-center space-x-3">
                   <div class="bg-orange-100 rounded-lg p-2">
                     <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
                   </div>
                   <div>
-                    <h3 class="font-medium text-gray-900 group-hover:text-orange-600">Communities</h3>
-                    <p class="text-sm text-gray-600">Join discussions</p>
+                    <h3 class="font-medium text-gray-900 group-hover:text-orange-600">Events</h3>
+                    <p class="text-sm text-gray-600">View upcoming events</p>
                   </div>
                 </div>
               </div>
-      </RouterLink>
+            </RouterLink>
+
+            <RouterLink to="/news" class="group">
+              <div class="p-4 border border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all duration-200">
+                <div class="flex items-center space-x-3">
+                  <div class="bg-green-100 rounded-lg p-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="font-medium text-gray-900 group-hover:text-green-600">News & Announcements</h3>
+                    <p class="text-sm text-gray-600">Stay updated</p>
+                  </div>
+                </div>
+              </div>
+            </RouterLink>
+
+            <RouterLink to="/profile" class="group">
+              <div class="p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all duration-200">
+                <div class="flex items-center space-x-3">
+                  <div class="bg-indigo-100 rounded-lg p-2">
+                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="font-medium text-gray-900 group-hover:text-indigo-600">Profile</h3>
+                    <p class="text-sm text-gray-600">Manage your profile</p>
+                  </div>
+                </div>
+              </div>
+            </RouterLink>
+
+            <!-- Admin-only Quick Actions -->
+            <RouterLink v-if="isAdmin" to="/alumni-management" class="group">
+              <div class="p-4 border border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 transition-all duration-200">
+                <div class="flex items-center space-x-3">
+                  <div class="bg-red-100 rounded-lg p-2">
+                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="font-medium text-gray-900 group-hover:text-red-600">Alumni Management</h3>
+                    <p class="text-sm text-gray-600">Manage alumni</p>
+                  </div>
+                </div>
+              </div>
+            </RouterLink>
+
+            <RouterLink v-if="isAdmin" to="/intelligent-tracker" class="group">
+              <div class="p-4 border border-gray-200 rounded-lg hover:border-yellow-500 hover:bg-yellow-50 transition-all duration-200">
+                <div class="flex items-center space-x-3">
+                  <div class="bg-yellow-100 rounded-lg p-2">
+                    <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="font-medium text-gray-900 group-hover:text-yellow-600">Alumni Tracker</h3>
+                    <p class="text-sm text-gray-600">Analytics & insights</p>
+                  </div>
+                </div>
+              </div>
+            </RouterLink>
           </div>
         </div>
       </div>
@@ -275,6 +324,9 @@ import axios from '../config/api'
 const authStore = useAuthStore()
 const router = useRouter()
 
+// Check if user is admin
+const isAdmin = computed(() => authStore.isAdmin)
+
 // User data
 const userFullName = computed(() => authStore.fullName || 'User')
 
@@ -283,7 +335,6 @@ const stats = ref({
   messages: 0,
   unreadMessages: 0,
   jobApplications: 0,
-  pendingApplications: 0,
   connections: 0,
   newConnections: 0,
   events: 0,
@@ -326,8 +377,7 @@ const fetchDashboardData = async () => {
       stats.value.unreadMessages = messagesData.reduce((sum, conv) => sum + (conv.unread_count || 0), 0)
     }
 
-    // Fetch job applications count (if we have an applications endpoint)
-    // For now, we'll use job posts count as a placeholder
+    // Jobs listed in the last 30 days
     const jobsResponse = await axios.get('/api/job-posts')
     const jobsPayload = jobsResponse?.data
     let jobsData = []
@@ -340,8 +390,8 @@ const fetchDashboardData = async () => {
     }
     
     if (jobsResponse.data.success) {
-      stats.value.jobApplications = jobsData.length
-      stats.value.pendingApplications = Math.floor(jobsData.length * 0.3)
+      const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      stats.value.jobApplications = jobsData.filter(j => new Date(j.created_at) >= thirtyDaysAgo).length
     }
 
     // Fetch events count

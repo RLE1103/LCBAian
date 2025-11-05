@@ -4,10 +4,10 @@
       <!-- Logo and Header -->
       <div class="text-center mb-8">
         <div class="flex items-center justify-center mb-4">
-          <img src="/src/assets/images/LCBAlogo.png" alt="LCBA Logo" class="w-16 h-16 rounded object-cover" />
+          <img src="/src/assets/images/LCBAlogo.png" alt="LCBA Logo" class="w-30 h-30 rounded object-cover" />
         </div>
-        <h1 class="text-3xl font-bold text-gray-900">Join LCBAian</h1>
-        <p class="text-gray-600 mt-2">Create your alumni account</p>
+        <h1 class="text-3xl font-bold text-gray-900">Join LCBAConnect+</h1>
+        <p class="text-gray-600 mt-2">Alumni Sign-Up</p>
       </div>
 
       <!-- Registration Form -->
@@ -100,21 +100,6 @@
         </div>
 
         <div>
-          <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Account Type</label>
-          <select
-            id="role"
-            v-model="form.role"
-            required
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-            :class="{ 'border-red-500': errors.role }"
-          >
-            <option value="">Select your role</option>
-            <option value="alumni">Alumni</option>
-          </select>
-          <p v-if="errors.role" class="text-red-500 text-sm mt-1">{{ errors.role }}</p>
-        </div>
-
-        <div>
           <label for="program" class="block text-sm font-medium text-gray-700 mb-2">Program</label>
           <select
             id="program"
@@ -123,9 +108,15 @@
             :class="{ 'border-red-500': errors.program }"
           >
             <option value="">Select your program</option>
-            <option value="BSCS">BSCS - Bachelor of Science in Computer Science</option>
-            <option value="BSCpE">BSCpE - Bachelor of Science in Computer Engineering</option>
-            <option value="BSIT">BSIT - Bachelor of Science in Information Technology</option>
+            <option value="AB Political Science">AB Political Science</option>
+            <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
+            <option value="Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)">Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)</option>
+            <option value="BS Computer Science">BS Computer Science</option>
+            <option value="BS Psychology">BS Psychology</option>
+            <option value="BS Computer Engineering">BS Computer Engineering</option>
+            <option value="BS Accountancy">BS Accountancy</option>
+            <option value="BS Business Administration (Majors in Human Resources Management, Marketing Management)">BS Business Administration (Majors in Human Resources Management, Marketing Management)</option>
+            <option value="BS Entrepreneurship in Culinary Arts">BS Entrepreneurship in Culinary Arts</option>
           </select>
           <p v-if="errors.program" class="text-red-500 text-sm mt-1">{{ errors.program }}</p>
         </div>
@@ -229,7 +220,7 @@ const form = reactive({
   email: '',
   password: '',
   password_confirmation: '',
-  role: '',
+  role: 'alumni', // Registration is only for alumni
   program: '',
   batch: '',
   terms: false
@@ -280,11 +271,6 @@ const validateForm = () => {
     isValid = false
   } else if (form.password !== form.password_confirmation) {
     errors.password_confirmation = 'Passwords do not match'
-    isValid = false
-  }
-  
-  if (!form.role) {
-    errors.role = 'Please select your role'
     isValid = false
   }
   

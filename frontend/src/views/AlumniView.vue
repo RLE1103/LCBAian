@@ -395,7 +395,7 @@
                   <h3 class="text-lg font-semibold text-gray-900 mb-4">Education</h3>
                   <div class="space-y-3">
                     <div class="border border-gray-200 rounded-lg p-4">
-                      <h4 class="font-medium text-gray-900">LCBA (La Consolacion College Bacolod)</h4>
+                      <h4 class="font-medium text-gray-900">LCBA (Laguna College of Business and Arts)</h4>
                       <p class="text-sm text-gray-600">{{ selectedAlumni.program }} • {{ selectedAlumni.batch }}</p>
               </div>
             </div>

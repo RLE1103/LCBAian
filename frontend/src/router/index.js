@@ -5,12 +5,14 @@ import DashboardView from '../views/DashboardView.vue'
 import JobsView from '../views/JobsView.vue'
 import AlumniView from '../views/AlumniView.vue'
 import MessagesView from '../views/MessagesView.vue'
-import ResumesView from '../views/ResumesView.vue'
+// removed ResumesView
 import AlumniManagementView from '../views/AlumniManagementView.vue'
 import EventsView from '../views/EventsView.vue'
-import MentorshipView from '../views/MentorshipView.vue'
-import CommunitiesView from '../views/CommunitiesView.vue'
+// removed MentorshipView
+// removed CommunitiesView
 import AnalyticsView from '../views/AnalyticsView.vue'
+import ProfileView from '../views/ProfileView.vue'
+import NewsAnnouncementsView from '../views/NewsAnnouncementsView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 
@@ -26,14 +28,16 @@ const router = createRouter({
 		{ path: '/jobs', name: 'jobs', component: JobsView, meta: { requiresAuth: true } },
 		{ path: '/alumni', name: 'alumni', component: AlumniView, meta: { requiresAuth: true } },
 		{ path: '/messages', name: 'messages', component: MessagesView, meta: { requiresAuth: true } },
-		{ path: '/resumes', name: 'resumes', component: ResumesView, meta: { requiresAuth: true } },
+		// resumes route removed
 		{ path: '/events', name: 'events', component: EventsView, meta: { requiresAuth: true } },
-		{ path: '/mentorship', name: 'mentorship', component: MentorshipView, meta: { requiresAuth: true } },
-		{ path: '/communities', name: 'communities', component: CommunitiesView, meta: { requiresAuth: true } },
+		// mentorship route removed
+		// communities route removed
+		{ path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true } },
+		{ path: '/news', name: 'news', component: NewsAnnouncementsView, meta: { requiresAuth: true } },
 		
 		// Admin only routes
 		{ path: '/alumni-management', name: 'alumni-management', component: AlumniManagementView, meta: { requiresAuth: true, requiresRole: 'admin' } },
-		{ path: '/analytics', name: 'analytics', component: AnalyticsView, meta: { requiresAuth: true } },
+		{ path: '/intelligent-tracker', name: 'intelligent-tracker', component: AnalyticsView, meta: { requiresAuth: true, requiresRole: 'admin' } },
 	],
 })
 

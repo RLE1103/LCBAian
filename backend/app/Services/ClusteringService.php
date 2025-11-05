@@ -14,18 +14,28 @@ class ClusteringService
     /**
      * Prepare alumni data for clustering
      */
-    public function prepareData()
+    public function prepareData(array $fields = [])
     {
         // Fetch all verified users with the data needed for clustering
-        $usersData = User::select(
-            'id',
-            'program',
-            'current_job_title',
-            'skills',
-            'industry',
-            'experience_level',
-            'role'
-        )->where('role', 'alumni')
+        $select = ['id', 'role'];
+        $map = [
+            'program' => 'program',
+            'graduation_year' => 'batch',
+            'skills' => 'skills',
+            'industry' => 'industry',
+            'location' => 'location',
+            'experience_level' => 'experience_level',
+            'current_job_title' => 'current_job_title',
+        ];
+        if (empty($fields)) {
+            $fields = ['program','industry','experience_level','skills'];
+        }
+        foreach ($fields as $f) {
+            if (isset($map[$f])) $select[] = $map[$f];
+        }
+
+        $usersData = User::select($select)
+        ->where('role', 'alumni')
          ->whereNotNull('skills')
          ->get();
 
@@ -35,24 +45,30 @@ class ClusteringService
     /**
      * Build feature vectors for clustering
      */
-    public function buildVectors($usersData)
+    public function buildVectors($usersData, array $fields = [])
     {
         if ($usersData->isEmpty()) {
             return ['vectors' => [], 'ids' => []];
         }
 
-        // Get all unique values for one-hot encoding
-        $allPrograms = $usersData->pluck('program')->filter()->unique()->values()->toArray();
-        $allIndustries = $usersData->pluck('industry')->filter()->unique()->values()->toArray();
-        $allExperienceLevels = $usersData->pluck('experience_level')->filter()->unique()->values()->toArray();
+        if (empty($fields)) {
+            $fields = ['program','industry','experience_level','skills'];
+        }
+
+        // Collect unique categorical sets depending on selected fields
+        $allPrograms = in_array('program', $fields) ? $usersData->pluck('program')->filter()->unique()->values()->toArray() : [];
+        $allIndustries = in_array('industry', $fields) ? $usersData->pluck('industry')->filter()->unique()->values()->toArray() : [];
+        $allExperienceLevels = in_array('experience_level', $fields) ? $usersData->pluck('experience_level')->filter()->unique()->values()->toArray() : [];
+        $allLocations = in_array('location', $fields) ? $usersData->pluck('location')->filter()->unique()->values()->toArray() : [];
+        $allBatches = in_array('graduation_year', $fields) ? $usersData->pluck('batch')->filter()->unique()->values()->toArray() : [];
         
         // Get all unique skills
-        $allSkills = $usersData->pluck('skills')
+        $allSkills = in_array('skills', $fields) ? $usersData->pluck('skills')
             ->filter()
             ->flatten()
             ->unique()
             ->values()
-            ->toArray();
+            ->toArray() : [];
 
         $userVectors = [];
         $userIds = [];
@@ -60,23 +76,28 @@ class ClusteringService
         foreach ($usersData as $user) {
             $vector = [];
 
-            // 1. Vectorize Program (One-Hot Encoding)
+            // Program OHE
             foreach ($allPrograms as $program) {
                 $vector[] = ($user->program === $program) ? 1 : 0;
             }
-
-            // 2. Vectorize Industry (One-Hot Encoding)
+            // Industry OHE
             foreach ($allIndustries as $industry) {
                 $vector[] = ($user->industry === $industry) ? 1 : 0;
             }
-
-            // 3. Vectorize Experience Level (One-Hot Encoding)
+            // Experience level OHE
             foreach ($allExperienceLevels as $level) {
                 $vector[] = ($user->experience_level === $level) ? 1 : 0;
             }
-
-            // 4. Vectorize Skills (Bag-of-Words)
-            $userSkills = $user->skills ?? [];
+            // Location OHE
+            foreach ($allLocations as $loc) {
+                $vector[] = ($user->location === $loc) ? 1 : 0;
+            }
+            // Graduation year/batch OHE
+            foreach ($allBatches as $by) {
+                $vector[] = ($user->batch === $by) ? 1 : 0;
+            }
+            // Skills BoW
+            $userSkills = is_array($user->skills) ? $user->skills : ($user->skills ? (array)$user->skills : []);
             foreach ($allSkills as $skill) {
                 $vector[] = in_array($skill, $userSkills) ? 1 : 0;
             }
@@ -92,6 +113,8 @@ class ClusteringService
                 'programs' => $allPrograms,
                 'industries' => $allIndustries,
                 'experience_levels' => $allExperienceLevels,
+                'locations' => $allLocations,
+                'batches' => $allBatches,
                 'skills' => $allSkills
             ]
         ];
@@ -149,19 +172,22 @@ class ClusteringService
      */
     public function getClusterAnalytics()
     {
-        $clusters = User::select('cluster_group')
+        $base = User::where('role', 'alumni')->whereNotNull('cluster_group');
+        $total = (clone $base)->count();
+        $clusters = (clone $base)
+            ->select('cluster_group')
             ->selectRaw('COUNT(*) as count')
-            ->whereNotNull('cluster_group')
             ->groupBy('cluster_group')
             ->orderBy('cluster_group')
             ->get();
 
         $analytics = [];
         foreach ($clusters as $cluster) {
+            $count = $cluster->count;
             $analytics[] = [
                 'cluster_id' => $cluster->cluster_group,
-                'count' => $cluster->count,
-                'percentage' => 0 // Will be calculated in frontend
+                'count' => $count,
+                'percentage' => $total > 0 ? round(($count / $total) * 100, 1) : 0
             ];
         }
 
@@ -173,31 +199,30 @@ class ClusteringService
      */
     public function getClusterProfiles()
     {
+        $clusterIds = User::where('role','alumni')
+            ->whereNotNull('cluster_group')
+            ->distinct()
+            ->pluck('cluster_group');
+
         $profiles = [];
+        foreach ($clusterIds as $cid) {
+            $clusterUsers = User::where('role','alumni')->where('cluster_group', $cid)->get();
+            if ($clusterUsers->isEmpty()) continue;
 
-        for ($i = 0; $i < 5; $i++) {
-            $clusterUsers = User::where('cluster_group', $i)->get();
-            
-            if ($clusterUsers->isEmpty()) {
-                continue;
-            }
+            $skillCounts = $clusterUsers->pluck('skills')->flatten()->countBy()->sortDesc()->take(10);
+            $industryCounts = $clusterUsers->pluck('industry')->filter()->countBy()->sortDesc()->take(5);
+            $programCounts = $clusterUsers->pluck('program')->filter()->countBy()->sortDesc()->take(5);
+            $locationCounts = $clusterUsers->pluck('location')->filter()->countBy()->sortDesc()->take(5);
+            $batchCounts = $clusterUsers->pluck('batch')->filter()->countBy()->sortDesc()->take(5);
 
-            // Get top skills in this cluster
-            $allSkills = $clusterUsers->pluck('skills')->flatten();
-            $skillCounts = $allSkills->countBy()->sortDesc()->take(5);
-            
-            // Get top industries
-            $industryCounts = $clusterUsers->pluck('industry')->countBy()->sortDesc()->take(3);
-            
-            // Get top programs
-            $programCounts = $clusterUsers->pluck('program')->countBy()->sortDesc()->take(3);
-
-            $profiles[$i] = [
-                'cluster_id' => $i,
+            $profiles[] = [
+                'cluster_id' => $cid,
                 'total_users' => $clusterUsers->count(),
                 'top_skills' => $skillCounts->toArray(),
                 'top_industries' => $industryCounts->toArray(),
                 'top_programs' => $programCounts->toArray(),
+                'top_locations' => $locationCounts->toArray(),
+                'top_batches' => $batchCounts->toArray(),
             ];
         }
 
@@ -207,16 +232,16 @@ class ClusteringService
     /**
      * Run complete clustering process
      */
-    public function performClustering($numClusters = 5)
+    public function performClustering($numClusters = 5, array $fields = [])
     {
         Log::info('Starting clustering process...');
 
         // 1. Prepare data
-        $usersData = $this->prepareData();
+        $usersData = $this->prepareData($fields);
         Log::info('Prepared data for ' . $usersData->count() . ' users');
 
         // 2. Build vectors
-        $vectorData = $this->buildVectors($usersData);
+        $vectorData = $this->buildVectors($usersData, $fields);
         Log::info('Built vectors with ' . count($vectorData['vectors']) . ' features');
 
         // 3. Run clustering
@@ -227,12 +252,18 @@ class ClusteringService
         );
 
         if ($success) {
+            $analytics = $this->getClusterAnalytics();
+            $profiles = $this->getClusterProfiles();
             Log::info('Clustering process completed successfully');
             return [
                 'success' => true,
                 'message' => 'Clustering completed successfully',
                 'clusters_created' => $numClusters,
-                'users_processed' => count($vectorData['ids'])
+                'users_processed' => count($vectorData['ids']),
+                'data' => [
+                    'analytics' => $analytics,
+                    'profiles' => $profiles
+                ]
             ];
         } else {
             Log::error('Clustering process failed');

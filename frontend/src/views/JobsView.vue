@@ -8,7 +8,7 @@
         Post a Job
       </button>
         <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
-          Saved Jobs
+          Bookmarked Jobs
             </button>
           </div>
     </div>
@@ -149,12 +149,171 @@
 
       <!-- Right Column - Quick Panels -->
       <div class="space-y-6">
-        <!-- Recommended Jobs -->
-        <JobRecommendations />
+        <!-- Career Matching -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Career Matching</h3>
+              <p class="text-xs text-gray-600 mt-1">Personalized job recommendations based on your profile</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button 
+                @click="loadCareerMatching"
+                :disabled="matchingLoading"
+                class="text-gray-500 hover:text-gray-700"
+                title="Refresh recommendations"
+              >
+                <svg v-if="matchingLoading" class="animate-spin w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading State -->
+          <div v-if="matchingLoading" class="text-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p class="text-gray-600 text-sm">Finding your perfect matches...</p>
+          </div>
+
+          <!-- Empty State -->
+          <div v-else-if="careerMatches.length === 0" class="text-center py-8 text-gray-500">
+            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            <p class="font-medium text-sm">No matches found</p>
+            <p class="text-xs mt-1">Add more skills to your profile for better matches!</p>
+            <button @click="loadCareerMatching" class="mt-4 text-blue-600 hover:text-blue-800 text-sm font-medium">
+              Try Again
+            </button>
+          </div>
+
+          <!-- Career Matches List -->
+          <div v-else class="space-y-4">
+            <div 
+              v-for="match in careerMatches" 
+              :key="match.job?.job_id || match.job_id"
+              class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer"
+              @click="selectJob(match.job || match)"
+            >
+              <!-- Job Header -->
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-900 text-sm">{{ match.job?.title || match.title }}</h4>
+                  <p class="text-sm text-gray-600">{{ match.job?.company_name || match.company_name }}</p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                      {{ match.job?.location || match.location }}
+                    </span>
+                    <span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                      {{ match.job?.work_type || match.work_type }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Match Score -->
+                <div class="text-right">
+                  <div class="flex items-center gap-2">
+                    <div class="w-12 h-12 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                      {{ getMatchPercentage(match) }}%
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">Match Score</p>
+                </div>
+              </div>
+
+              <!-- Match Summary -->
+              <div v-if="match.match_summary" class="mb-3">
+                <p class="text-sm text-gray-700">{{ match.match_summary }}</p>
+              </div>
+
+              <!-- Skills Match -->
+              <div class="space-y-2">
+                <!-- Matched Skills -->
+                <div v-if="match.matched_skills && match.matched_skills.length > 0">
+                  <p class="text-xs font-medium text-green-700 mb-1">✓ Matched Skills:</p>
+                  <div class="flex flex-wrap gap-1">
+                    <span 
+                      v-for="skill in match.matched_skills.slice(0, 3)" 
+                      :key="skill"
+                      class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full"
+                    >
+                      {{ skill }}
+                    </span>
+                    <span v-if="match.matched_skills.length > 3" class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+                      +{{ match.matched_skills.length - 3 }} more
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Missing Skills -->
+                <div v-if="match.missing_skills && match.missing_skills.length > 0">
+                  <p class="text-xs font-medium text-orange-700 mb-1">⚠ Missing Skills:</p>
+                  <div class="flex flex-wrap gap-1">
+                    <span 
+                      v-for="skill in match.missing_skills.slice(0, 2)" 
+                      :key="skill"
+                      class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full"
+                    >
+                      {{ skill }}
+                    </span>
+                    <span v-if="match.missing_skills.length > 2" class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
+                      +{{ match.missing_skills.length - 2 }} more
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Bonus Skills -->
+                <div v-if="match.bonus_skills && match.bonus_skills.length > 0">
+                  <p class="text-xs font-medium text-blue-700 mb-1">⭐ Bonus Skills:</p>
+                  <div class="flex flex-wrap gap-1">
+                    <span 
+                      v-for="skill in match.bonus_skills.slice(0, 2)" 
+                      :key="skill"
+                      class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
+                    >
+                      {{ skill }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+                <button 
+                  @click.stop="selectJob(match.job || match)"
+                  class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+                >
+                  View Details
+                </button>
+                <button 
+                  @click.stop="toggleSaveJob(match.job || match)"
+                  :title="isJobSaved(match.job || match) ? 'Unsave' : 'Save'"
+                  class="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                >
+                  {{ isJobSaved(match.job || match) ? 'Saved' : 'Save' }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- View More Button -->
+          <div v-if="careerMatches.length > 0" class="mt-6 text-center">
+            <button 
+              @click="viewAllCareerMatches"
+              class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              View All Matches →
+            </button>
+          </div>
+        </div>
         
-        <!-- Saved Jobs -->
+        <!-- Bookmarked Jobs -->
         <div class="bg-white rounded-lg shadow-md p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Saved Jobs</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Bookmarked Jobs</h3>
           <div class="space-y-3">
             <div v-for="savedJob in savedJobs" :key="savedJob.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
@@ -173,21 +332,7 @@
             </div>
           </div>
 
-        <!-- Recommended Jobs -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Recommended for You</h3>
-          <div class="space-y-3">
-            <div v-for="recommendedJob in recommendedJobs" :key="recommendedJob.id" class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-              <h4 class="font-medium text-sm text-gray-900">{{ recommendedJob.title }}</h4>
-              <p class="text-xs text-gray-600">{{ recommendedJob.company_name }} • {{ recommendedJob.location }}</p>
-              <div class="mt-2">
-                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                  {{ recommendedJob.match_score }}% match
-                </span>
-              </div>
-                </div>
-              </div>
-            </div>
+        
 
         <!-- Your Job Posts -->
         <div v-if="userJobPosts.length > 0" class="bg-white rounded-lg shadow-md p-6">
@@ -263,14 +408,6 @@
                   <li>Strong problem-solving and communication skills</li>
                 </ul>
 
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Benefits</h3>
-                <ul class="list-disc list-inside text-gray-700 space-y-2">
-                  <li>Competitive salary and equity package</li>
-                  <li>Comprehensive health, dental, and vision insurance</li>
-                  <li>Flexible work arrangements and remote options</li>
-                  <li>Professional development opportunities</li>
-                  <li>Generous vacation and sick leave</li>
-                </ul>
                 </div>
               </div>
 
@@ -335,61 +472,16 @@
       </div>
     </div>
 
-          <!-- Apply Button -->
-          <div class="flex justify-end space-x-4">
+          <div class="flex justify-end">
             <button @click="showJobModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
-              Cancel
-            </button>
-            <button @click="applyForJob" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Apply Now
+              Close
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Apply Modal -->
-    <div v-if="showApplyModal" class="fixed inset-0 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 w-full max-w-md border-4 border-gray-300 shadow-2xl">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">Apply for {{ selectedJob?.title }}</h3>
-          <button @click="showApplyModal = false" class="text-gray-400 hover:text-gray-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Select Resume</label>
-          <select v-model="selectedResume" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="">Choose a resume...</option>
-            <option v-for="resume in userResumes" :key="resume.id" :value="resume.id">
-              {{ resume.title }}
-            </option>
-          </select>
-        </div>
-        
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Cover Letter (Optional)</label>
-          <textarea 
-            v-model="coverLetter"
-            rows="4"
-            placeholder="Write a cover letter..."
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          ></textarea>
-        </div>
-        
-        <div class="flex justify-end space-x-2">
-          <button @click="showApplyModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
-            Cancel
-          </button>
-          <button @click="submitApplication" :disabled="!selectedResume" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-            Submit Application
-          </button>
-        </div>
-      </div>
-    </div>
+    
   </div>
   
   <!-- Create Job Modal -->
@@ -470,7 +562,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from '../config/api'
-import JobRecommendations from '../components/JobRecommendations.vue'
 
 // Reactive data
 const searchQuery = ref('')
@@ -480,11 +571,8 @@ const selectedIndustry = ref('')
 const selectedExperience = ref('')
 const selectedJob = ref(null)
 const showJobModal = ref(false)
-const showApplyModal = ref(false)
 const showCreateJobModal = ref(false)
 const activeTab = ref('overview')
-const selectedResume = ref('')
-const coverLetter = ref('')
 const loading = ref(false)
 
 // Fetch jobs from API
@@ -519,7 +607,10 @@ const savedJobs = ref([])
 const recommendedJobs = ref([])
 const userJobPosts = ref([])
 const jobApplicants = ref([])
-const userResumes = ref([])
+// Career Matching
+const careerMatches = ref([])
+const matchingLoading = ref(false)
+// removed apply flow state
 
 // New job form state
 const newJob = ref({
@@ -554,29 +645,7 @@ const selectJob = (job) => {
   activeTab.value = 'overview'
 }
 
-const applyForJob = () => {
-  showJobModal.value = false
-  showApplyModal.value = true
-}
-
-const submitApplication = async () => {
-  if (!selectedJob.value) return
-  try {
-    const payload = {
-      job_id: selectedJob.value.job_id,
-      resume_path: selectedResume.value || null,
-      cover_letter: coverLetter.value || ''
-    }
-    const response = await axios.post('/api/applications', payload)
-    if (response?.data?.success) {
-      showApplyModal.value = false
-      selectedResume.value = ''
-      coverLetter.value = ''
-    }
-  } catch (error) {
-    console.error('Error submitting application:', error)
-  }
-}
+// removed apply flow methods
 
 // Save/Unsave jobs via localStorage
 const STORAGE_KEY = 'saved_jobs'
@@ -635,9 +704,77 @@ const formatTime = (date) => {
   return new Date(date).toLocaleDateString()
 }
 
+// Career Matching
+const getMatchPercentage = (match) => {
+  if (match.match_percentage !== undefined) {
+    return match.match_percentage
+  }
+  if (match.similarity_score !== undefined) {
+    return Math.round(match.similarity_score * 100)
+  }
+  if (match.job?.similarity_score !== undefined) {
+    return Math.round(match.job.similarity_score * 100)
+  }
+  return 'N/A'
+}
+
+const loadCareerMatching = async () => {
+  matchingLoading.value = true
+  try {
+    const response = await axios.get('/api/jobs/quick-recommendations', {
+      params: { limit: 5 }
+    })
+    
+    if (response.data.success) {
+      // Transform data to match expected format
+      const matches = response.data.data || []
+      careerMatches.value = matches.map(match => {
+        // Handle both quick-recommendations format (just job objects) and detailed format
+        if (match.job) {
+          return match // Already in detailed format
+        } else {
+          // Quick format - transform to match structure
+          return {
+            job: match,
+            similarity_score: match.similarity_score || 0,
+            match_percentage: match.similarity_score ? Math.round(match.similarity_score * 100) : 0,
+            matched_skills: [],
+            missing_skills: [],
+            bonus_skills: []
+          }
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Error loading career matching:', error)
+    careerMatches.value = []
+  } finally {
+    matchingLoading.value = false
+  }
+}
+
+const viewAllCareerMatches = async () => {
+  matchingLoading.value = true
+  try {
+    const response = await axios.get('/api/jobs/recommended', {
+      params: { limit: 20 }
+    })
+    
+    if (response.data.success) {
+      // Detailed recommendations with match details
+      careerMatches.value = response.data.data || []
+    }
+  } catch (error) {
+    console.error('Error loading all career matches:', error)
+  } finally {
+    matchingLoading.value = false
+  }
+}
+
 onMounted(() => {
   fetchJobs()
   loadSavedJobs()
+  loadCareerMatching()
 })
 
 // Watch for filter changes and refetch

@@ -4,9 +4,9 @@
       <!-- Logo and Header -->
       <div class="text-center mb-8">
         <div class="flex items-center justify-center mb-4">
-          <img src="/src/assets/images/LCBAlogo.png" alt="LCBA Logo" class="w-16 h-16 rounded object-cover" />
+          <img src="/src/assets/images/LCBAlogo.png" alt="LCBA Logo" class="w-30 h-30 rounded object-cover" />
         </div>
-        <h1 class="text-3xl font-bold text-gray-900">LCBAian</h1>
+        <h1 class="text-3xl font-bold text-gray-900">LCBAConnect+</h1>
         <p class="text-gray-600 mt-2">Alumni Network Platform</p>
       </div>
 

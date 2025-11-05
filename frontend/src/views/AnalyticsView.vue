@@ -3,22 +3,32 @@
     <!-- Page Header -->
     <div class="flex items-center justify-between mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">AI Analytics Dashboard</h1>
-        <p class="text-gray-600 mt-2">K-Means Clustering and Content-Based Filtering Insights</p>
+        <h1 class="text-3xl font-bold text-gray-900">Alumni Tracker</h1>
+        <p class="text-gray-600 mt-2">Discover dynamic alumni clusters powered by K-Means</p>
       </div>
       <div class="flex items-center space-x-4">
-        <button 
-          @click="runClustering"
-          :disabled="isClustering"
-          class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-        >
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-700">Clusters (K)</label>
+            <input type="number" min="2" max="10" v-model.number="kValue" class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          </div>
+          <div class="hidden md:flex items-center gap-3">
+            <span class="text-sm text-gray-700">Data Parameters:</span>
+            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.program" /> Program</label>
+            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.graduation_year" /> Graduation Year</label>
+            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.industry" /> Current Job Field</label>
+            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.location" /> Location</label>
+            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.skills" /> Skills</label>
+          </div>
+        </div>
+        <button @click="runClustering" :disabled="isClustering" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
           <svg v-if="isClustering" class="animate-spin w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
           </svg>
           <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
           </svg>
-          {{ isClustering ? 'Running Clustering...' : 'Run Clustering' }}
+          {{ isClustering ? 'Discovering...' : 'Discover Groups' }}
         </button>
         <button 
           @click="refreshData"
@@ -32,13 +42,14 @@
       </div>
     </div>
 
-    <!-- Overview Stats -->
+    <!-- Overview Stats - At-a-Glance Metrics -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+      <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-blue-100 text-sm font-medium">Total Alumni</p>
-            <p class="text-3xl font-bold">{{ analyticsData.overview?.total_users || 0 }}</p>
+            <p class="text-3xl font-bold">{{ analyticsData.overview?.total_alumni || 0 }}</p>
+            <p class="text-blue-100 text-xs mt-1">Overall user base size</p>
           </div>
           <div class="bg-blue-400 bg-opacity-30 rounded-full p-3">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,13 +59,29 @@
         </div>
       </div>
 
-      <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+      <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-green-100 text-sm font-medium">Active Jobs</p>
-            <p class="text-3xl font-bold">{{ analyticsData.overview?.total_jobs || 0 }}</p>
+            <p class="text-green-100 text-sm font-medium">New Alumni</p>
+            <p class="text-3xl font-bold">{{ analyticsData.overview?.new_alumni_last_30_days || 0 }}</p>
+            <p class="text-green-100 text-xs mt-1">Last 30 days</p>
           </div>
           <div class="bg-green-400 bg-opacity-30 rounded-full p-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-purple-100 text-sm font-medium">Jobs Listed</p>
+            <p class="text-3xl font-bold">{{ analyticsData.overview?.jobs_listed_last_30_days || 0 }}</p>
+            <p class="text-purple-100 text-xs mt-1">Last 30 days</p>
+          </div>
+          <div class="bg-purple-400 bg-opacity-30 rounded-full p-3">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"></path>
             </svg>
@@ -62,29 +89,16 @@
         </div>
       </div>
 
-      <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+      <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-purple-100 text-sm font-medium">Applications</p>
-            <p class="text-3xl font-bold">{{ analyticsData.overview?.total_applications || 0 }}</p>
-          </div>
-          <div class="bg-purple-400 bg-opacity-30 rounded-full p-3">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-orange-100 text-sm font-medium">Clusters</p>
-            <p class="text-3xl font-bold">{{ analyticsData.clustering?.length || 0 }}</p>
+            <p class="text-orange-100 text-sm font-medium">Events</p>
+            <p class="text-3xl font-bold">{{ analyticsData.overview?.total_events || 0 }}</p>
+            <p class="text-orange-100 text-xs mt-1">Community engagement</p>
           </div>
           <div class="bg-orange-400 bg-opacity-30 rounded-full p-3">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
           </div>
         </div>
@@ -164,56 +178,115 @@
         </div>
       </div>
 
-      <!-- Content-Based Filtering Insights -->
-      <div class="space-y-6">
-        <!-- Trending Skills -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <h2 class="text-xl font-bold text-gray-900 mb-6">Trending Skills</h2>
-          
-          <div v-if="analyticsData.trending_skills && Object.keys(analyticsData.trending_skills).length > 0" class="space-y-3">
-            <div 
-              v-for="(count, skill) in Object.entries(analyticsData.trending_skills).slice(0, 10)" 
-              :key="skill"
-              class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-            >
-              <span class="font-medium text-gray-900">{{ skill }}</span>
-              <span class="bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full">
-                {{ count }} jobs
-              </span>
-            </div>
-          </div>
-          
-          <div v-else class="text-center py-8 text-gray-500">
-            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
-            <p>No trending skills data</p>
+      <!-- Skills Gap Analysis -->
+      <div class="bg-white rounded-xl shadow-lg p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900">Skills Gap Analysis</h2>
+            <p class="text-sm text-gray-600 mt-1">Demand vs. Supply for curriculum planning</p>
           </div>
         </div>
 
-        <!-- Industry Distribution -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <h2 class="text-xl font-bold text-gray-900 mb-6">Industry Distribution</h2>
-          
-          <div v-if="analyticsData.industry_distribution && Object.keys(analyticsData.industry_distribution).length > 0" class="space-y-3">
+        <!-- Summary Stats -->
+        <div v-if="skillsGapAnalysis?.summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-blue-50 rounded-lg p-4">
+            <p class="text-xs text-gray-600 mb-1">Skills in Demand</p>
+            <p class="text-2xl font-bold text-blue-600">{{ skillsGapAnalysis.summary.total_skills_in_demand || 0 }}</p>
+          </div>
+          <div class="bg-green-50 rounded-lg p-4">
+            <p class="text-xs text-gray-600 mb-1">Skills Supplied</p>
+            <p class="text-2xl font-bold text-green-600">{{ skillsGapAnalysis.summary.total_skills_supplied || 0 }}</p>
+          </div>
+          <div class="bg-red-50 rounded-lg p-4">
+            <p class="text-xs text-gray-600 mb-1">Shortages</p>
+            <p class="text-2xl font-bold text-red-600">{{ skillsGapAnalysis.summary.skills_with_shortage || 0 }}</p>
+          </div>
+          <div class="bg-yellow-50 rounded-lg p-4">
+            <p class="text-xs text-gray-600 mb-1">Surpluses</p>
+            <p class="text-2xl font-bold text-yellow-600">{{ skillsGapAnalysis.summary.skills_with_surplus || 0 }}</p>
+          </div>
+        </div>
+
+        <!-- Critical Shortages (Most Important for Curriculum Planning) -->
+        <div v-if="skillsGapAnalysis?.critical_shortages && skillsGapAnalysis.critical_shortages.length > 0" class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            Critical Shortages (Top Priority)
+          </h3>
+          <div class="space-y-3">
             <div 
-              v-for="(count, industry) in Object.entries(analyticsData.industry_distribution).slice(0, 8)" 
-              :key="industry"
-              class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              v-for="skill in skillsGapAnalysis.critical_shortages.slice(0, 10)" 
+              :key="skill.skill"
+              class="border-l-4 border-red-500 bg-red-50 rounded-lg p-4"
             >
-              <span class="font-medium text-gray-900">{{ industry }}</span>
-              <span class="bg-green-100 text-green-800 text-sm px-2 py-1 rounded-full">
-                {{ count }} alumni
-              </span>
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-semibold text-gray-900">{{ skill.skill }}</span>
+                <span class="bg-red-200 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
+                  Shortage: {{ skill.gap }}
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="text-gray-600">Demand:</span>
+                  <span class="font-medium text-gray-900 ml-2">{{ skill.demand }} jobs</span>
+                </div>
+                <div>
+                  <span class="text-gray-600">Supply:</span>
+                  <span class="font-medium text-gray-900 ml-2">{{ skill.supply }} alumni</span>
+                </div>
+              </div>
+              <div class="mt-2">
+                <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+                  <span>Gap: {{ skill.gap_percentage }}%</span>
+                  <span>Action: Strengthen curriculum</span>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <div v-else class="text-center py-8 text-gray-500">
-            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+        </div>
+
+        <!-- Surpluses -->
+        <div v-if="skillsGapAnalysis?.surpluses && skillsGapAnalysis.surpluses.length > 0" class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            <p>No industry data available</p>
+            Skills Surpluses
+          </h3>
+          <div class="space-y-3">
+            <div 
+              v-for="skill in skillsGapAnalysis.surpluses.slice(0, 5)" 
+              :key="skill.skill"
+              class="border-l-4 border-green-500 bg-green-50 rounded-lg p-4"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-semibold text-gray-900">{{ skill.skill }}</span>
+                <span class="bg-green-200 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                  Surplus: {{ Math.abs(skill.gap) }}
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="text-gray-600">Demand:</span>
+                  <span class="font-medium text-gray-900 ml-2">{{ skill.demand }} jobs</span>
+                </div>
+                <div>
+                  <span class="text-gray-600">Supply:</span>
+                  <span class="font-medium text-gray-900 ml-2">{{ skill.supply }} alumni</span>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div v-if="!skillsGapAnalysis || (!skillsGapAnalysis.critical_shortages && !skillsGapAnalysis.surpluses)" class="text-center py-8 text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+          <p>No skills gap data available</p>
+          <p class="text-sm">Run analysis to see demand vs. supply insights</p>
         </div>
       </div>
     </div>
@@ -309,6 +382,13 @@ const isClustering = ref(false)
 const showClusterModal = ref(false)
 const selectedClusterId = ref(null)
 const clusterDetails = ref(null)
+const kValue = ref(4)
+const selectedFields = ref({ program: true, graduation_year: false, industry: true, location: true, skills: false })
+
+// Computed properties
+const skillsGapAnalysis = computed(() => {
+  return analyticsData.value.skills_gap_analysis || null
+})
 
 // Chart options
 const chartOptions = {
@@ -377,6 +457,7 @@ const loadAnalyticsData = async () => {
     }
   } catch (error) {
     console.error('Error loading analytics data:', error)
+    alert('Error loading analytics data: ' + error.message)
   }
 }
 
@@ -384,12 +465,23 @@ const runClustering = async () => {
   isClustering.value = true
   try {
     const response = await axios.post('/api/admin/analytics/run-clustering', {
-      clusters: 5
+      clusters: kValue.value,
+      fields: Object.keys(selectedFields.value).filter(k => selectedFields.value[k])
     })
     
     if (response.data.success) {
-      // Refresh data after clustering
-      await loadAnalyticsData()
+      // If backend returns fresh analytics/profiles, apply immediately
+      const payload = response.data.data
+      if (payload && payload.analytics && payload.profiles) {
+        analyticsData.value = {
+          ...(analyticsData.value || {}),
+          clustering: payload.analytics
+        }
+        clusterProfiles.value = payload.profiles || []
+      } else {
+        // Fallback: refresh via API
+        await loadAnalyticsData()
+      }
       alert('Clustering completed successfully!')
     } else {
       alert('Clustering failed: ' + response.data.message)

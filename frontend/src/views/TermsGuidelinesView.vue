@@ -1,6 +1,19 @@
 <template>
   <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
+      <!-- Back Button -->
+      <div class="mb-6">
+        <button 
+          @click="goBack" 
+          class="flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
+        >
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          Back
+        </button>
+      </div>
+
       <!-- Header -->
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-gray-900">Terms of Use & Community Guidelines</h1>
@@ -129,13 +142,6 @@
           <p class="text-sm">Contact the LCBA Alumni Affairs Office or platform administrators for assistance.</p>
         </section>
       </div>
-
-      <!-- Footer Actions -->
-      <div class="mt-8 flex justify-center space-x-4">
-        <button @click="agreeAndProceed" class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-lg">
-          I Agree - Continue to Registration
-        </button>
-      </div>
     </div>
   </div>
 </template>
@@ -145,10 +151,8 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const agreeAndProceed = () => {
-  // Store agreement in sessionStorage
-  sessionStorage.setItem('terms_agreed', 'true')
-  // Navigate to register
-  router.push('/register')
+const goBack = () => {
+  // Go back to the previous page
+  router.back()
 }
 </script>

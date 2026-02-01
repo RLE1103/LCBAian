@@ -99,7 +99,7 @@
       <div class="mt-6 text-center">
         <p class="text-gray-600">
           Don't have an account?
-          <router-link to="/terms-guidelines" class="text-blue-600 hover:text-blue-800 font-medium">
+          <router-link to="/register" class="text-blue-600 hover:text-blue-800 font-medium">
             Create one here
           </router-link>
         </p>

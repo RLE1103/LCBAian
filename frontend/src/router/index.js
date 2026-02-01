@@ -22,7 +22,7 @@ const router = createRouter({
 	routes: [
 		// Public routes
 		{ path: '/login', name: 'login', component: LoginView, meta: { requiresGuest: true } },
-		{ path: '/terms-guidelines', name: 'terms-guidelines', component: TermsGuidelinesView, meta: { requiresGuest: true, hideNavigation: true } },
+		{ path: '/terms-guidelines', name: 'terms-guidelines', component: TermsGuidelinesView, meta: { hideNavigation: true } },
 		{ path: '/register', name: 'register', component: RegisterView, meta: { requiresGuest: true, hideNavigation: true } },
 		{ path: '/terms', redirect: '/terms-guidelines' },
 		
@@ -47,14 +47,6 @@ const router = createRouter({
 // Navigation guards
 router.beforeEach(async (to, from, next) => {
 	const authStore = useAuthStore()
-	
-	// Check for terms agreement before registration
-	if (to.name === 'register') {
-		const agreed = sessionStorage.getItem('terms_agreed')
-		if (!agreed || agreed !== 'true') {
-			return next('/terms-guidelines')
-		}
-	}
 	
 	// Check if route requires authentication
 	if (to.meta.requiresAuth) {

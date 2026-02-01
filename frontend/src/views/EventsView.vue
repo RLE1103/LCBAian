@@ -456,10 +456,10 @@
             <button @click="showEventModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
               Close
             </button>
-            <button class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <button @click="addToCalendar(selectedEvent)" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               Add to Calendar
             </button>
-            <button class="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
+            <button @click="shareEvent(selectedEvent)" class="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
               Share Event
             </button>
               </div>
@@ -598,7 +598,16 @@ const fetchEvents = async () => {
     
     const response = await axios.get('/api/events', { params })
     if (response?.data?.success && Array.isArray(response.data.data)) {
-      events.value = response.data.data
+      // Parse and format event dates
+      events.value = response.data.data.map(event => ({
+        ...event,
+        start_date: new Date(event.start_date),
+        end_date: new Date(event.end_date),
+        attendees_count: event.attendees_count || 0,
+        interested_count: event.interested_count || 0,
+        attendees: event.attendees || [],
+        interested: event.interested || []
+      }))
     } else {
       events.value = []
     }
@@ -814,6 +823,53 @@ const rsvpEvent = async (event, rsvp) => {
     }
   } catch (error) {
     console.error('Error RSVP:', error)
+  }
+}
+
+const addToCalendar = (event) => {
+  if (!event) return
+  
+  // Format dates for calendar (yyyyMMddTHHmmss format)
+  const formatCalendarDate = (date) => {
+    if (!date) return ''
+    const d = new Date(date)
+    return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+  }
+  
+  const startDate = formatCalendarDate(event.start_date)
+  const endDate = formatCalendarDate(event.end_date)
+  const title = encodeURIComponent(event.title)
+  const description = encodeURIComponent(event.description || '')
+  const location = encodeURIComponent(event.location || '')
+  
+  // Create Google Calendar URL
+  const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${description}&location=${location}`
+  
+  // Open in new tab
+  window.open(googleCalUrl, '_blank')
+}
+
+const shareEvent = (event) => {
+  if (!event) return
+  
+  const eventUrl = `${window.location.origin}/events?id=${event.id}`
+  const shareText = `Check out this event: ${event.title} on ${formatDate(event.start_date)}`
+  
+  // Check if Web Share API is available (mobile devices)
+  if (navigator.share) {
+    navigator.share({
+      title: event.title,
+      text: shareText,
+      url: eventUrl
+    }).catch(err => console.log('Error sharing:', err))
+  } else {
+    // Fallback: Copy to clipboard
+    navigator.clipboard.writeText(`${shareText}\n${eventUrl}`).then(() => {
+      alert('Event link copied to clipboard!')
+    }).catch(err => {
+      console.error('Failed to copy:', err)
+      alert('Failed to copy link')
+    })
   }
 }
 

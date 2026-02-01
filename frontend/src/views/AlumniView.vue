@@ -334,22 +334,19 @@
         <!-- Recent Activity -->
         <div class="bg-white rounded-lg shadow-md p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-          <div class="space-y-3">
-            <div class="text-sm">
-              <p class="text-gray-700">John Doe joined the platform</p>
-              <p class="text-gray-500 text-xs">2 hours ago</p>
+          <div v-if="recentActivity.length > 0" class="space-y-3">
+            <div v-for="(activity, index) in recentActivity" :key="index" class="text-sm">
+              <p class="text-gray-700">{{ activity.text }}</p>
+              <p class="text-gray-500 text-xs">{{ activity.time }}</p>
             </div>
-            <div class="text-sm">
-              <p class="text-gray-700">Jane Smith posted a job opening</p>
-              <p class="text-gray-500 text-xs">1 day ago</p>
-            </div>
-            <div class="text-sm">
-              <p class="text-gray-700">Mike Johnson became a mentor</p>
-              <p class="text-gray-500 text-xs">3 days ago</p>
-            </div>
-                </div>
-              </div>
-              </div>
+          </div>
+          <div v-else class="text-center py-4">
+            <p class="text-sm text-gray-500">No recent activity</p>
+          </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Profile Modal -->
     <div v-if="showProfileModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -497,8 +494,6 @@
             <button @click="sendMessage(selectedAlumni)" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               Send Message
             </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -601,38 +596,59 @@ const fetchFilterOptions = async () => {
   }
 }
 
-const suggestedConnections = ref([
-  {
-    id: 6,
-    first_name: 'Alex',
-    last_name: 'Chen',
-    full_name: 'Alex Chen',
-    program: 'BSCS',
-    batch: '2020',
-    headline: 'Software Engineer at Google',
-    reason: 'Same batch and program'
-  },
-  {
-    id: 7,
-    first_name: 'Sarah',
-    last_name: 'Martinez',
-    full_name: 'Sarah Martinez',
-    program: 'BSCpE',
-    batch: '2019',
-    headline: 'Senior Developer at Microsoft',
-    reason: 'Similar skills and industry'
-  },
-  {
-    id: 8,
-    first_name: 'Ryan',
-    last_name: 'Kim',
-    full_name: 'Ryan Kim',
-    program: 'BSIT',
-    batch: '2021',
-    headline: 'Product Manager at Amazon',
-    reason: 'Same company network'
+const suggestedConnections = ref([])
+
+// Fetch suggested connections from API
+const fetchSuggestedConnections = async () => {
+  try {
+    const authStore = useAuthStore()
+    const currentUser = authStore.user
+    
+    if (!currentUser) return
+    
+    const response = await axios.get('/api/users', {
+      params: {
+        role: 'alumni',
+        limit: 5,
+        exclude: currentUser.id
+      }
+    })
+    
+    if (response.data.success) {
+      const usersData = Array.isArray(response.data.data) ? response.data.data : (response.data.data.data || [])
+      
+      suggestedConnections.value = usersData.slice(0, 3).map(user => {
+        let reason = ''
+        
+        // Determine reason for suggestion
+        if (user.program === currentUser.program && user.batch === currentUser.batch) {
+          reason = 'Same batch and program'
+        } else if (user.program === currentUser.program) {
+          reason = 'Same program'
+        } else if (user.industry === currentUser.industry) {
+          reason = 'Similar industry'
+        } else if (user.city === currentUser.city) {
+          reason = 'Same location'
+        } else {
+          reason = 'Alumni network'
+        }
+        
+        return {
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          full_name: `${user.first_name} ${user.last_name}`,
+          program: user.program,
+          batch: user.batch,
+          headline: user.current_job_title || user.headline || 'LCBA Alumni',
+          reason
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Error fetching suggested connections:', error)
   }
-])
+}
 
 const profileTabs = [
   { key: 'about', label: 'About' },
@@ -752,17 +768,104 @@ const connectWithAlumni = (alumni) => {
 
 
 const filterByAvailability = (type) => {
+  // Reset filters first
+  selectedProgram.value = ''
+  selectedBatch.value = ''
+  selectedLocation.value = ''
   selectedAvailability.value = type
+  searchQuery.value = ''
+  
+  // Filter alumni based on availability type
+  if (type === 'mentor') {
+    // Filter to show only mentors
+    alumni.value = alumni.value.filter(a => a.is_mentor)
+  } else if (type === 'hiring') {
+    // Filter to show only those hiring
+    alumni.value = alumni.value.filter(a => a.is_hiring)
+  } else if (type === 'work') {
+    // Filter to show only those open to work
+    alumni.value = alumni.value.filter(a => a.is_open_to_work)
+  }
+  
+  // Refetch with filters
+  fetchAlumni()
 }
 
 const viewBatchAlumni = () => {
-  // Show alumni from same batch
-  console.log('View batch alumni')
+  const authStore = useAuthStore()
+  const currentUser = authStore.user
+  
+  if (currentUser && currentUser.batch) {
+    selectedBatch.value = currentUser.batch
+    selectedProgram.value = ''
+    searchQuery.value = ''
+    fetchAlumni()
+  } else {
+    alert('Your batch information is not available')
+  }
 }
 
 const viewCompanyNetworks = () => {
-  // Show alumni by company
-  console.log('View company networks')
+  const authStore = useAuthStore()
+  const currentUser = authStore.user
+  
+  if (currentUser && currentUser.current_job_title) {
+    // Search for alumni in similar industries or companies
+    selectedProgram.value = ''
+    selectedBatch.value = ''
+    if (currentUser.industry) {
+      searchQuery.value = currentUser.industry
+    }
+    fetchAlumni()
+  } else {
+    alert('Please update your profile with your current company/industry information')
+  }
+}
+
+// Recent Activity Data
+const recentActivity = ref([])
+
+const fetchRecentActivity = async () => {
+  try {
+    // Fetch recent user registrations/updates
+    const response = await axios.get('/api/users', {
+      params: {
+        role: 'alumni',
+        sort: 'created_at',
+        limit: 5
+      }
+    })
+    
+    if (response.data.success) {
+      const usersData = Array.isArray(response.data.data) ? response.data.data : (response.data.data.data || [])
+      
+      recentActivity.value = usersData.map(user => ({
+        text: `${user.first_name} ${user.last_name} joined the platform`,
+        time: formatActivityTime(user.created_at),
+        type: 'join'
+      }))
+    }
+  } catch (error) {
+    console.error('Error fetching recent activity:', error)
+    recentActivity.value = []
+  }
+}
+
+const formatActivityTime = (dateString) => {
+  if (!dateString) return 'Recently'
+  
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+  return date.toLocaleDateString()
 }
 
 const formatEmploymentStatus = (status) => {
@@ -806,6 +909,8 @@ const formatPostDate = (dateStr) => {
 onMounted(() => {
   fetchAlumni()
   fetchFilterOptions()
+  fetchSuggestedConnections()
+  fetchRecentActivity()
 })
 
 // Watch for filter changes and refetch

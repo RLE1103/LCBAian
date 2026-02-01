@@ -421,10 +421,10 @@
                   {{ report.id }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ report.type }}
+                  {{ formatReportType(report.reported_entity_type) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ report.reported_by }}
+                  {{ report.reporter ? `${report.reporter.first_name} ${report.reporter.last_name}` : 'N/A' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {{ report.reason }}
@@ -626,7 +626,7 @@
 </div>
   
 <!-- Verification Request View Modal -->
-<div v-if="showVerificationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4" @click.self="showVerificationModal = false">
+<div v-if="showVerificationModal" class="fixed inset-0 bg-transparent flex items-center justify-center z-[100] p-4" @click.self="showVerificationModal = false">
   <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
     <div class="p-6 border-b border-gray-200">
       <h3 class="text-xl font-semibold text-gray-900">Verification Request Details</h3>
@@ -677,7 +677,7 @@
 </div>
 
 <!-- Report View Modal -->
-<div v-if="showReportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4" @click.self="showReportModal = false">
+<div v-if="showReportModal" class="fixed inset-0 bg-transparent flex items-center justify-center z-[100] p-4" @click.self="showReportModal = false">
   <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
     <div class="p-6 border-b border-gray-200">
       <h3 class="text-xl font-semibold text-gray-900">Report Details</h3>
@@ -690,11 +690,11 @@
         </div>
         <div>
           <label class="text-sm font-medium text-gray-500">Type</label>
-          <p class="text-gray-900">{{ selectedReport.type }}</p>
+          <p class="text-gray-900">{{ formatReportType(selectedReport.reported_entity_type) }}</p>
         </div>
         <div>
           <label class="text-sm font-medium text-gray-500">Reported By</label>
-          <p class="text-gray-900">{{ selectedReport.reported_by }}</p>
+          <p class="text-gray-900">{{ selectedReport.reporter ? `${selectedReport.reporter.first_name} ${selectedReport.reporter.last_name}` : 'N/A' }}</p>
         </div>
         <div>
           <label class="text-sm font-medium text-gray-500">Status</label>
@@ -1064,6 +1064,20 @@ const updateReportStatus = async (reportId, status, notes = '') => {
     console.error('Error updating report:', error)
     alert('Failed to update report')
   }
+}
+
+// Helper function to format report type
+const formatReportType = (type) => {
+  if (!type) return 'N/A'
+  
+  const typeMap = {
+    'job_post': 'Job Post',
+    'user': 'User',
+    'post': 'Post',
+    'comment': 'Comment'
+  }
+  
+  return typeMap[type] || type
 }
 
 // Job Approvals Methods

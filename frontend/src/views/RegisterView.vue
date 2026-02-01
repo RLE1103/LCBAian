@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8 border-4 border-gray-300">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border-4 border-gray-300">
       <!-- Logo and Header -->
       <div class="text-center mb-8">
         <div class="flex items-center justify-center mb-4">
@@ -12,58 +12,32 @@
 
       <!-- Registration Form -->
       <form @submit.prevent="handleRegister" class="space-y-6">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-            <input
-              id="firstName"
-              v-model="form.first_name"
-              type="text"
-              required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="First name"
-              :class="{ 'border-red-500': errors.first_name }"
-            />
-            <p v-if="errors.first_name" class="text-red-500 text-sm mt-1">{{ errors.first_name }}</p>
-          </div>
-          
-          <div>
-            <label for="middleName" class="block text-sm font-medium text-gray-700 mb-2">Middle Name <span class="text-gray-400 text-xs">(Optional)</span></label>
-            <input
-              id="middleName"
-              v-model="form.middle_name"
-              type="text"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Middle name"
-            />
-          </div>
+        <div>
+          <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+          <input
+            id="firstName"
+            v-model="form.first_name"
+            type="text"
+            required
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            placeholder="First name"
+            :class="{ 'border-red-500': errors.first_name }"
+          />
+          <p v-if="errors.first_name" class="text-red-500 text-sm mt-1">{{ errors.first_name }}</p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-            <input
-              id="lastName"
-              v-model="form.last_name"
-              type="text"
-              required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Last name"
-              :class="{ 'border-red-500': errors.last_name }"
-            />
-            <p v-if="errors.last_name" class="text-red-500 text-sm mt-1">{{ errors.last_name }}</p>
-          </div>
-
-          <div>
-            <label for="suffix" class="block text-sm font-medium text-gray-700 mb-2">Suffix <span class="text-gray-400 text-xs">(Optional)</span></label>
-            <input
-              id="suffix"
-              v-model="form.suffix"
-              type="text"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Jr., Sr., III, etc."
-            />
-          </div>
+        <div>
+          <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+          <input
+            id="lastName"
+            v-model="form.last_name"
+            type="text"
+            required
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            placeholder="Last name"
+            :class="{ 'border-red-500': errors.last_name }"
+          />
+          <p v-if="errors.last_name" class="text-red-500 text-sm mt-1">{{ errors.last_name }}</p>
         </div>
 
         <div>
@@ -128,6 +102,7 @@
           <select
             id="program"
             v-model="form.program"
+            required
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
             :class="{ 'border-red-500': errors.program }"
           >
@@ -162,37 +137,39 @@
           <p v-if="errors.program" class="text-red-500 text-sm mt-1">{{ errors.program }}</p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label for="batch" class="block text-sm font-medium text-gray-700 mb-2">Graduation Year</label>
-            <input
-              id="batch"
-              v-model="form.batch"
-              type="number"
-              min="1990"
-              :max="new Date().getFullYear()"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="e.g., 2020"
-              :class="{ 'border-red-500': errors.batch }"
-            />
-            <p v-if="errors.batch" class="text-red-500 text-sm mt-1">{{ errors.batch }}</p>
-          </div>
+        <div>
+          <label for="batch" class="block text-sm font-medium text-gray-700 mb-2">Graduation Year</label>
+          <input
+            id="batch"
+            v-model="form.batch"
+            type="number"
+            required
+            min="1990"
+            :max="new Date().getFullYear()"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            placeholder="e.g., 2020"
+            :class="{ 'border-red-500': errors.batch }"
+          />
+          <p v-if="errors.batch" class="text-red-500 text-sm mt-1">{{ errors.batch }}</p>
+        </div>
 
-          <div>
-            <label for="highestAttainment" class="block text-sm font-medium text-gray-700 mb-2">Highest Educational Attainment</label>
-            <select
-              id="highestAttainment"
-              v-model="form.highest_educational_attainment"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-            >
-              <option value="">Select level</option>
-              <option value="high_school">High School</option>
-              <option value="senior_high">Senior High School</option>
-              <option value="bachelors">Bachelor's Degree</option>
-              <option value="masters">Master's Degree</option>
-              <option value="doctorate">Doctorate</option>
-            </select>
-          </div>
+        <div>
+          <label for="highestAttainment" class="block text-sm font-medium text-gray-700 mb-2">Highest Educational Attainment</label>
+          <select
+            id="highestAttainment"
+            v-model="form.highest_educational_attainment"
+            required
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            :class="{ 'border-red-500': errors.highest_educational_attainment }"
+          >
+            <option value="">Select level</option>
+            <option value="high_school">High School</option>
+            <option value="senior_high">Senior High School</option>
+            <option value="bachelors">Bachelor's Degree</option>
+            <option value="masters">Master's Degree</option>
+            <option value="doctorate">Doctorate</option>
+          </select>
+          <p v-if="errors.highest_educational_attainment" class="text-red-500 text-sm mt-1">{{ errors.highest_educational_attainment }}</p>
         </div>
 
         <div class="flex items-center">
@@ -273,9 +250,7 @@ const authStore = useAuthStore()
 // Form data
 const form = reactive({
   first_name: '',
-  middle_name: '',
   last_name: '',
-  suffix: '',
   email: '',
   password: '',
   password_confirmation: '',
@@ -331,6 +306,21 @@ const validateForm = () => {
     isValid = false
   } else if (form.password !== form.password_confirmation) {
     errors.password_confirmation = 'Passwords do not match'
+    isValid = false
+  }
+  
+  if (!form.program) {
+    errors.program = 'Program is required'
+    isValid = false
+  }
+  
+  if (!form.batch) {
+    errors.batch = 'Graduation year is required'
+    isValid = false
+  }
+  
+  if (!form.highest_educational_attainment) {
+    errors.highest_educational_attainment = 'Highest educational attainment is required'
     isValid = false
   }
   

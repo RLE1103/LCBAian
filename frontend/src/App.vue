@@ -17,8 +17,8 @@ onMounted(async () => {
   await authStore.initAuth()
   isInitialized.value = true
   
-  // Redirect to login if not authenticated
-  if (!authStore.isAuthenticated) {
+  // Redirect to login if not authenticated and trying to access protected routes
+  if (!authStore.isAuthenticated && route.meta.requiresAuth) {
     router.push('/login')
   }
 })

@@ -17,12 +17,16 @@ class Post extends Model
         'user_id',
         'content',
         'image_path',
+        'visibility',
     ];
+    
+    public $timestamps = true;
 
     protected function casts(): array
     {
         return [
             'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

@@ -24,8 +24,13 @@ class ClusteringService
             'skills' => 'skills',
             'industry' => 'industry',
             'location' => 'location',
+            'city' => 'city',
+            'country' => 'country',
             'experience_level' => 'experience_level',
             'current_job_title' => 'current_job_title',
+            'employment_status' => 'employment_status',
+            'years_of_experience' => 'years_of_experience',
+            'salary_range' => 'salary_range',
         ];
         if (empty($fields)) {
             $fields = ['program','industry','experience_level','skills'];
@@ -60,6 +65,11 @@ class ClusteringService
         $allIndustries = in_array('industry', $fields) ? $usersData->pluck('industry')->filter()->unique()->values()->toArray() : [];
         $allExperienceLevels = in_array('experience_level', $fields) ? $usersData->pluck('experience_level')->filter()->unique()->values()->toArray() : [];
         $allLocations = in_array('location', $fields) ? $usersData->pluck('location')->filter()->unique()->values()->toArray() : [];
+        $allCities = in_array('city', $fields) ? $usersData->pluck('city')->filter()->unique()->values()->toArray() : [];
+        $allCountries = in_array('country', $fields) ? $usersData->pluck('country')->filter()->unique()->values()->toArray() : [];
+        $allEmploymentStatuses = in_array('employment_status', $fields) ? $usersData->pluck('employment_status')->filter()->unique()->values()->toArray() : [];
+        $allYearsOfExperience = in_array('years_of_experience', $fields) ? $usersData->pluck('years_of_experience')->filter()->unique()->values()->toArray() : [];
+        $allSalaryRanges = in_array('salary_range', $fields) ? $usersData->pluck('salary_range')->filter()->unique()->values()->toArray() : [];
         $allBatches = in_array('graduation_year', $fields) ? $usersData->pluck('batch')->filter()->unique()->values()->toArray() : [];
         
         // Get all unique skills
@@ -88,9 +98,29 @@ class ClusteringService
             foreach ($allExperienceLevels as $level) {
                 $vector[] = ($user->experience_level === $level) ? 1 : 0;
             }
-            // Location OHE
+            // Location OHE (legacy)
             foreach ($allLocations as $loc) {
                 $vector[] = ($user->location === $loc) ? 1 : 0;
+            }
+            // City OHE
+            foreach ($allCities as $city) {
+                $vector[] = ($user->city === $city) ? 1 : 0;
+            }
+            // Country OHE
+            foreach ($allCountries as $country) {
+                $vector[] = ($user->country === $country) ? 1 : 0;
+            }
+            // Employment Status OHE
+            foreach ($allEmploymentStatuses as $status) {
+                $vector[] = ($user->employment_status === $status) ? 1 : 0;
+            }
+            // Years of Experience OHE
+            foreach ($allYearsOfExperience as $yoe) {
+                $vector[] = ($user->years_of_experience === $yoe) ? 1 : 0;
+            }
+            // Salary Range OHE
+            foreach ($allSalaryRanges as $range) {
+                $vector[] = ($user->salary_range === $range) ? 1 : 0;
             }
             // Graduation year/batch OHE
             foreach ($allBatches as $by) {
@@ -114,6 +144,11 @@ class ClusteringService
                 'industries' => $allIndustries,
                 'experience_levels' => $allExperienceLevels,
                 'locations' => $allLocations,
+                'cities' => $allCities,
+                'countries' => $allCountries,
+                'employment_statuses' => $allEmploymentStatuses,
+                'years_of_experience' => $allYearsOfExperience,
+                'salary_ranges' => $allSalaryRanges,
                 'batches' => $allBatches,
                 'skills' => $allSkills
             ]
@@ -131,17 +166,23 @@ class ClusteringService
         }
 
         try {
+            // Normalize vectors before clustering
+            $normalizedVectors = $this->normalizeVectors($vectors);
+            
             // Create dataset
-            $dataset = new Unlabeled($vectors);
+            $dataset = new Unlabeled($normalizedVectors);
 
             // Initialize K-Means
             $kmeans = new KMeans($numClusters, 100, 0.001);
 
-            // Run clustering
-            $clusters = $kmeans->cluster($dataset);
+            // Train the clusterer
+            $kmeans->train($dataset);
+            
+            // Predict clusters for all data points
+            $predictions = $kmeans->predict($dataset);
 
             // Save results to database
-            $this->saveClusterResults($clusters, $ids);
+            $this->saveClusterPredictions($predictions, $ids);
 
             Log::info("K-Means clustering completed with {$numClusters} clusters");
             return true;
@@ -150,6 +191,169 @@ class ClusteringService
             Log::error('Clustering failed: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Save clustering predictions to database
+     */
+    private function saveClusterPredictions($predictions, $ids)
+    {
+        foreach ($predictions as $index => $clusterId) {
+            $userId = $ids[$index];
+            User::where('id', $userId)->update(['cluster_group' => $clusterId]);
+        }
+    }
+
+    /**
+     * Normalize feature vectors using L2 normalization
+     */
+    private function normalizeVectors($vectors)
+    {
+        $normalized = [];
+        foreach ($vectors as $vector) {
+            // Calculate L2 norm (magnitude)
+            $magnitude = sqrt(array_sum(array_map(function($v) { 
+                return $v * $v; 
+            }, $vector)));
+            
+            // Normalize if magnitude > 0
+            if ($magnitude > 0) {
+                $normalized[] = array_map(function($v) use ($magnitude) { 
+                    return $v / $magnitude; 
+                }, $vector);
+            } else {
+                // Keep zero vector as is
+                $normalized[] = $vector;
+            }
+        }
+        return $normalized;
+    }
+
+    /**
+     * Find optimal K using Elbow Method
+     * Returns the optimal number of clusters based on inertia scores
+     */
+    public function findOptimalK($vectors, $minK = 2, $maxK = 10)
+    {
+        if (empty($vectors)) {
+            Log::warning('No vectors provided for optimal K selection');
+            return 3; // Default fallback
+        }
+
+        $normalizedVectors = $this->normalizeVectors($vectors);
+        $dataset = new Unlabeled($normalizedVectors);
+        
+        $inertias = [];
+        
+        // Calculate inertia for each K
+        for ($k = $minK; $k <= $maxK; $k++) {
+            try {
+                $kmeans = new KMeans($k, 100, 0.001);
+                $clusters = $kmeans->cluster($dataset);
+                
+                // Calculate inertia (sum of squared distances to centroids)
+                $inertia = 0;
+                foreach ($clusters as $clusterMembers) {
+                    // Calculate cluster centroid
+                    $centroid = $this->calculateCentroid($clusterMembers, $normalizedVectors);
+                    
+                    // Sum squared distances
+                    foreach ($clusterMembers as $memberIndex) {
+                        $vector = $normalizedVectors[$memberIndex];
+                        $distance = $this->euclideanDistance($vector, $centroid);
+                        $inertia += $distance * $distance;
+                    }
+                }
+                
+                $inertias[$k] = $inertia;
+                Log::info("K={$k}, Inertia={$inertia}");
+            } catch (\Exception $e) {
+                Log::error("Failed to calculate inertia for K={$k}: " . $e->getMessage());
+            }
+        }
+        
+        // Find elbow point using simple rate of change method
+        $optimalK = $this->findElbowPoint($inertias, $minK, $maxK);
+        
+        Log::info("Optimal K determined: {$optimalK}");
+        return $optimalK;
+    }
+
+    /**
+     * Calculate centroid of a cluster
+     */
+    private function calculateCentroid($memberIndices, $vectors)
+    {
+        if (empty($memberIndices)) {
+            return [];
+        }
+        
+        $dimensions = count($vectors[0]);
+        $centroid = array_fill(0, $dimensions, 0);
+        
+        foreach ($memberIndices as $index) {
+            foreach ($vectors[$index] as $dim => $value) {
+                $centroid[$dim] += $value;
+            }
+        }
+        
+        $count = count($memberIndices);
+        return array_map(function($sum) use ($count) {
+            return $sum / $count;
+        }, $centroid);
+    }
+
+    /**
+     * Calculate Euclidean distance between two vectors
+     */
+    private function euclideanDistance($vector1, $vector2)
+    {
+        $sum = 0;
+        for ($i = 0; $i < count($vector1); $i++) {
+            $diff = $vector1[$i] - $vector2[$i];
+            $sum += $diff * $diff;
+        }
+        return sqrt($sum);
+    }
+
+    /**
+     * Find elbow point in inertia curve
+     * Uses rate of change to find where improvement diminishes
+     */
+    private function findElbowPoint($inertias, $minK, $maxK)
+    {
+        if (count($inertias) < 3) {
+            return $minK; // Not enough data points
+        }
+        
+        // Calculate rate of change
+        $rateOfChange = [];
+        $kValues = array_keys($inertias);
+        
+        for ($i = 1; $i < count($kValues); $i++) {
+            $k1 = $kValues[$i - 1];
+            $k2 = $kValues[$i];
+            $rateOfChange[$k2] = abs($inertias[$k1] - $inertias[$k2]);
+        }
+        
+        // Find largest drop in rate of change (elbow point)
+        $maxDrop = 0;
+        $elbowK = $minK;
+        
+        for ($i = 1; $i < count($rateOfChange); $i++) {
+            $k1 = $kValues[$i];
+            $k2 = $kValues[$i + 1];
+            
+            if (isset($rateOfChange[$k1]) && isset($rateOfChange[$k2])) {
+                $drop = $rateOfChange[$k1] - $rateOfChange[$k2];
+                if ($drop > $maxDrop) {
+                    $maxDrop = $drop;
+                    $elbowK = $k1;
+                }
+            }
+        }
+        
+        return $elbowK;
     }
 
     /**
@@ -213,6 +417,11 @@ class ClusteringService
             $industryCounts = $clusterUsers->pluck('industry')->filter()->countBy()->sortDesc()->take(5);
             $programCounts = $clusterUsers->pluck('program')->filter()->countBy()->sortDesc()->take(5);
             $locationCounts = $clusterUsers->pluck('location')->filter()->countBy()->sortDesc()->take(5);
+            $cityCounts = $clusterUsers->pluck('city')->filter()->countBy()->sortDesc()->take(5);
+            $countryCounts = $clusterUsers->pluck('country')->filter()->countBy()->sortDesc()->take(5);
+            $employmentStatusCounts = $clusterUsers->pluck('employment_status')->filter()->countBy()->sortDesc()->take(5);
+            $yearsOfExperienceCounts = $clusterUsers->pluck('years_of_experience')->filter()->countBy()->sortDesc()->take(5);
+            $salaryRangeCounts = $clusterUsers->pluck('salary_range')->filter()->countBy()->sortDesc()->take(5);
             $batchCounts = $clusterUsers->pluck('batch')->filter()->countBy()->sortDesc()->take(5);
 
             $profiles[] = [
@@ -222,11 +431,67 @@ class ClusteringService
                 'top_industries' => $industryCounts->toArray(),
                 'top_programs' => $programCounts->toArray(),
                 'top_locations' => $locationCounts->toArray(),
+                'top_cities' => $cityCounts->toArray(),
+                'top_countries' => $countryCounts->toArray(),
+                'top_employment_statuses' => $employmentStatusCounts->toArray(),
+                'top_years_of_experience' => $yearsOfExperienceCounts->toArray(),
+                'top_salary_ranges' => $salaryRangeCounts->toArray(),
                 'top_batches' => $batchCounts->toArray(),
             ];
         }
 
         return $profiles;
+    }
+
+    /**
+     * Generate human-readable insights for each cluster
+     */
+    public function generateClusterInsights()
+    {
+        $profiles = $this->getClusterProfiles();
+        $insights = [];
+        
+        foreach ($profiles as $profile) {
+            $topProgram = array_key_first($profile['top_programs'] ?? []);
+            $topProgramCount = $profile['top_programs'][$topProgram] ?? 0;
+            $topProgramPct = $profile['total_users'] > 0 ? round(($topProgramCount / $profile['total_users']) * 100) : 0;
+            
+            $topIndustry = array_key_first($profile['top_industries'] ?? []);
+            $topIndustryCount = $profile['top_industries'][$topIndustry] ?? 0;
+            $topIndustryPct = $profile['total_users'] > 0 ? round(($topIndustryCount / $profile['total_users']) * 100) : 0;
+            
+            $topCity = array_key_first($profile['top_cities'] ?? []);
+            $topCityCount = $profile['top_cities'][$topCity] ?? 0;
+            $topCityPct = $profile['total_users'] > 0 ? round(($topCityCount / $profile['total_users']) * 100) : 0;
+            
+            $insight = sprintf(
+                "Cluster %d represents %d alumni, with %d%% from %s program, %d%% working in %s, and %d%% located in %s.",
+                $profile['cluster_id'],
+                $profile['total_users'],
+                $topProgramPct,
+                $topProgram ?? 'various',
+                $topIndustryPct,
+                $topIndustry ?? 'various industries',
+                $topCityPct,
+                $topCity ?? 'various locations'
+            );
+            
+            $insights[$profile['cluster_id']] = [
+                'cluster_id' => $profile['cluster_id'],
+                'insight' => $insight,
+                'dominant_program' => $topProgram,
+                'dominant_industry' => $topIndustry,
+                'dominant_location' => $topCity,
+                'percentages' => [
+                    'program' => $topProgramPct,
+                    'industry' => $topIndustryPct,
+                    'location' => $topCityPct
+                ],
+                'total_users' => $profile['total_users']
+            ];
+        }
+        
+        return $insights;
     }
 
     /**

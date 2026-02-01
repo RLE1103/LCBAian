@@ -15,7 +15,13 @@ class JobPostController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = JobPost::query();
+            $query = JobPost::with('poster:id,first_name,last_name,middle_name');
+
+            // Filter by status - only show approved jobs for non-admin users
+            $user = Auth::user();
+            if (!$user || $user->role !== 'admin') {
+                $query->where('status', 'approved');
+            }
 
             // Search filter
             if ($request->has('search') && $request->search) {
@@ -47,11 +53,6 @@ class JobPostController extends Controller
                 $query->where('experience_level', $request->experience_level);
             }
 
-            // Only show active jobs by default (remove this filter since is_active doesn't exist)
-            // if ($request->has('is_active')) {
-            //     $query->where('is_active', $request->is_active);
-            // }
-
             $jobs = $query->orderBy('created_at', 'desc')
                          ->get();
 
@@ -73,7 +74,7 @@ class JobPostController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $job = JobPost::findOrFail($id);
+            $job = JobPost::with('poster:id,first_name,last_name,middle_name')->findOrFail($id);
 
             return response()->json([
                 'success' => true,
@@ -104,19 +105,67 @@ class JobPostController extends Controller
                 'industry' => 'nullable|string|max:100',
                 'experience_level' => 'nullable|string|max:50',
                 'salary_range' => 'nullable|string|max:50',
+                'application_link' => 'nullable|url|max:500',
                 'is_active' => 'boolean',
             ]);
 
             $job = JobPost::create([
                 'posted_by_admin' => Auth::user()->role === 'admin',
                 'user_id' => Auth::id(),
+                'status' => 'pending',  // All new job posts are pending by default
                 ...$validated
             ]);
+
+            // Load poster relationship
+            $job->load('poster:id,first_name,last_name,middle_name');
 
             return response()->json([
                 'success' => true,
                 'data' => $job,
-                'message' => 'Job posted successfully'
+                'message' => 'Job post submitted and pending admin approval'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get unique filter values for jobs directory
+     */
+    public function getFilterOptions(): JsonResponse
+    {
+        try {
+            $locations = JobPost::whereNotNull('location')
+                ->distinct()
+                ->pluck('location')
+                ->filter()
+                ->sort()
+                ->values();
+
+            $industries = JobPost::whereNotNull('industry')
+                ->distinct()
+                ->pluck('industry')
+                ->filter()
+                ->sort()
+                ->values();
+
+            $workTypes = JobPost::whereNotNull('work_type')
+                ->distinct()
+                ->pluck('work_type')
+                ->filter()
+                ->sort()
+                ->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'locations' => $locations,
+                    'industries' => $industries,
+                    'work_types' => $workTypes,
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([

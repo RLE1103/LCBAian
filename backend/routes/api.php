@@ -51,22 +51,53 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // User routes
     Route::get('/users', [App\Http\Controllers\UserController::class, 'index']);
+    Route::get('/users/filter-options', [App\Http\Controllers\UserController::class, 'getFilterOptions']);
     Route::get('/users/{id}', [App\Http\Controllers\UserController::class, 'show']);
     Route::put('/users/{id}', [App\Http\Controllers\UserController::class, 'update']);
     
     // Job routes
     Route::get('/job-posts', [App\Http\Controllers\JobPostController::class, 'index']);
+    Route::get('/job-posts/filter-options', [App\Http\Controllers\JobPostController::class, 'getFilterOptions']);
     Route::get('/job-posts/{id}', [App\Http\Controllers\JobPostController::class, 'show']);
     Route::post('/job-posts', [App\Http\Controllers\JobPostController::class, 'store']);
     
     // Message routes
     Route::get('/messages', [App\Http\Controllers\MessageController::class, 'index']);
     Route::get('/messages/conversation/{userId}', [App\Http\Controllers\MessageController::class, 'getConversation']);
+    Route::get('/messages/available-users', [App\Http\Controllers\MessageController::class, 'getAvailableUsers']);
+    Route::get('/messages/poll', [App\Http\Controllers\MessageController::class, 'pollMessages']);
+    Route::get('/messages/unread-count', [App\Http\Controllers\MessageController::class, 'getUnreadCount']);
     Route::post('/messages', [App\Http\Controllers\MessageController::class, 'store']);
     
     // Post routes (social posts)
     Route::get('/posts', [App\Http\Controllers\PostController::class, 'index']);
     Route::post('/posts', [App\Http\Controllers\PostController::class, 'store']);
+    
+    // Report routes
+    Route::post('/reports', [App\Http\Controllers\ReportController::class, 'store']);
+    Route::get('/reports', [App\Http\Controllers\ReportController::class, 'index']); // Admin only
+    Route::get('/reports/{id}', [App\Http\Controllers\ReportController::class, 'show']); // Admin only
+    Route::put('/reports/{id}', [App\Http\Controllers\ReportController::class, 'update']); // Admin only
+    Route::post('/reports/{id}/resolve', [App\Http\Controllers\ReportController::class, 'resolve']); // Admin only
+    
+    // Admin Job Approval routes
+    Route::get('/admin/jobs/pending', [App\Http\Controllers\AdminJobApprovalController::class, 'getPendingJobs']); // Admin only
+    Route::post('/admin/jobs/{id}/approve', [App\Http\Controllers\AdminJobApprovalController::class, 'approve']); // Admin only
+    Route::post('/admin/jobs/{id}/reject', [App\Http\Controllers\AdminJobApprovalController::class, 'reject']); // Admin only
+    Route::post('/admin/jobs/{id}/flag', [App\Http\Controllers\AdminJobApprovalController::class, 'flag']); // Admin only
+    Route::get('/admin/jobs/statistics', [App\Http\Controllers\AdminJobApprovalController::class, 'getStatistics']); // Admin only
+    
+    // Education History routes
+    Route::get('/user/education', [App\Http\Controllers\EducationHistoryController::class, 'index']);
+    Route::post('/user/education', [App\Http\Controllers\EducationHistoryController::class, 'store']);
+    Route::put('/user/education/{id}', [App\Http\Controllers\EducationHistoryController::class, 'update']);
+    Route::delete('/user/education/{id}', [App\Http\Controllers\EducationHistoryController::class, 'destroy']);
+    
+    // Birthday routes
+    Route::get('/birthdays/today', [App\Http\Controllers\BirthdayController::class, 'getBirthdaysToday']);
+    Route::get('/birthdays/this-week', [App\Http\Controllers\BirthdayController::class, 'getBirthdaysThisWeek']);
+    Route::get('/birthdays/this-month', [App\Http\Controllers\BirthdayController::class, 'getBirthdaysThisMonth']);
+    Route::get('/birthdays/upcoming', [App\Http\Controllers\BirthdayController::class, 'getUpcomingBirthdays']);
     Route::post('/posts/{id}/like', [App\Http\Controllers\PostController::class, 'toggleLike']);
     Route::post('/posts/{id}/comment', [App\Http\Controllers\PostController::class, 'addComment']);
     
@@ -83,6 +114,10 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Applications
     Route::post('/applications', [App\Http\Controllers\ApplicationController::class, 'store']);
+    
+    // Skills Taxonomy routes
+    Route::get('/skills', [App\Http\Controllers\SkillsTaxonomyController::class, 'index']);
+    Route::get('/skills/by-category', [App\Http\Controllers\SkillsTaxonomyController::class, 'byCategory']);
 
     // Community routes
     Route::get('/communities', [App\Http\Controllers\CommunityController::class, 'index']);

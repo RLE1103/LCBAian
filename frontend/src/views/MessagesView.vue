@@ -1,7 +1,13 @@
 <template>
-  <div class="flex h-full bg-gray-100">
+  <div class="flex bg-gray-100" style="min-height: calc(100vh - 60px);">
     <!-- Left Panel - Conversations List -->
-    <div class="w-1/3 bg-white border-r border-gray-200 flex flex-col">
+    <div 
+      :class="[
+        'bg-white border-r border-gray-200 flex flex-col',
+        'w-full md:w-1/3',
+        selectedConversation && 'hidden md:flex'
+      ]"
+    >
       <!-- Header -->
       <div class="p-4 border-b border-gray-200">
         <div class="flex items-center justify-between mb-4">
@@ -103,9 +109,14 @@
     </div>
 
     <!-- Middle Panel - Chat Window -->
-    <div class="flex-1 flex flex-col">
+    <div 
+      :class="[
+        'flex-1 flex flex-col',
+        !selectedConversation && 'hidden md:flex'
+      ]"
+    >
       <div v-if="!selectedConversation" class="flex-1 flex items-center justify-center bg-gray-50">
-        <div class="text-center text-gray-500">
+        <div class="text-center text-gray-500 px-4">
           <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
           </svg>
@@ -117,8 +128,18 @@
       <div v-else class="flex-1 flex flex-col">
         <!-- Chat Header -->
         <div class="bg-white border-b border-gray-200 p-4">
-              <div class="flex items-center justify-between">
-            <div class="flex items-center">
+          <div class="flex items-center justify-between">
+            <!-- Back button for mobile -->
+            <button 
+              @click="selectedConversation = null"
+              class="md:hidden mr-3 text-gray-600 hover:text-gray-900"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+            </button>
+            
+            <div class="flex items-center flex-1">
               <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
                 {{ selectedConversation.other_user?.first_name?.[0] }}{{ selectedConversation.other_user?.last_name?.[0] }}
               </div>
@@ -145,7 +166,7 @@
     </div>
 
         <!-- Messages Area -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+        <div class="messages-container flex-1 overflow-y-auto p-4 space-y-4">
           <div v-if="conversationMessages.length === 0" class="text-center text-gray-500 py-8">
             <p>No messages yet. Start the conversation!</p>
           </div>
@@ -193,12 +214,12 @@
                 @keypress.enter="sendMessage"
                 type="text"
                 placeholder="Type a message..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-3 md:px-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm md:text-base"
               />
               </div>
             
-            <button class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button class="p-2 md:p-2.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 touch-manipulation">
+              <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
           </button>
@@ -206,7 +227,7 @@
             <button 
               @click="sendMessage"
               :disabled="!newMessage.trim()"
-              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="bg-blue-600 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base font-medium touch-manipulation"
             >
               Send
           </button>
@@ -216,7 +237,7 @@
     </div>
 
     <!-- Right Panel - Profile & Context -->
-    <div v-if="selectedConversation" class="w-1/4 bg-white border-l border-gray-200 p-4">
+    <div v-if="selectedConversation" class="w-1/4 bg-white border-l border-gray-200 p-4 hidden lg:block">
       <!-- Profile Card -->
       <div class="text-center mb-6">
         <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-3">
@@ -231,9 +252,6 @@
       <div class="space-y-2 mb-6">
         <button class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
           View Full Profile
-        </button>
-        <button class="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50">
-          Request Mentorship
         </button>
         <button class="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50">
           Recommend for Job
@@ -292,7 +310,7 @@
           <select v-model="newMessageRecipient" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             <option value="">Choose an alumni...</option>
             <option v-for="user in availableUsers" :key="user.id" :value="user.id">
-              {{ user.full_name }} - {{ user.headline || 'Alumni' }}
+              {{ user.full_name }}{{ user.program ? ` - ${user.program}` : '' }}{{ user.batch ? ` (${user.batch})` : '' }}
             </option>
           </select>
         </div>
@@ -321,7 +339,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import axios from '../config/api'
 import { useAuthStore } from '../stores/auth'
 
@@ -341,6 +359,11 @@ const showNewMessageModal = ref(false)
 const newMessageRecipient = ref('')
 const newMessageContent = ref('')
 const loading = ref(false)
+
+// Polling
+const pollingInterval = ref(null)
+const lastPollTime = ref(null)
+const messagesContainer = ref(null)
 
 // Fetch conversations from API
 const conversations = ref([])
@@ -381,12 +404,93 @@ const loadMessages = async (otherUserId) => {
     if (response?.data?.success && Array.isArray(response.data.data)) {
       // Sort messages by sent_at to ensure correct chronological order
       conversationMessages.value = sortMessages(response.data.data)
+      lastPollTime.value = new Date().toISOString()
+      await nextTick()
+      scrollToBottom()
     } else {
       conversationMessages.value = []
     }
   } catch (error) {
     console.error('Error loading messages:', error)
     conversationMessages.value = []
+  }
+}
+
+// Auto-scroll to bottom
+const scrollToBottom = () => {
+  const container = document.querySelector('.messages-container')
+  if (container) {
+    container.scrollTop = container.scrollHeight
+  }
+}
+
+// Polling for new messages
+const pollForNewMessages = async () => {
+  if (!selectedConversation.value || !lastPollTime.value) return
+  
+  // Only poll when tab is visible
+  if (document.visibilityState !== 'visible') return
+  
+  try {
+    const response = await axios.get('/api/messages/poll', {
+      params: {
+        since: lastPollTime.value,
+        other_user_id: selectedConversation.value.other_user.id
+      }
+    })
+    
+    if (response?.data?.success && Array.isArray(response.data.data) && response.data.data.length > 0) {
+      // Get existing message IDs to prevent duplicates
+      const existingIds = new Set(conversationMessages.value.map(m => m.id))
+      
+      // Filter out duplicate messages
+      const newMessages = response.data.data.filter(msg => !existingIds.has(msg.id))
+      
+      if (newMessages.length > 0) {
+        // Add only new unique messages
+        conversationMessages.value = sortMessages([...conversationMessages.value, ...newMessages])
+        await nextTick()
+        scrollToBottom()
+      }
+      
+      // Update last poll time
+      lastPollTime.value = new Date().toISOString()
+      
+      // Update conversation list if there were new messages
+      if (newMessages.length > 0) {
+        fetchConversations()
+      }
+    }
+  } catch (error) {
+    console.error('Error polling messages:', error)
+  }
+}
+
+const startPolling = () => {
+  // Poll every 3 seconds
+  pollingInterval.value = setInterval(() => {
+    pollForNewMessages()
+    // Also refresh conversation list to show new conversations
+    fetchConversations()
+  }, 3000)
+}
+
+const stopPolling = () => {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value)
+    pollingInterval.value = null
+  }
+}
+
+// Load available users for new message modal
+const loadAvailableUsers = async () => {
+  try {
+    const response = await axios.get('/api/messages/available-users')
+    if (response?.data?.success && Array.isArray(response.data.data)) {
+      availableUsers.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Error loading available users:', error)
   }
 }
 
@@ -459,6 +563,10 @@ const sendMessage = async () => {
       }
       
       newMessage.value = ''
+      lastPollTime.value = new Date().toISOString()
+      
+      await nextTick()
+      scrollToBottom()
     }
   } catch (error) {
     console.error('Error sending message:', error)
@@ -491,20 +599,39 @@ const formatTime = (date) => {
   if (!date) return ''
   
   const now = new Date()
-  const diff = now - new Date(date)
+  const messageDate = new Date(date)
+  const diff = now - messageDate
+  
+  // Just now (< 60 seconds)
+  if (diff < 60000) return 'Just now'
+  
+  // Minutes (< 60 minutes)
   const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
-
-  if (minutes < 1) return 'Just now'
   if (minutes < 60) return `${minutes}m ago`
+  
+  // Hours (< 24 hours)
+  const hours = Math.floor(diff / 3600000)
   if (hours < 24) return `${hours}h ago`
+  
+  // Days (< 7 days)
+  const days = Math.floor(diff / 86400000)
   if (days < 7) return `${days}d ago`
   
-  return new Date(date).toLocaleDateString()
+  // Full date for older messages
+  return messageDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: messageDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+  })
 }
 
 onMounted(() => {
   fetchConversations()
+  loadAvailableUsers()
+  startPolling()
+})
+
+onUnmounted(() => {
+  stopPolling()
 })
 </script>

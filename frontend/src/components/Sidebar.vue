@@ -1,42 +1,102 @@
 <template>
-  <aside class="w-64 bg-blue-900 text-white flex flex-col justify-between h-screen shadow-lg">
-    <div>
+  <aside 
+    :class="[
+      'bg-blue-900 text-white flex flex-col shadow-lg overflow-hidden transition-all duration-300 ease-in-out',
+      'fixed inset-y-0 left-0 md:relative md:inset-auto md:h-full',
+      'z-50',
+      // Width classes
+      isCollapsed ? 'w-0 md:w-16' : 'w-64',
+      // Transform classes for mobile
+      isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    ]"
+  >
+    <div class="flex flex-col h-full overflow-hidden">
       <!-- LCBA Logo Placeholder -->
-      <div class="flex items-center gap-3 p-4 border-b border-blue-800">
-        <img src="\src\assets\images\LCBAlogo.png" alt="LCBA Logo" class="w-16 h-16 rounded object-cover" />
-        <div class="font-bold text-lg leading-tight">LCBAian</div>
+      <div class="flex items-center gap-3 p-4 border-b border-blue-800 flex-shrink-0" :class="{ 'justify-center': isCollapsed }">
+        <img src="\src\assets\images\LCBAlogo.png" alt="LCBA Logo" :class="isCollapsed ? 'w-10 h-10' : 'w-16 h-16'" class="rounded object-cover" />
+        <div v-if="!isCollapsed" class="font-bold text-lg leading-tight">LCBAConnect+</div>
       </div>
+      
       <!-- Logo and User -->
-      <div class="flex items-center gap-3 p-4 border-b border-blue-800">
+      <div class="flex items-center gap-3 p-4 border-b border-blue-800 flex-shrink-0" :class="{ 'justify-center': isCollapsed }">
         <div class="w-12 h-12 rounded-full border-4 border-yellow-400 flex items-center justify-center bg-blue-700 overflow-hidden">
           <img :src="userAvatar" :alt="userFullName" class="w-10 h-10 rounded-full" />
         </div>
-        <div>
+        <div v-if="!isCollapsed">
           <div class="text-sm font-semibold leading-tight">{{ userFullName }}</div>
           <div class="text-xs leading-tight text-blue-300">{{ userRole }}</div>
         </div>
       </div>
-      <!-- Navigation -->
-      <nav class="mt-6 flex-1">
-        <ul class="space-y-2">
-          <li class="mt-4 text-xs text-blue-300 px-4">Features</li>
-          <li><RouterLink to="/" :class="linkClasses('/')"><span>🏠</span>Dashboard</RouterLink></li>
-          <li><RouterLink to="/messages" :class="linkClasses('/messages', 'relative')"><span>✉️</span>Messages <span v-if="unreadCount > 0" class="ml-auto text-xs bg-red-500 text-white rounded-full px-2 absolute right-4">{{ unreadCount }}</span></RouterLink></li>
-          <li><RouterLink to="/profile" :class="linkClasses('/profile')"><span>👤</span>Profile</RouterLink></li>
-          <li class="mt-4 text-xs text-blue-300 px-4">Recruitment</li>
-          <li><RouterLink to="/jobs" :class="linkClasses('/jobs')"><span>💼</span>Jobs</RouterLink></li>
-          <li><RouterLink to="/alumni" :class="linkClasses('/alumni')"><span>👥</span>Alumni</RouterLink></li>
-          <li class="mt-4 text-xs text-blue-300 px-4">Organization</li>
-          <li v-if="isAdmin"><RouterLink to="/alumni-management" :class="linkClasses('/alumni-management')"><span>🏢</span>Alumni Management</RouterLink></li>
-          <li v-if="isAdmin"><RouterLink to="/intelligent-tracker" :class="linkClasses('/intelligent-tracker')"><span>📊</span>Alumni Tracker</RouterLink></li>
-          <li><RouterLink to="/events" :class="linkClasses('/events')"><span>📅</span>Events</RouterLink></li>
-          <li><RouterLink to="/news" :class="linkClasses('/news')"><span>📰</span>News and Announcements</RouterLink></li>
+      
+      <!-- Navigation (Scrollable) -->
+      <nav class="flex-1 overflow-y-auto overflow-x-hidden mt-6 min-h-0">
+        <ul class="space-y-2 pb-4">
+          <li v-if="!isCollapsed" class="text-xs text-blue-300 px-4">Features</li>
+          <li>
+            <RouterLink to="/" :class="linkClasses('/')" @click="handleNavClick" :title="isCollapsed ? 'Dashboard' : ''">
+              <span>🏠</span><span v-if="!isCollapsed">Dashboard</span>
+            </RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/messages" :class="linkClasses('/messages', 'relative')" @click="handleNavClick" :title="isCollapsed ? 'Messages' : ''">
+              <span>✉️</span><span v-if="!isCollapsed">Messages</span>
+              <span v-if="unreadCount > 0 && !isCollapsed" class="ml-auto text-xs bg-red-500 text-white rounded-full px-2 absolute right-4">{{ unreadCount }}</span>
+            </RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/profile" :class="linkClasses('/profile')" @click="handleNavClick" :title="isCollapsed ? 'Profile' : ''">
+              <span>👤</span><span v-if="!isCollapsed">Profile</span>
+            </RouterLink>
+          </li>
+          <li v-if="!isCollapsed" class="mt-4 text-xs text-blue-300 px-4">Recruitment</li>
+          <li>
+            <RouterLink to="/jobs" :class="linkClasses('/jobs')" @click="handleNavClick" :title="isCollapsed ? 'Jobs' : ''">
+              <span>💼</span><span v-if="!isCollapsed">Jobs</span>
+            </RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/alumni" :class="linkClasses('/alumni')" @click="handleNavClick" :title="isCollapsed ? 'Alumni' : ''">
+              <span>👥</span><span v-if="!isCollapsed">Alumni</span>
+            </RouterLink>
+          </li>
+          <li v-if="!isCollapsed" class="mt-4 text-xs text-blue-300 px-4">Organization</li>
+          <li v-if="isAdmin">
+            <RouterLink to="/alumni-management" :class="linkClasses('/alumni-management')" @click="handleNavClick" :title="isCollapsed ? 'Alumni Management' : ''">
+              <span>🏢</span><span v-if="!isCollapsed">Alumni Management</span>
+            </RouterLink>
+          </li>
+          <li v-if="isAdmin">
+            <RouterLink to="/intelligent-tracker" :class="linkClasses('/intelligent-tracker')" @click="handleNavClick" :title="isCollapsed ? 'Alumni Tracker' : ''">
+              <span>📊</span><span v-if="!isCollapsed">Alumni Tracker</span>
+            </RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/events" :class="linkClasses('/events')" @click="handleNavClick" :title="isCollapsed ? 'Events' : ''">
+              <span>📅</span><span v-if="!isCollapsed">Events</span>
+            </RouterLink>
+          </li>
+          <li>
+            <RouterLink to="/news" :class="linkClasses('/news')" @click="handleNavClick" :title="isCollapsed ? 'News and Announcements' : ''">
+              <span>📰</span><span v-if="!isCollapsed">News and Announcements</span>
+            </RouterLink>
+          </li>
         </ul>
       </nav>
-    </div>
-    <!-- Bottom Pattern -->
-    <div class="relative">
-      <button @click="handleLogout" class="m-4 w-[85%] bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-bold shadow">Log Out</button>
+      
+      <!-- Quick Links Section (Fixed at bottom) -->
+      <div v-if="!isCollapsed" class="border-t border-blue-800 p-4 flex-shrink-0 bg-blue-900">
+        <div class="text-xs text-blue-300 mb-2">Quick Links</div>
+        <div class="space-y-1 text-xs">
+          <a href="https://lcba.edu.ph" target="_blank" class="flex items-center gap-2 text-blue-200 hover:text-white py-1">
+            <span>🌐</span>
+            <span>LCBA Website</span>
+          </a>
+          <router-link to="/terms" class="flex items-center gap-2 text-blue-200 hover:text-white py-1">
+            <span>📋</span>
+            <span>Community Guidelines</span>
+          </router-link>
+        </div>
+      </div>
     </div>
   </aside>
 </template>
@@ -46,6 +106,21 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { computed, ref, onMounted } from 'vue'
 import axios from '../config/api'
+
+// Props
+const props = defineProps({
+  isMobileMenuOpen: {
+    type: Boolean,
+    default: false
+  },
+  isCollapsed: {
+    type: Boolean,
+    default: false
+  }
+})
+
+// Emits
+const emit = defineEmits(['close'])
 
 const route = useRoute()
 const router = useRouter()
@@ -82,14 +157,17 @@ const userAvatar = computed(() => {
 
 function linkClasses(targetPath, extra = '') {
 	const isActive = route.path === targetPath
-	const base = 'flex items-center gap-3 px-4 py-2 rounded-r-full '
+	const base = 'flex items-center px-4 py-2 rounded-r-full transition-all '
+	const gap = props.isCollapsed ? 'justify-center ' : 'gap-3 '
 	const hover = isActive ? '' : 'hover:bg-blue-800 '
 	const active = isActive ? 'bg-yellow-400 text-blue-900 font-bold ' : ''
-	return base + hover + active + (extra ? extra + ' ' : '')
+	return base + gap + hover + active + (extra ? extra + ' ' : '')
 }
 
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
+// Close mobile menu when clicking a link
+const handleNavClick = () => {
+  if (props.isMobileMenuOpen) {
+    emit('close')
+  }
 }
 </script>

@@ -1,26 +1,21 @@
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <!-- Page Header -->
-    <div class="flex items-center justify-between mb-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 md:mb-8 gap-3">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Alumni Tracker</h1>
-        <p class="text-gray-600 mt-2">Discover dynamic alumni clusters powered by K-Means</p>
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Alumni Tracker</h1>
+        <p class="text-sm md:text-base text-gray-600 mt-1 md:mt-2">Discover dynamic alumni clusters powered by K-Means</p>
       </div>
-      <div class="flex items-center space-x-4">
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-700">Clusters (K)</label>
-            <input type="number" min="2" max="10" v-model.number="kValue" class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-          </div>
-          <div class="hidden md:flex items-center gap-3">
-            <span class="text-sm text-gray-700">Data Parameters:</span>
-            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.program" /> Program</label>
-            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.graduation_year" /> Graduation Year</label>
-            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.industry" /> Current Job Field</label>
-            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.location" /> Location</label>
-            <label class="text-sm text-gray-700 flex items-center gap-1"><input type="checkbox" v-model="selectedFields.skills" /> Skills</label>
-          </div>
-        </div>
+      <div class="flex items-center space-x-2 md:space-x-4">
+        <button 
+          @click="showClusteringModal = true"
+          class="bg-gray-500 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-gray-600 flex items-center gap-2 text-sm md:text-base"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+          </svg>
+          Configure Clustering
+        </button>
         <button @click="runClustering" :disabled="isClustering" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
           <svg v-if="isClustering" class="animate-spin w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -106,7 +101,7 @@
     </div>
 
     <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="max-w-7xl mx-auto">
       <!-- K-Means Clustering Results -->
       <div class="bg-white rounded-xl shadow-lg p-6">
         <div class="flex items-center justify-between mb-6">
@@ -124,46 +119,66 @@
         </div>
 
         <!-- Cluster Details -->
-        <div v-if="clusterProfiles.length > 0" class="space-y-4">
+        <div v-if="clusterProfiles.length > 0" class="space-y-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Cluster Profiles</h3>
           <div 
             v-for="profile in clusterProfiles" 
             :key="profile.cluster_id"
-            class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer"
+            class="border border-gray-200 rounded-lg p-6 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer"
             @click="viewClusterDetails(profile.cluster_id)"
           >
-            <div class="flex items-center justify-between mb-2">
-              <h4 class="font-semibold text-gray-900">Cluster {{ profile.cluster_id }}</h4>
-              <span class="bg-gray-100 text-gray-600 text-sm px-2 py-1 rounded-full">
-                {{ profile.total_users }} users
+            <div class="flex items-center justify-between mb-4">
+              <h4 class="text-xl font-bold text-gray-900">Cluster {{ profile.cluster_id }}</h4>
+              <span class="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">
+                {{ profile.total_users }} alumni
               </span>
             </div>
             
-            <div class="space-y-2">
-              <div v-if="profile.top_skills && Object.keys(profile.top_skills).length > 0">
-                <p class="text-sm font-medium text-gray-700">Top Skills:</p>
-                <div class="flex flex-wrap gap-1">
-                  <span 
-                    v-for="(count, skill) in Object.entries(profile.top_skills).slice(0, 3)" 
-                    :key="skill"
-                    class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
-                  >
-                    {{ skill }} ({{ count }})
-                  </span>
-                </div>
+            <!-- Distribution Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div class="bg-blue-50 p-3 rounded-lg">
+                <p class="text-xs text-gray-600 mb-1">Top Program</p>
+                <p class="text-lg font-bold text-blue-600 truncate">
+                  {{ getTopItem(profile.top_programs) || 'N/A' }}
+                </p>
+                <p class="text-xs text-gray-500">{{ getTopPercentage(profile.top_programs, profile.total_users) }}% of cluster</p>
               </div>
               
-              <div v-if="profile.top_industries && Object.keys(profile.top_industries).length > 0">
-                <p class="text-sm font-medium text-gray-700">Top Industries:</p>
-                <div class="flex flex-wrap gap-1">
-                  <span 
-                    v-for="(count, industry) in Object.entries(profile.top_industries).slice(0, 2)" 
-                    :key="industry"
-                    class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full"
-                  >
-                    {{ industry }} ({{ count }})
-                  </span>
-                </div>
+              <div class="bg-green-50 p-3 rounded-lg">
+                <p class="text-xs text-gray-600 mb-1">Top Industry</p>
+                <p class="text-lg font-bold text-green-600 truncate">
+                  {{ getTopItem(profile.top_industries) || 'N/A' }}
+                </p>
+                <p class="text-xs text-gray-500">{{ getTopPercentage(profile.top_industries, profile.total_users) }}% of cluster</p>
+              </div>
+              
+              <div class="bg-purple-50 p-3 rounded-lg">
+                <p class="text-xs text-gray-600 mb-1">Top Location</p>
+                <p class="text-lg font-bold text-purple-600 truncate">
+                  {{ getTopItem(profile.top_cities) || 'N/A' }}
+                </p>
+                <p class="text-xs text-gray-500">{{ getTopPercentage(profile.top_cities, profile.total_users) }}% of cluster</p>
+              </div>
+            </div>
+            
+            <!-- Auto-generated Insight -->
+            <div v-if="clusterInsights[profile.cluster_id]" class="bg-gray-50 p-4 rounded-lg mt-4">
+              <p class="text-sm text-gray-700">
+                <strong class="text-blue-600">Insight:</strong> {{ clusterInsights[profile.cluster_id].insight }}
+              </p>
+            </div>
+            
+            <!-- Top Skills -->
+            <div v-if="profile.top_skills && Object.keys(profile.top_skills).length > 0" class="mt-4">
+              <p class="text-sm font-medium text-gray-700 mb-2">Top Skills:</p>
+              <div class="flex flex-wrap gap-1">
+                <span 
+                  v-for="(count, skill) in Object.entries(profile.top_skills).slice(0, 5)" 
+                  :key="skill"
+                  class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full"
+                >
+                  {{ skill }} ({{ count }})
+                </span>
               </div>
             </div>
           </div>
@@ -177,116 +192,96 @@
           <p class="text-sm">Run clustering analysis to see results</p>
         </div>
       </div>
+    </div>
 
-      <!-- Skills Gap Analysis -->
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h2 class="text-xl font-bold text-gray-900">Skills Gap Analysis</h2>
-            <p class="text-sm text-gray-600 mt-1">Demand vs. Supply for curriculum planning</p>
+    <!-- Clustering Configuration Modal -->
+    <div v-if="showClusteringModal" class="fixed inset-0 flex items-center justify-center z-50 p-4" @click.self="showClusteringModal = false">
+      <div class="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-4 border-gray-300">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">Clustering Configuration</h2>
+            <button @click="showClusteringModal = false" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
           </div>
-        </div>
 
-        <!-- Summary Stats -->
-        <div v-if="skillsGapAnalysis?.summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-blue-50 rounded-lg p-4">
-            <p class="text-xs text-gray-600 mb-1">Skills in Demand</p>
-            <p class="text-2xl font-bold text-blue-600">{{ skillsGapAnalysis.summary.total_skills_in_demand || 0 }}</p>
-          </div>
-          <div class="bg-green-50 rounded-lg p-4">
-            <p class="text-xs text-gray-600 mb-1">Skills Supplied</p>
-            <p class="text-2xl font-bold text-green-600">{{ skillsGapAnalysis.summary.total_skills_supplied || 0 }}</p>
-          </div>
-          <div class="bg-red-50 rounded-lg p-4">
-            <p class="text-xs text-gray-600 mb-1">Shortages</p>
-            <p class="text-2xl font-bold text-red-600">{{ skillsGapAnalysis.summary.skills_with_shortage || 0 }}</p>
-          </div>
-          <div class="bg-yellow-50 rounded-lg p-4">
-            <p class="text-xs text-gray-600 mb-1">Surpluses</p>
-            <p class="text-2xl font-bold text-yellow-600">{{ skillsGapAnalysis.summary.skills_with_surplus || 0 }}</p>
-          </div>
-        </div>
+          <div class="space-y-6">
+            <!-- Clusters (K) Input -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Number of Clusters (K)</label>
+              <input 
+                type="number" 
+                min="2" 
+                max="10" 
+                v-model.number="kValue" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              />
+              <p class="text-xs text-gray-500 mt-1">Select the number of clusters to create (2-10)</p>
+            </div>
 
-        <!-- Critical Shortages (Most Important for Curriculum Planning) -->
-        <div v-if="skillsGapAnalysis?.critical_shortages && skillsGapAnalysis.critical_shortages.length > 0" class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
-            Critical Shortages (Top Priority)
-          </h3>
-          <div class="space-y-3">
-            <div 
-              v-for="skill in skillsGapAnalysis.critical_shortages.slice(0, 10)" 
-              :key="skill.skill"
-              class="border-l-4 border-red-500 bg-red-50 rounded-lg p-4"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="font-semibold text-gray-900">{{ skill.skill }}</span>
-                <span class="bg-red-200 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
-                  Shortage: {{ skill.gap }}
-                </span>
+            <!-- Data Parameters -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-3">Data Parameters</label>
+              <p class="text-xs text-gray-500 mb-3">Select which fields to use for clustering analysis</p>
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectedFields.program" class="rounded border-gray-300" />
+                  <span class="text-sm text-gray-700">Program</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectedFields.graduation_year" class="rounded border-gray-300" />
+                  <span class="text-sm text-gray-700">Graduation Year</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectedFields.industry" class="rounded border-gray-300" />
+                  <span class="text-sm text-gray-700">Current Job Field</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectedFields.city" class="rounded border-gray-300" />
+                  <span class="text-sm text-gray-700">City</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectedFields.country" class="rounded border-gray-300" />
+                  <span class="text-sm text-gray-700">Country</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectedFields.employment_status" class="rounded border-gray-300" />
+                  <span class="text-sm text-gray-700">Employment Status</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectedFields.years_of_experience" class="rounded border-gray-300" />
+                  <span class="text-sm text-gray-700">Years of Experience</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectedFields.salary_range" class="rounded border-gray-300" />
+                  <span class="text-sm text-gray-700">Salary Range</span>
+                </label>
+                <label class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input type="checkbox" v-model="selectedFields.skills" class="rounded border-gray-300" />
+                  <span class="text-sm text-gray-700">Skills</span>
+                </label>
               </div>
-              <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span class="text-gray-600">Demand:</span>
-                  <span class="font-medium text-gray-900 ml-2">{{ skill.demand }} jobs</span>
-                </div>
-                <div>
-                  <span class="text-gray-600">Supply:</span>
-                  <span class="font-medium text-gray-900 ml-2">{{ skill.supply }} alumni</span>
-                </div>
-              </div>
-              <div class="mt-2">
-                <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
-                  <span>Gap: {{ skill.gap_percentage }}%</span>
-                  <span>Action: Strengthen curriculum</span>
-                </div>
-              </div>
+              <p class="text-xs text-gray-500 mt-3">At least one parameter must be selected</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-end gap-3 pt-4 border-t">
+              <button 
+                @click="showClusteringModal = false"
+                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button 
+                @click="applyClusteringConfig"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Apply & Run
+              </button>
             </div>
           </div>
-        </div>
-
-        <!-- Surpluses -->
-        <div v-if="skillsGapAnalysis?.surpluses && skillsGapAnalysis.surpluses.length > 0" class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            Skills Surpluses
-          </h3>
-          <div class="space-y-3">
-            <div 
-              v-for="skill in skillsGapAnalysis.surpluses.slice(0, 5)" 
-              :key="skill.skill"
-              class="border-l-4 border-green-500 bg-green-50 rounded-lg p-4"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="font-semibold text-gray-900">{{ skill.skill }}</span>
-                <span class="bg-green-200 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                  Surplus: {{ Math.abs(skill.gap) }}
-                </span>
-              </div>
-              <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span class="text-gray-600">Demand:</span>
-                  <span class="font-medium text-gray-900 ml-2">{{ skill.demand }} jobs</span>
-                </div>
-                <div>
-                  <span class="text-gray-600">Supply:</span>
-                  <span class="font-medium text-gray-900 ml-2">{{ skill.supply }} alumni</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="!skillsGapAnalysis || (!skillsGapAnalysis.critical_shortages && !skillsGapAnalysis.surpluses)" class="text-center py-8 text-gray-500">
-          <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-          </svg>
-          <p>No skills gap data available</p>
-          <p class="text-sm">Run analysis to see demand vs. supply insights</p>
         </div>
       </div>
     </div>
@@ -378,17 +373,14 @@ ChartJS.register(Title, Tooltip, Legend, ArcElement)
 // Reactive data
 const analyticsData = ref({})
 const clusterProfiles = ref([])
+const clusterInsights = ref({})
 const isClustering = ref(false)
 const showClusterModal = ref(false)
+const showClusteringModal = ref(false)
 const selectedClusterId = ref(null)
 const clusterDetails = ref(null)
 const kValue = ref(4)
-const selectedFields = ref({ program: true, graduation_year: false, industry: true, location: true, skills: false })
-
-// Computed properties
-const skillsGapAnalysis = computed(() => {
-  return analyticsData.value.skills_gap_analysis || null
-})
+const selectedFields = ref({ program: true, graduation_year: false, industry: true, city: true, country: true, employment_status: false, years_of_experience: false, salary_range: false, skills: false })
 
 // Chart options
 const chartOptions = {
@@ -448,6 +440,7 @@ const loadAnalyticsData = async () => {
     const response = await axios.get('/api/admin/analytics/dashboard')
     if (response.data.success) {
       analyticsData.value = response.data.data
+      clusterInsights.value = response.data.data.cluster_insights || {}
       
       // Load cluster profiles
       const clusterResponse = await axios.get('/api/admin/analytics/cluster-report')
@@ -461,12 +454,33 @@ const loadAnalyticsData = async () => {
   }
 }
 
+// Helper methods for cluster display
+const getTopItem = (itemsObj) => {
+  if (!itemsObj || Object.keys(itemsObj).length === 0) return null
+  return Object.keys(itemsObj)[0]
+}
+
+const getTopPercentage = (itemsObj, totalUsers) => {
+  if (!itemsObj || Object.keys(itemsObj).length === 0 || !totalUsers) return 0
+  const topItem = Object.keys(itemsObj)[0]
+  const count = itemsObj[topItem]
+  return Math.round((count / totalUsers) * 100)
+}
+
 const runClustering = async () => {
+  // Validate that at least one field is selected
+  const selectedFieldsList = Object.keys(selectedFields.value).filter(k => selectedFields.value[k])
+  if (selectedFieldsList.length === 0) {
+    alert('Please select at least one data parameter')
+    showClusteringModal.value = true
+    return
+  }
+
   isClustering.value = true
   try {
     const response = await axios.post('/api/admin/analytics/run-clustering', {
       clusters: kValue.value,
-      fields: Object.keys(selectedFields.value).filter(k => selectedFields.value[k])
+      fields: selectedFieldsList
     })
     
     if (response.data.success) {
@@ -483,6 +497,7 @@ const runClustering = async () => {
         await loadAnalyticsData()
       }
       alert('Clustering completed successfully!')
+      showClusteringModal.value = false
     } else {
       alert('Clustering failed: ' + response.data.message)
     }
@@ -492,6 +507,17 @@ const runClustering = async () => {
   } finally {
     isClustering.value = false
   }
+}
+
+const applyClusteringConfig = () => {
+  // Validate that at least one field is selected
+  const selectedFieldsList = Object.keys(selectedFields.value).filter(k => selectedFields.value[k])
+  if (selectedFieldsList.length === 0) {
+    alert('Please select at least one data parameter')
+    return
+  }
+  showClusteringModal.value = false
+  runClustering()
 }
 
 const refreshData = async () => {

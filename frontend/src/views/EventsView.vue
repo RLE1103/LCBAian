@@ -1,17 +1,17 @@
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <!-- Page Header -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6 gap-3">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">Alumni Events</h1>
-        <p class="text-gray-600 mt-1">Discover and join upcoming alumni events</p>
+        <h1 class="text-xl md:text-2xl font-bold text-gray-800">Alumni Events</h1>
+        <p class="text-sm md:text-base text-gray-600 mt-1">Discover and join upcoming alumni events</p>
       </div>
-      <div class="flex items-center space-x-4">
+      <div class="flex items-center space-x-2 md:space-x-4">
         <button 
           @click="showCreateModal = true"
-          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          class="bg-blue-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm md:text-base"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
           </svg>
           Create Event
@@ -136,7 +136,7 @@
           </div>
 
           <div 
-            v-for="event in filteredEvents" 
+            v-for="event in paginatedEvents" 
             :key="event.id"
             class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
             @click="viewEvent(event)"
@@ -218,11 +218,44 @@
                       Not Going
                     </button>
                   </div>
-                  </div>
-                  </div>
                 </div>
               </div>
             </div>
+          </div>
+          
+          <!-- Pagination Controls -->
+          <div v-if="totalPages > 1" class="mt-6 flex items-center justify-center gap-2">
+            <button 
+              @click="goToPage(currentPage - 1)"
+              :disabled="currentPage === 1"
+              class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              &lt;
+            </button>
+            
+            <button
+              v-for="page in totalPages"
+              :key="page"
+              @click="goToPage(page)"
+              :class="[
+                'px-3 py-2 border rounded-lg min-w-[40px]',
+                currentPage === page 
+                  ? 'bg-blue-600 text-white border-blue-600' 
+                  : 'border-gray-300 hover:bg-gray-50 text-gray-700'
+              ]"
+            >
+              {{ page }}
+            </button>
+            
+            <button 
+              @click="goToPage(currentPage + 1)"
+              :disabled="currentPage === totalPages"
+              class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              &gt;
+            </button>
+          </div>
+        </div>
 
           <!-- Pagination -->
         <div class="mt-6 flex justify-center">
@@ -435,8 +468,8 @@
         </div>
 
     <!-- Create Event Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg p-6 w-full max-w-2xl border-4 border-gray-300 shadow-2xl">
+    <div v-if="showCreateModal" class="fixed inset-0 flex items-center justify-center z-50 p-4" @click.self="showCreateModal = false">
+      <div class="bg-white rounded-lg p-6 w-full max-w-2xl border-4 border-gray-300 shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">Create New Event</h3>
           <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600">
@@ -539,6 +572,10 @@ const selectedEvent = ref(null)
 const currentDate = ref(new Date())
 const loading = ref(false)
 
+// Pagination
+const currentPage = ref(1)
+const itemsPerPage = 10
+
 const newEvent = ref({
   title: '',
   description: '',
@@ -574,10 +611,39 @@ const fetchEvents = async () => {
 }
 
 const createEvent = async () => {
+  if (!newEvent.value.title || !newEvent.value.title.trim()) {
+    alert('Please enter an event title')
+    return
+  }
+
+  if (!newEvent.value.description || !newEvent.value.description.trim()) {
+    alert('Please enter an event description')
+    return
+  }
+
+  if (!newEvent.value.start_date) {
+    alert('Please select a start date and time')
+    return
+  }
+
+  if (!newEvent.value.end_date) {
+    alert('Please select an end date and time')
+    return
+  }
+
+  if (!newEvent.value.location || !newEvent.value.location.trim()) {
+    alert('Please enter a location')
+    return
+  }
+
   try {
     const response = await axios.post('/api/events', newEvent.value)
+    
     if (response.data.success) {
-      showCreateModal.value = false
+      // Show success message
+      alert('Event created successfully!')
+      
+      // Reset form
       newEvent.value = {
         title: '',
         description: '',
@@ -586,10 +652,18 @@ const createEvent = async () => {
         location: '',
         type: 'webinar'
       }
+      
+      // Close modal
+      showCreateModal.value = false
+      
+      // Refresh events list
       await fetchEvents()
+    } else {
+      alert('Failed to create event: ' + (response.data.message || 'Unknown error'))
     }
   } catch (error) {
     console.error('Error creating event:', error)
+    alert('Error creating event: ' + (error.response?.data?.message || error.message || 'Unknown error'))
   }
 }
 
@@ -641,6 +715,21 @@ const filteredEvents = computed(() => {
 
   return filtered
 })
+
+const totalPages = computed(() => Math.ceil(filteredEvents.value.length / itemsPerPage))
+
+const paginatedEvents = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredEvents.value.slice(start, end)
+})
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
 
 const currentYear = computed(() => currentDate.value.getFullYear())
 const currentMonth = computed(() => {
@@ -746,7 +835,7 @@ onMounted(() => {
 
 // Watch for filter changes and refetch
 watch([searchQuery, selectedEventType, selectedLocation, selectedDateRange], () => {
-  fetchEvents()
+  currentPage.value = 1  // Reset to page 1 when filters change
 })
 </script>
 

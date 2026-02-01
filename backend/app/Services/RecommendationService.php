@@ -72,7 +72,8 @@ class RecommendationService
     }
 
     /**
-     * Calculate comprehensive similarity score
+     * Calculate comprehensive similarity score with multi-factor considerations
+     * Enhanced to include educational background and career preferences
      */
     public static function calculateSimilarityScore(User $user, JobPost $job): float
     {
@@ -80,28 +81,297 @@ class RecommendationService
         $jobRequiredSkills = $job->required_skills ?? [];
         $jobPreferredSkills = $job->preferred_skills ?? [];
 
-        if (empty($userSkills) || empty($jobRequiredSkills)) {
-            return 0.0;
-        }
+        // Allow matching even without skills if education/preferences match
+        $hasSkills = !empty($userSkills) && !empty($jobRequiredSkills);
 
-        // Calculate Jaccard similarity for required skills
-        $requiredSimilarity = self::calculateJaccard($userSkills, $jobRequiredSkills);
-        
-        // Calculate Jaccard similarity for preferred skills (weighted less)
+        // 1. Skill Similarity (30% weight) - reduced from 40%
+        $requiredSimilarity = 0.0;
         $preferredSimilarity = 0.0;
-        if (!empty($jobPreferredSkills)) {
-            $preferredSimilarity = self::calculateJaccard($userSkills, $jobPreferredSkills) * 0.3;
+        
+        if ($hasSkills) {
+            $requiredSimilarity = self::calculateJaccard($userSkills, $jobRequiredSkills) * 0.25;
+            
+            // Calculate preferred skills similarity (part of skill weight)
+            if (!empty($jobPreferredSkills)) {
+                $preferredSimilarity = self::calculateJaccard($userSkills, $jobPreferredSkills) * 0.05;
+            }
         }
 
-        // Bonus for exact skill matches
-        $exactMatches = count(array_intersect($userSkills, $jobRequiredSkills));
-        $bonusScore = min($exactMatches * 0.1, 0.3); // Max 30% bonus
+        // 2. Education Background Matching (25% weight) - NEW
+        $educationScore = self::calculateEducationScore($user, $job) * 0.25;
 
-        // Combine scores
-        $totalScore = $requiredSimilarity + $preferredSimilarity + $bonusScore;
+        // 3. Cluster-based collaborative filtering (20% weight) - reduced from 30%
+        $clusterScore = self::calculateClusterScore($user, $job) * 0.2;
+
+        // 4. Career Preferences (15% weight) - NEW
+        $preferencesScore = self::calculatePreferencesScore($user, $job) * 0.15;
+
+        // 5. Industry match (5% weight) - reduced from 15%
+        $industryScore = 0.0;
+        if ($user->industry && $job->industry) {
+            $industryScore = (strtolower($user->industry) === strtolower($job->industry)) ? 0.05 : 0.0;
+        }
+
+        // 6. Location preference (3% weight) - reduced from 10%
+        $locationScore = 0.0;
+        if ($user->city && $job->location) {
+            // Simple check if user's city is in job location
+            $locationScore = (stripos($job->location, $user->city) !== false) ? 0.03 : 0.0;
+        }
+
+        // 7. Job recency (2% weight) - reduced from 5%
+        $recencyScore = self::calculateRecencyScore($job) * 0.02;
+
+        // Combine all scores
+        // Total possible: 30% + 25% + 20% + 15% + 5% + 3% + 2% = 100%
+        $totalScore = $requiredSimilarity + $preferredSimilarity + $educationScore + 
+                     $clusterScore + $preferencesScore + $industryScore + 
+                     $locationScore + $recencyScore;
         
         // Cap at 1.0
         return min($totalScore, 1.0);
+    }
+
+    /**
+     * Calculate education background matching score
+     * Matches user's educational program with job industry/field
+     */
+    private static function calculateEducationScore(User $user, JobPost $job): float
+    {
+        $score = 0.0;
+        
+        // Get user's education history including LCBA program
+        $userPrograms = [];
+        if ($user->program) {
+            $userPrograms[] = $user->program;
+        }
+        
+        // Fetch education history
+        $educationHistory = \App\Models\EducationHistory::where('user_id', $user->id)->get();
+        foreach ($educationHistory as $edu) {
+            if (in_array($edu->level, ['college', 'masters', 'doctorate'])) {
+                // Include school name as it might contain program info
+                $userPrograms[] = $edu->school_name;
+            }
+        }
+        
+        // Define program-to-industry mappings
+        $techPrograms = ['BSCS', 'BSCpE', 'BSIT', 'Computer Science', 'Computer Engineering', 'Information Technology'];
+        $businessPrograms = ['BSA', 'BSBA', 'Business Administration', 'MBA', 'Accountancy', 'Management'];
+        $educationPrograms = ['BEED', 'BSED', 'Education', 'Teaching', 'Bachelor of Elementary Education', 'Bachelor of Secondary Education'];
+        $engineeringPrograms = ['Engineering', 'Civil Engineering', 'Mechanical Engineering', 'Electrical Engineering'];
+        $healthPrograms = ['Nursing', 'Medicine', 'Healthcare', 'Medical', 'Health Sciences'];
+        
+        // Check each user program against job requirements
+        foreach ($userPrograms as $program) {
+            $programLower = strtolower($program);
+            $industryLower = strtolower($job->industry ?? '');
+            $titleLower = strtolower($job->title ?? '');
+            
+            // Tech programs matching
+            foreach ($techPrograms as $techProg) {
+                if (stripos($programLower, strtolower($techProg)) !== false) {
+                    if (stripos($industryLower, 'technology') !== false || 
+                        stripos($industryLower, 'software') !== false ||
+                        stripos($industryLower, 'it') !== false ||
+                        stripos($titleLower, 'developer') !== false ||
+                        stripos($titleLower, 'engineer') !== false ||
+                        stripos($titleLower, 'programmer') !== false) {
+                        $score += 0.6;
+                    }
+                    break;
+                }
+            }
+            
+            // Business programs matching
+            foreach ($businessPrograms as $bizProg) {
+                if (stripos($programLower, strtolower($bizProg)) !== false) {
+                    if (stripos($industryLower, 'business') !== false || 
+                        stripos($industryLower, 'finance') !== false ||
+                        stripos($industryLower, 'accounting') !== false ||
+                        stripos($industryLower, 'management') !== false ||
+                        stripos($titleLower, 'manager') !== false ||
+                        stripos($titleLower, 'accountant') !== false) {
+                        $score += 0.6;
+                    }
+                    break;
+                }
+            }
+            
+            // Education programs matching
+            foreach ($educationPrograms as $eduProg) {
+                if (stripos($programLower, strtolower($eduProg)) !== false) {
+                    if (stripos($industryLower, 'education') !== false ||
+                        stripos($industryLower, 'academic') !== false ||
+                        stripos($titleLower, 'teacher') !== false ||
+                        stripos($titleLower, 'instructor') !== false ||
+                        stripos($titleLower, 'professor') !== false) {
+                        $score += 0.6;
+                    }
+                    break;
+                }
+            }
+            
+            // Engineering programs matching
+            foreach ($engineeringPrograms as $engProg) {
+                if (stripos($programLower, strtolower($engProg)) !== false) {
+                    if (stripos($industryLower, 'engineering') !== false ||
+                        stripos($industryLower, 'construction') !== false ||
+                        stripos($industryLower, 'manufacturing') !== false) {
+                        $score += 0.6;
+                    }
+                    break;
+                }
+            }
+            
+            // Healthcare programs matching
+            foreach ($healthPrograms as $healthProg) {
+                if (stripos($programLower, strtolower($healthProg)) !== false) {
+                    if (stripos($industryLower, 'health') !== false ||
+                        stripos($industryLower, 'medical') !== false ||
+                        stripos($industryLower, 'hospital') !== false) {
+                        $score += 0.6;
+                    }
+                    break;
+                }
+            }
+        }
+        
+        // Check for advanced degrees (Masters, PhD) - boost for senior positions
+        $hasAdvancedDegree = $educationHistory->contains(function($edu) {
+            return in_array($edu->level, ['masters', 'doctorate']);
+        });
+        
+        if ($hasAdvancedDegree) {
+            $experienceLevel = strtolower($job->experience_level ?? '');
+            if (stripos($experienceLevel, 'senior') !== false || 
+                stripos($experienceLevel, 'lead') !== false ||
+                stripos($experienceLevel, 'manager') !== false) {
+                $score += 0.3;
+            }
+        }
+        
+        return min($score, 1.0);
+    }
+
+    /**
+     * Calculate cluster-based collaborative filtering score
+     * Jobs that similar users in the same cluster have are scored higher
+     */
+    private static function calculateClusterScore(User $user, JobPost $job): float
+    {
+        // If user doesn't have a cluster assignment, return 0
+        if (!$user->cluster_group) {
+            return 0.0;
+        }
+
+        // Find users in the same cluster
+        $clusterUsers = User::where('cluster_group', $user->cluster_group)
+            ->where('id', '!=', $user->id)
+            ->where('role', 'alumni')
+            ->limit(20)
+            ->get();
+
+        if ($clusterUsers->isEmpty()) {
+            return 0.0;
+        }
+
+        // Calculate how many users in the cluster match this job well
+        $goodMatches = 0;
+        foreach ($clusterUsers as $clusterUser) {
+            if (empty($clusterUser->skills)) continue;
+            
+            $similarity = self::calculateJaccard(
+                $clusterUser->skills ?? [],
+                $job->required_skills ?? []
+            );
+            
+            if ($similarity > 0.3) { // Threshold for "good match"
+                $goodMatches++;
+            }
+        }
+
+        // Return proportion of cluster users who match well
+        return min($goodMatches / max(count($clusterUsers), 1), 1.0);
+    }
+
+    /**
+     * Calculate career preferences matching score
+     * Matches user's work preferences with job characteristics
+     */
+    private static function calculatePreferencesScore(User $user, JobPost $job): float
+    {
+        $score = 0.0;
+        
+        // Work setup preferences (remote, hybrid, on-site)
+        if ($user->work_setup_preferences && is_array($user->work_setup_preferences) && $job->work_type) {
+            $workTypeLower = strtolower($job->work_type);
+            foreach ($user->work_setup_preferences as $pref) {
+                $prefLower = strtolower($pref);
+                // Handle variations: on_site -> on-site/onsite
+                $prefNormalized = str_replace('_', ' ', $prefLower);
+                
+                if (stripos($workTypeLower, $prefLower) !== false || 
+                    stripos($workTypeLower, $prefNormalized) !== false ||
+                    stripos($workTypeLower, str_replace('_', '-', $prefLower)) !== false) {
+                    $score += 0.4;
+                    break;
+                }
+            }
+        }
+        
+        // Employment type preferences (full-time, part-time, contract, internship)
+        if ($user->employment_type_preferences && is_array($user->employment_type_preferences) && $job->work_type) {
+            $workTypeLower = strtolower($job->work_type);
+            foreach ($user->employment_type_preferences as $pref) {
+                $prefLower = strtolower($pref);
+                // Handle variations: full_time -> full-time/fulltime
+                $prefNormalized = str_replace('_', ' ', $prefLower);
+                
+                if (stripos($workTypeLower, $prefLower) !== false || 
+                    stripos($workTypeLower, $prefNormalized) !== false ||
+                    stripos($workTypeLower, str_replace('_', '-', $prefLower)) !== false) {
+                    $score += 0.3;
+                    break;
+                }
+            }
+        }
+        
+        // Industries of interest
+        if ($user->industries_of_interest && is_array($user->industries_of_interest) && $job->industry) {
+            $industryLower = strtolower($job->industry);
+            foreach ($user->industries_of_interest as $interest) {
+                if (stripos($industryLower, strtolower($interest)) !== false ||
+                    stripos($interest, $job->industry) !== false) {
+                    $score += 0.3;
+                    break;
+                }
+            }
+        }
+        
+        return min($score, 1.0);
+    }
+
+    /**
+     * Calculate recency score for a job
+     * Newer jobs get higher scores
+     */
+    private static function calculateRecencyScore(JobPost $job): float
+    {
+        $daysOld = now()->diffInDays($job->created_at);
+        
+        // Jobs less than 7 days old get full score
+        if ($daysOld < 7) {
+            return 1.0;
+        }
+        
+        // Jobs 7-30 days old get decreasing score
+        if ($daysOld < 30) {
+            return 1.0 - (($daysOld - 7) / 23 * 0.5);
+        }
+        
+        // Jobs older than 30 days get minimum score
+        return 0.5;
     }
 
     /**
@@ -111,14 +381,13 @@ class RecommendationService
     {
         if (empty($user->skills)) {
             Log::info("User {$user->id} has no skills, returning recent jobs");
-            return JobPost::where('is_active', true)
-                ->orderBy('created_at', 'desc')
+            return JobPost::orderBy('created_at', 'desc')
                 ->limit($limit)
                 ->get();
         }
 
-        // Get all active jobs
-        $allJobs = JobPost::where('is_active', true)->get();
+        // Get all jobs
+        $allJobs = JobPost::all();
         
         if ($allJobs->isEmpty()) {
             return collect([]);
@@ -249,8 +518,7 @@ class RecommendationService
      */
     public function getTrendingSkills($limit = 10)
     {
-        $allSkills = JobPost::where('is_active', true)
-            ->pluck('required_skills')
+        $allSkills = JobPost::pluck('required_skills')
             ->filter()
             ->flatten()
             ->countBy()

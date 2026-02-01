@@ -70,6 +70,7 @@ class EventController extends Controller
                 'start_date' => 'required|date',
                 'end_date' => 'required|date',
                 'location' => 'required|string|max:255',
+                'type' => 'nullable|string|max:50',
             ]);
 
             $event = Event::create([

@@ -1,13 +1,13 @@
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <!-- Page Header -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6 gap-3">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">Alumni Directory</h1>
-        <p class="text-gray-600 mt-1">Connect with fellow LCBA alumni worldwide</p>
+        <h1 class="text-xl md:text-2xl font-bold text-gray-800">Alumni Directory</h1>
+        <p class="text-sm md:text-base text-gray-600 mt-1">Connect with fellow LCBA alumni worldwide</p>
       </div>
-      <div class="flex items-center space-x-4">
-        <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
+      <div class="flex items-center space-x-2 md:space-x-4">
+        <button class="border border-gray-300 text-gray-700 px-3 md:px-4 py-2 rounded-lg hover:bg-gray-50 text-sm md:text-base whitespace-nowrap">
           Export Directory
         </button>
       </div>
@@ -37,38 +37,23 @@
         <div class="flex flex-wrap gap-2">
           <select v-model="selectedProgram" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="">All Programs</option>
-            <option value="BSCS">BSCS</option>
-            <option value="BSCpE">BSCpE</option>
-            <option value="BSIT">BSIT</option>
-            <option value="BSEMC">BSEMC</option>
+            <option v-for="program in filterOptions.programs" :key="program" :value="program">
+              {{ program }}
+            </option>
           </select>
 
           <select v-model="selectedBatch" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="">All Batches</option>
-            <option value="2018">2018</option>
-            <option value="2019">2019</option>
-            <option value="2020">2020</option>
-            <option value="2021">2021</option>
-            <option value="2022">2022</option>
-            <option value="2023">2023</option>
-          </select>
-
-          <select v-model="selectedCompany" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <option value="">All Companies</option>
-            <option value="Google">Google</option>
-            <option value="Microsoft">Microsoft</option>
-            <option value="Amazon">Amazon</option>
-            <option value="Meta">Meta</option>
-            <option value="Apple">Apple</option>
+            <option v-for="batch in filterOptions.batches" :key="batch" :value="batch">
+              {{ batch }}
+            </option>
           </select>
 
           <select v-model="selectedLocation" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="">All Locations</option>
-            <option value="Manila">Manila</option>
-            <option value="Cebu">Cebu</option>
-            <option value="Davao">Davao</option>
-            <option value="Remote">Remote</option>
-            <option value="International">International</option>
+            <option v-for="city in filterOptions.cities" :key="city" :value="city">
+              {{ city }}
+            </option>
           </select>
 
           <select v-model="selectedAvailability" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
@@ -123,7 +108,7 @@
         <!-- Grid View -->
         <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div 
-            v-for="alumni in filteredAlumni" 
+            v-for="alumni in paginatedAlumni" 
             :key="alumni.id"
             class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
             @click="viewProfile(alumni)"
@@ -180,7 +165,7 @@
         <!-- List View -->
         <div v-else class="space-y-4">
           <div 
-            v-for="alumni in filteredAlumni" 
+            v-for="alumni in paginatedAlumni" 
             :key="alumni.id"
             class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
             @click="viewProfile(alumni)"
@@ -231,12 +216,38 @@
                 </div>
               </div>
 
-        <!-- Pagination -->
-        <div class="mt-6 flex justify-center">
-          <button class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-            Load More Alumni
+        <!-- Pagination Controls -->
+        <div v-if="totalPages > 1" class="mt-6 flex items-center justify-center gap-2">
+          <button 
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            &lt;
           </button>
-              </div>
+          
+          <button
+            v-for="page in totalPages"
+            :key="page"
+            @click="goToPage(page)"
+            :class="[
+              'px-3 py-2 border rounded-lg min-w-[40px]',
+              currentPage === page 
+                ? 'bg-blue-600 text-white border-blue-600' 
+                : 'border-gray-300 hover:bg-gray-50 text-gray-700'
+            ]"
+          >
+            {{ page }}
+          </button>
+          
+          <button 
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            &gt;
+          </button>
+        </div>
             </div>
 
       <!-- Right Column - Suggested Connections -->
@@ -339,7 +350,6 @@
                 </div>
               </div>
               </div>
-            </div>
 
     <!-- Profile Modal -->
     <div v-if="showProfileModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -427,31 +437,57 @@
             <!-- Experience Tab -->
             <div v-if="activeProfileTab === 'experience'">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Work Experience</h3>
-              <div class="space-y-4">
+              
+              <!-- Only show if user has experience data -->
+              <div v-if="selectedAlumni.current_job_title || selectedAlumni.industry" class="space-y-4">
                 <div class="border border-gray-200 rounded-lg p-4">
-                  <h4 class="font-medium text-gray-900">{{ selectedAlumni.headline || 'Current Position' }}</h4>
-                  <p class="text-sm text-gray-600">{{ selectedAlumni.company || 'Company Name' }}</p>
-                  <p class="text-sm text-gray-500">2020 - Present</p>
-                  <p class="text-gray-700 mt-2">Description of current role and responsibilities...</p>
-                </div>
+                  <div class="flex items-start gap-3 mb-3">
+                    <div class="w-12 h-12 bg-blue-100 rounded flex items-center justify-center text-blue-600 font-bold flex-shrink-0">
+                      💼
+                    </div>
+                    <div class="flex-1">
+                      <h4 class="font-medium text-gray-900">{{ selectedAlumni.current_job_title }}</h4>
+                      <p v-if="selectedAlumni.industry" class="text-sm text-gray-600">{{ selectedAlumni.industry }}</p>
+                      <p v-if="selectedAlumni.employment_status" class="text-xs text-gray-500 mt-1">
+                        {{ formatEmploymentStatus(selectedAlumni.employment_status) }}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div v-if="selectedAlumni.years_of_experience" class="text-sm text-gray-600 mb-2">
+                    <span class="font-medium">Experience:</span> {{ selectedAlumni.years_of_experience }} years
+                  </div>
+                  
+                  <div v-if="selectedAlumni.employment_sector" class="text-sm text-gray-600 mb-2">
+                    <span class="font-medium">Sector:</span> {{ formatEmploymentSector(selectedAlumni.employment_sector) }}
+                  </div>
+                  
+                  <div v-if="selectedAlumni.city || selectedAlumni.country" class="text-sm text-gray-600">
+                    <span class="font-medium">Location:</span> {{ selectedAlumni.city }}{{ selectedAlumni.city && selectedAlumni.country ? ', ' : '' }}{{ selectedAlumni.country }}
+                  </div>
                 </div>
               </div>
+              
+              <div v-else class="text-center py-8 text-gray-500">
+                <p class="text-sm">No work experience information available</p>
+              </div>
+            </div>
 
             <!-- Posts Tab -->
             <div v-if="activeProfileTab === 'posts'">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Posts</h3>
-              <div class="space-y-4">
-                <div class="border border-gray-200 rounded-lg p-4">
-                  <p class="text-gray-700">Shared a job posting at Tech Corp</p>
-                  <p class="text-sm text-gray-500">2 days ago</p>
+              
+              <div v-if="userPosts.length > 0" class="space-y-4">
+                <div v-for="post in userPosts.slice(0, 5)" :key="post.post_id" class="border border-gray-200 rounded-lg p-4">
+                  <p class="text-gray-700">{{ post.content }}</p>
+                  <p class="text-sm text-gray-500 mt-2">{{ formatPostDate(post.created_at) }}</p>
                 </div>
-                <div class="border border-gray-200 rounded-lg p-4">
-                  <p class="text-gray-700">Attended the Alumni Meetup 2024</p>
-                  <p class="text-sm text-gray-500">1 week ago</p>
+              </div>
+              
+              <div v-else class="text-center py-8 text-gray-500">
+                <p class="text-sm">No posts or activity yet</p>
               </div>
             </div>
-                </div>
-              </div>
 
           <!-- Action Buttons -->
           <div class="flex justify-end space-x-4">
@@ -461,19 +497,21 @@
             <button @click="sendMessage(selectedAlumni)" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               Send Message
             </button>
-            <button @click="requestMentorship(selectedAlumni)" class="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
-              Request Mentorship
-            </button>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from '../config/api'
+
+const router = useRouter()
 
 // Reactive data
 const searchQuery = ref('')
@@ -488,8 +526,21 @@ const selectedAlumni = ref({})
 const activeProfileTab = ref('about')
 const loading = ref(false)
 
+// Pagination
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+// Filter options from database
+const filterOptions = ref({
+  programs: [],
+  batches: [],
+  cities: [],
+  industries: []
+})
+
 // Fetch alumni from API
 const alumni = ref([])
+const userPosts = ref([])
 
 const fetchAlumni = async () => {
   loading.value = true
@@ -504,7 +555,10 @@ const fetchAlumni = async () => {
     const response = await axios.get('/api/users', { params })
     if (response.data.success) {
       // Format the data for the view
-      alumni.value = response.data.data.map(user => ({
+      // Handle both paginated (response.data.data.data) and non-paginated (response.data.data) responses
+      const usersData = Array.isArray(response.data.data) ? response.data.data : (response.data.data.data || [])
+      
+      alumni.value = usersData.map(user => ({
         id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
@@ -514,7 +568,14 @@ const fetchAlumni = async () => {
         headline: user.headline,
         company: user.current_job_title,
         bio: user.bio,
-        skills: user.skills || [],
+        city: user.city,
+        country: user.country,
+        industry: user.industry,
+        current_job_title: user.current_job_title,
+        employment_status: user.employment_status,
+        years_of_experience: user.years_of_experience,
+        employment_sector: user.employment_sector,
+        skills: Array.isArray(user.skills) ? user.skills : (user.skills ? JSON.parse(user.skills) : []),
         is_verified: true,
         is_mentor: user.role === 'mentor',
         is_hiring: false,
@@ -526,6 +587,17 @@ const fetchAlumni = async () => {
     alumni.value = []
   } finally {
     loading.value = false
+  }
+}
+
+const fetchFilterOptions = async () => {
+  try {
+    const response = await axios.get('/api/users/filter-options')
+    if (response?.data?.success) {
+      filterOptions.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Error fetching filter options:', error)
   }
 }
 
@@ -575,11 +647,11 @@ const filteredAlumni = computed(() => {
   // Apply search filter
   if (searchQuery.value) {
     filtered = filtered.filter(alumni => 
-      alumni.full_name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      alumni.program.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      alumni.batch.includes(searchQuery.value) ||
-      alumni.headline.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      alumni.skills.some(skill => skill.toLowerCase().includes(searchQuery.value.toLowerCase()))
+      alumni.full_name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      alumni.program?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      alumni.batch?.includes(searchQuery.value) ||
+      alumni.headline?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      (Array.isArray(alumni.skills) && alumni.skills.some(skill => skill?.toLowerCase().includes(searchQuery.value.toLowerCase())))
     )
   }
 
@@ -593,14 +665,9 @@ const filteredAlumni = computed(() => {
     filtered = filtered.filter(alumni => alumni.batch === selectedBatch.value)
   }
 
-  // Apply company filter
-  if (selectedCompany.value) {
-    filtered = filtered.filter(alumni => alumni.company === selectedCompany.value)
-  }
-
   // Apply location filter
   if (selectedLocation.value) {
-    filtered = filtered.filter(alumni => alumni.location.includes(selectedLocation.value))
+    filtered = filtered.filter(alumni => alumni.city === selectedLocation.value)
   }
 
   // Apply availability filter
@@ -621,25 +688,68 @@ const filteredAlumni = computed(() => {
   return filtered
 })
 
+const totalPages = computed(() => Math.ceil(filteredAlumni.value.length / itemsPerPage))
+
+const paginatedAlumni = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredAlumni.value.slice(start, end)
+})
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
 // Methods
-const viewProfile = (alumni) => {
+const viewProfile = async (alumni) => {
   selectedAlumni.value = alumni
   showProfileModal.value = true
   activeProfileTab.value = 'about'
+  
+  // Fetch user's posts
+  userPosts.value = []
+  try {
+    const response = await axios.get('/api/posts', {
+      params: { user_id: alumni.id }
+    })
+    if (response.data.success) {
+      userPosts.value = response.data.data.data || response.data.data || []
+    }
+  } catch (error) {
+    console.error('Error loading user posts:', error)
+    userPosts.value = []
+  }
 }
 
-const sendMessage = (alumni) => {
-  // Navigate to messages with this alumni
-  console.log('Send message to:', alumni.full_name)
+const sendMessage = async (alumni) => {
+  // Navigate to messages and create/select conversation with this alumni
+  try {
+    // First, try to send an initial message or find existing conversation
+    // This will create a conversation if it doesn't exist
+    const response = await axios.post('/api/messages', {
+      receiver_id: alumni.id,
+      content: 'Hi! I\'d like to connect.'
+    })
+    
+    if (response.data.success) {
+      // Navigate to messages page
+      router.push('/messages')
+      // The MessagesView will automatically load conversations
+      // and the new conversation will appear in the list
+    }
+  } catch (error) {
+    // If message already exists or other error, just navigate
+    router.push('/messages')
+  }
 }
 
 const connectWithAlumni = (alumni) => {
   console.log('Connect with:', alumni.full_name)
 }
 
-const requestMentorship = (alumni) => {
-  console.log('Request mentorship from:', alumni.full_name)
-}
 
 const filterByAvailability = (type) => {
   selectedAvailability.value = type
@@ -655,12 +765,51 @@ const viewCompanyNetworks = () => {
   console.log('View company networks')
 }
 
+const formatEmploymentStatus = (status) => {
+  const statusMap = {
+    'employed_full_time': 'Employed (Full-Time)',
+    'employed_part_time': 'Employed (Part-Time)',
+    'self_employed': 'Self-Employed',
+    'in_study': 'In Further Study',
+    'unemployed_looking': 'Seeking Opportunities',
+    'unemployed_not_looking': 'Not Currently Seeking'
+  }
+  return statusMap[status] || status
+}
+
+const formatEmploymentSector = (sector) => {
+  const sectorMap = {
+    'public_government': 'Government/Public Sector',
+    'private': 'Private Sector',
+    'ngo_nonprofit': 'NGO/Non-Profit'
+  }
+  return sectorMap[sector] || sector
+}
+
+const formatPostDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now - date
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+  
+  if (seconds < 60) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days < 7) return `${days}d ago`
+  return date.toLocaleDateString()
+}
+
 onMounted(() => {
   fetchAlumni()
+  fetchFilterOptions()
 })
 
 // Watch for filter changes and refetch
-watch([searchQuery, selectedProgram, selectedBatch], () => {
-  fetchAlumni()
+watch([searchQuery, selectedProgram, selectedBatch, selectedLocation], () => {
+  currentPage.value = 1  // Reset to page 1 when filters change
 })
 </script>

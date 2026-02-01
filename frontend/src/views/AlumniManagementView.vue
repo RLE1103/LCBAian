@@ -1,33 +1,25 @@
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <!-- Page Header -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6 gap-3">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">Alumni Management</h1>
-        <p class="text-gray-600 mt-1">Manage alumni verification, reports, and analytics</p>
-      </div>
-      <div class="flex items-center space-x-4">
-        <button @click="exportDirectoryCsv" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
-          Export Data
-        </button>
-        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-          Send Invitations
-        </button>
+        <h1 class="text-xl md:text-2xl font-bold text-gray-800">Alumni Management</h1>
+        <p class="text-sm md:text-base text-gray-600 mt-1">Manage alumni verification, reports, and analytics</p>
       </div>
     </div>
 
     <!-- Tab Navigation -->
-    <div class="bg-white rounded-lg shadow-md mb-6">
-      <div class="border-b border-gray-200">
-        <nav class="flex space-x-8 px-6">
+    <div class="bg-white rounded-lg shadow-md mb-4 md:mb-6">
+      <div class="border-b border-gray-200 overflow-x-auto">
+        <nav class="flex space-x-4 md:space-x-8 px-4 md:px-6 min-w-max">
           <button 
-            v-for="tab in tabs" 
+            v-for="tab in tabs"
             :key="tab.key"
             @click="activeTab = tab.key"
             :class="[
-              'py-4 px-1 border-b-2 font-medium text-sm',
+              'py-3 md:py-4 px-2 border-b-2 font-medium text-xs md:text-sm whitespace-nowrap',
               activeTab === tab.key 
-                ? 'border-blue-500 text-blue-600' 
+                ? 'border-blue-600 text-blue-600' 
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             ]"
           >
@@ -96,7 +88,6 @@
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program & Batch</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proof Submitted</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
@@ -129,14 +120,6 @@
                   {{ request.program }} {{ request.batch }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <button 
-                    @click="previewProof(request)"
-                    class="text-blue-600 hover:text-blue-800 text-sm underline"
-                  >
-                    {{ request.proof_file }}
-                  </button>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
                   <span :class="[
                     'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
                     request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -149,19 +132,19 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex space-x-2">
                     <button 
-                      @click="approveRequest(request)"
+                      @click.stop="approveRequest(request)"
                       class="text-green-600 hover:text-green-900"
                     >
                       Approve
           </button>
                     <button 
-                      @click="denyRequest(request)"
+                      @click.stop="denyRequest(request)"
                       class="text-red-600 hover:text-red-900"
                     >
                       Deny
           </button>
                     <button 
-                      @click="viewDetails(request)"
+                      @click.stop="viewDetails(request)"
                       class="text-blue-600 hover:text-blue-900"
                     >
                       View
@@ -299,15 +282,120 @@
         </div>
       </div>
 
+      <!-- Job Approvals Tab -->
+      <div v-if="activeTab === 'job-approvals'" class="p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-semibold text-gray-900">Job Post Approvals</h2>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-600">{{ pendingJobs.length }} pending</span>
+            <button @click="loadPendingJobs" class="text-blue-600 hover:text-blue-800 text-sm">
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Pending Jobs List -->
+        <div v-if="loadingJobs" class="text-center py-8 text-gray-500">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading pending jobs...</p>
+        </div>
+
+        <div v-else-if="pendingJobs.length === 0" class="text-center py-12 text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p class="font-medium">No pending job posts</p>
+          <p class="text-sm">All job posts have been reviewed</p>
+        </div>
+
+        <div v-else class="space-y-4">
+          <div 
+            v-for="job in pendingJobs" 
+            :key="job.job_id"
+            class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow"
+          >
+            <!-- Job Header -->
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1">
+                <h3 class="text-lg font-semibold text-gray-900">{{ job.title }}</h3>
+                <p class="text-sm text-gray-600">{{ job.company_name }}</p>
+              </div>
+              <span class="bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium">
+                Pending Review
+              </span>
+            </div>
+
+            <!-- Posted By Info -->
+            <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+              <p class="text-sm font-medium text-gray-700">Posted by:</p>
+              <p class="text-sm text-gray-900">
+                {{ job.poster?.first_name }} {{ job.poster?.last_name }}
+                <span v-if="job.poster?.email" class="text-gray-600">({{ job.poster.email }})</span>
+              </p>
+            </div>
+
+            <!-- Job Details Grid -->
+            <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+              <div>
+                <span class="text-gray-600">Location:</span>
+                <span class="text-gray-900 ml-2">{{ job.location || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-600">Work Type:</span>
+                <span class="text-gray-900 ml-2">{{ job.work_type || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-600">Industry:</span>
+                <span class="text-gray-900 ml-2">{{ job.industry || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-600">Experience Level:</span>
+                <span class="text-gray-900 ml-2">{{ job.experience_level || 'N/A' }}</span>
+              </div>
+              <div class="col-span-2">
+                <span class="text-gray-600">Application Link:</span>
+                <a v-if="job.application_link" :href="job.application_link" target="_blank" class="text-blue-600 hover:underline ml-2">
+                  {{ job.application_link }}
+                </a>
+                <span v-else class="text-gray-900 ml-2">Not provided</span>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-4">
+              <p class="text-sm font-medium text-gray-700 mb-2">Description:</p>
+              <p class="text-sm text-gray-600 line-clamp-3">{{ job.description }}</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-3 pt-4 border-t border-gray-200">
+              <button 
+                @click="approveJob(job.job_id)"
+                class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium"
+              >
+                Approve
+              </button>
+              <button 
+                @click="rejectJob(job.job_id)"
+                class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium"
+              >
+                Reject
+              </button>
+              <button 
+                @click="flagJob(job.job_id)"
+                class="flex-1 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 font-medium"
+              >
+                Flag for Review
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Reports & Moderation Tab -->
       <div v-if="activeTab === 'reports'" class="p-6">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-lg font-semibold text-gray-900">Reports & Moderation</h2>
-          <div class="flex items-center space-x-4">
-            <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
-              Export Reports
-            </button>
-          </div>
         </div>
 
         <!-- Reports Table -->
@@ -354,22 +442,22 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex space-x-2">
                     <button 
-                      @click="viewReport(report)"
+                      @click.stop="viewReport(report)"
                       class="text-blue-600 hover:text-blue-900"
                     >
                       View
                     </button>
                     <button 
-                      @click="resolveReport(report)"
+                      @click.stop="resolveReport(report.id)"
                       class="text-green-600 hover:text-green-900"
                     >
                       Resolve
                     </button>
                     <button 
-                      @click="warnUser(report)"
+                      @click.stop="dismissReport(report.id)"
                       class="text-yellow-600 hover:text-yellow-900"
                     >
-                      Warn
+                      Dismiss
                     </button>
                 </div>
               </td>
@@ -535,7 +623,114 @@
       </div>
     </div>
   </div>
+</div>
+  
+<!-- Verification Request View Modal -->
+<div v-if="showVerificationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4" @click.self="showVerificationModal = false">
+  <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="p-6 border-b border-gray-200">
+      <h3 class="text-xl font-semibold text-gray-900">Verification Request Details</h3>
+    </div>
+    <div v-if="selectedVerificationRequest" class="p-6 space-y-4">
+      <div class="flex items-center gap-4 pb-4 border-b">
+        <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+          {{ selectedVerificationRequest.first_name[0] }}{{ selectedVerificationRequest.last_name[0] }}
+        </div>
+        <div>
+          <h4 class="text-lg font-semibold">{{ selectedVerificationRequest.full_name }}</h4>
+          <p class="text-sm text-gray-600">{{ selectedVerificationRequest.email }}</p>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm font-medium text-gray-500">Program</label>
+          <p class="text-gray-900">{{ selectedVerificationRequest.program }}</p>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-500">Batch</label>
+          <p class="text-gray-900">{{ selectedVerificationRequest.batch }}</p>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-500">Status</label>
+          <span :class="[
+            'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+            selectedVerificationRequest.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+            selectedVerificationRequest.status === 'approved' ? 'bg-green-100 text-green-800' :
+            'bg-red-100 text-red-800'
+          ]">
+            {{ selectedVerificationRequest.status }}
+          </span>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-500">Submitted</label>
+          <p class="text-gray-900">{{ new Date(selectedVerificationRequest.submitted_at).toLocaleDateString() }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="p-6 border-t border-gray-200 flex justify-end space-x-2">
+      <button @click="showVerificationModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
+      <button v-if="selectedVerificationRequest?.status === 'pending'" @click="denyRequest(selectedVerificationRequest); showVerificationModal = false" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Deny</button>
+      <button v-if="selectedVerificationRequest?.status === 'pending'" @click="approveRequest(selectedVerificationRequest); showVerificationModal = false" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Approve</button>
+    </div>
   </div>
+</div>
+
+<!-- Report View Modal -->
+<div v-if="showReportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4" @click.self="showReportModal = false">
+  <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="p-6 border-b border-gray-200">
+      <h3 class="text-xl font-semibold text-gray-900">Report Details</h3>
+    </div>
+    <div v-if="selectedReport" class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm font-medium text-gray-500">Report ID</label>
+          <p class="text-gray-900">#{{ selectedReport.id }}</p>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-500">Type</label>
+          <p class="text-gray-900">{{ selectedReport.type }}</p>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-500">Reported By</label>
+          <p class="text-gray-900">{{ selectedReport.reported_by }}</p>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-gray-500">Status</label>
+          <span :class="[
+            'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+            selectedReport.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+            selectedReport.status === 'resolved' ? 'bg-green-100 text-green-800' :
+            'bg-red-100 text-red-800'
+          ]">
+            {{ selectedReport.status }}
+          </span>
+        </div>
+      </div>
+      
+      <div>
+        <label class="text-sm font-medium text-gray-500">Reason</label>
+        <p class="text-gray-900 mt-1">{{ selectedReport.reason }}</p>
+      </div>
+      
+      <div v-if="selectedReport.description">
+        <label class="text-sm font-medium text-gray-500">Description</label>
+        <p class="text-gray-900 mt-1 whitespace-pre-wrap">{{ selectedReport.description }}</p>
+      </div>
+      
+      <div v-if="selectedReport.admin_notes">
+        <label class="text-sm font-medium text-gray-500">Admin Notes</label>
+        <p class="text-gray-900 mt-1 whitespace-pre-wrap">{{ selectedReport.admin_notes }}</p>
+      </div>
+    </div>
+    <div class="p-6 border-t border-gray-200 flex justify-end space-x-2">
+      <button @click="showReportModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
+      <button v-if="selectedReport?.status === 'pending'" @click="dismissReport(selectedReport.id); showReportModal = false" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Dismiss</button>
+      <button v-if="selectedReport?.status === 'pending'" @click="resolveReport(selectedReport.id); showReportModal = false" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Resolve</button>
+    </div>
+  </div>
+</div>
 </template>
 
 <script setup>
@@ -552,78 +747,57 @@ const directoryRole = ref('')
 const directoryStatus = ref('')
 const selectAll = ref(false)
 const selectedRequests = ref([])
+const verificationRequests = ref([])
+const loadingVerifications = ref(false)
+const showVerificationModal = ref(false)
+const selectedVerificationRequest = ref(null)
+const showReportModal = ref(false)
+const selectedReport = ref(null)
 
-// Verification queue placeholder (no backend yet)
-const verificationRequests = ref([
-  {
-    id: 1,
-    first_name: 'Maria',
-    last_name: 'Lopez',
-    full_name: 'Maria Lopez',
-    email: 'maria.lopez@example.com',
-    program: 'BSCS',
-    batch: '2020',
-    proof_file: 'Transcript.pdf',
-    status: 'pending',
-    submitted_at: new Date('2025-01-15')
-  },
-  {
-    id: 2,
-    first_name: 'John',
-    last_name: 'Cruz',
-    full_name: 'John Cruz',
-    email: 'john.cruz@example.com',
-    program: 'BSCpE',
-    batch: '2019',
-    proof_file: 'Alumni ID.jpg',
-    status: 'pending',
-    submitted_at: new Date('2025-01-14')
-  },
-  {
-    id: 3,
-    first_name: 'Sarah',
-    last_name: 'Martinez',
-    full_name: 'Sarah Martinez',
-    email: 'sarah.martinez@example.com',
-    program: 'BSIT',
-    batch: '2021',
-    proof_file: 'Diploma.pdf',
-    status: 'approved',
-    submitted_at: new Date('2025-01-13')
+// Load verification requests from database
+const loadVerificationRequests = async () => {
+  loadingVerifications.value = true
+  try {
+    const response = await axios.get('/api/users', {
+      params: { role: 'alumni' }
+    })
+    if (response.data.success) {
+      verificationRequests.value = response.data.data.map(user => ({
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        full_name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        program: user.program || 'N/A',
+        batch: user.batch || 'N/A',
+        status: user.lcba_verification_status || 'pending',
+        submitted_at: user.created_at
+      }))
+      // Update tab count
+      const verTab = tabs.value.find(t => t.key === 'verification')
+      if (verTab) verTab.count = verificationRequests.value.filter(r => r.status === 'pending').length
+    }
+  } catch (error) {
+    console.error('Error loading verification requests:', error)
+  } finally {
+    loadingVerifications.value = false
   }
-])
+}
+
+const pendingJobs = ref([])
+const loadingJobs = ref(false)
 
 const directoryUsers = ref([])
 
-const reports = ref([
-  {
-    id: 'RPT-1021',
-    type: 'Message',
-    reported_by: 'John Doe',
-    reason: 'Harassment',
-    status: 'pending'
-  },
-  {
-    id: 'RPT-1022',
-    type: 'Profile',
-    reported_by: 'Jane Smith',
-    reason: 'Inappropriate content',
-    status: 'resolved'
-  },
-  {
-    id: 'RPT-1023',
-    type: 'Post',
-    reported_by: 'Mike Johnson',
-    reason: 'Spam',
-    status: 'pending'
-  }
-])
+const reports = ref([])
+const loadingReports = ref(false)
 
 const tabs = ref([
   { key: 'verification', label: 'Verification Queue', count: 0 },
+  { key: 'job-approvals', label: 'Job Approvals', count: 0 },
   { key: 'directory', label: 'User Directory', count: 0 },
   { key: 'reports', label: 'Reports & Moderation', count: 0 },
-  { key: 'analytics', label: 'Analytics', count: null },
+  // { key: 'analytics', label: 'Analytics', count: null }, // Temporarily hidden
   { key: 'tools', label: 'Data Tools', count: null }
 ])
 
@@ -724,12 +898,10 @@ const denyRequest = (request) => {
   }
 }
 
-const previewProof = (request) => {
-  console.log('Preview proof for:', request.full_name)
-}
 
 const viewDetails = (request) => {
-  console.log('View details for:', request.full_name)
+  selectedVerificationRequest.value = request
+  showVerificationModal.value = true
 }
 
 // Edit user modal
@@ -780,13 +952,8 @@ const toggleUserStatus = (user) => {
 }
 
 const viewReport = (report) => {
-  console.log('View report:', report.id)
-}
-
-const resolveReport = (report) => {
-  if (confirm(`Mark report ${report.id} as resolved?`)) {
-    report.status = 'resolved'
-  }
+  selectedReport.value = report
+  showReportModal.value = true
 }
 
 const warnUser = (report) => {
@@ -821,7 +988,7 @@ const fetchUsers = async () => {
         { key: 'verification', label: 'Verification Queue', count: verificationRequests.value.filter(r => r.status === 'pending').length },
         { key: 'directory', label: 'User Directory', count: directoryUsers.value.length },
         { key: 'reports', label: 'Reports & Moderation', count: reports.value.filter(r => r.status === 'pending').length },
-        { key: 'analytics', label: 'Analytics', count: null },
+        // { key: 'analytics', label: 'Analytics', count: null }, // Temporarily hidden
         { key: 'tools', label: 'Data Tools', count: null }
       ]
     } else {
@@ -830,6 +997,137 @@ const fetchUsers = async () => {
   } catch (e) {
     console.error('Error fetching users:', e)
     directoryUsers.value = []
+  }
+}
+
+// Reports & Moderation Methods
+const loadReports = async () => {
+  loadingReports.value = true
+  try {
+    const response = await axios.get('/api/reports')
+    if (response.data.success) {
+      reports.value = response.data.data.data || response.data.data || []
+      // Update tab count
+      const reportTab = tabs.value.find(t => t.key === 'reports')
+      if (reportTab) reportTab.count = reports.value.filter(r => r.status === 'pending').length
+    }
+  } catch (error) {
+    console.error('Error loading reports:', error)
+  } finally {
+    loadingReports.value = false
+  }
+}
+
+const resolveReport = async (reportId) => {
+  if (!confirm('Are you sure you want to resolve this report?')) return
+  
+  try {
+    const response = await axios.post(`/api/reports/${reportId}/resolve`)
+    if (response.data.success) {
+      alert('Report resolved successfully')
+      await loadReports()
+    }
+  } catch (error) {
+    console.error('Error resolving report:', error)
+    alert('Failed to resolve report: ' + (error.response?.data?.message || error.message))
+  }
+}
+
+const dismissReport = async (reportId) => {
+  if (!confirm('Are you sure you want to dismiss this report?')) return
+  
+  try {
+    const response = await axios.put(`/api/reports/${reportId}`, { 
+      status: 'dismissed',
+      admin_notes: 'Report dismissed by admin'
+    })
+    if (response.data.success) {
+      alert('Report dismissed')
+      await loadReports()
+    }
+  } catch (error) {
+    console.error('Error dismissing report:', error)
+    alert('Failed to dismiss report: ' + (error.response?.data?.message || error.message))
+  }
+}
+
+const updateReportStatus = async (reportId, status, notes = '') => {
+  try {
+    const response = await axios.put(`/api/reports/${reportId}`, { 
+      status,
+      admin_notes: notes
+    })
+    if (response.data.success) {
+      await loadReports()
+    }
+  } catch (error) {
+    console.error('Error updating report:', error)
+    alert('Failed to update report')
+  }
+}
+
+// Job Approvals Methods
+const loadPendingJobs = async () => {
+  loadingJobs.value = true
+  try {
+    const response = await axios.get('/api/admin/jobs/pending')
+    if (response.data.success) {
+      pendingJobs.value = response.data.data.data || response.data.data || []
+      // Update tab count
+      const jobTab = tabs.value.find(t => t.key === 'job-approvals')
+      if (jobTab) jobTab.count = pendingJobs.value.length
+    }
+  } catch (error) {
+    console.error('Error loading pending jobs:', error)
+    alert('Failed to load pending jobs')
+  } finally {
+    loadingJobs.value = false
+  }
+}
+
+const approveJob = async (jobId) => {
+  if (!confirm('Are you sure you want to approve this job post?')) return
+  
+  try {
+    const response = await axios.post(`/api/admin/jobs/${jobId}/approve`)
+    if (response.data.success) {
+      alert('Job post approved successfully!')
+      await loadPendingJobs()
+    }
+  } catch (error) {
+    console.error('Error approving job:', error)
+    alert('Failed to approve job: ' + (error.response?.data?.message || error.message))
+  }
+}
+
+const rejectJob = async (jobId) => {
+  const reason = prompt('Please provide a reason for rejection (optional):')
+  if (reason === null) return // User cancelled
+  
+  try {
+    const response = await axios.post(`/api/admin/jobs/${jobId}/reject`, { reason })
+    if (response.data.success) {
+      alert('Job post rejected')
+      await loadPendingJobs()
+    }
+  } catch (error) {
+    console.error('Error rejecting job:', error)
+    alert('Failed to reject job: ' + (error.response?.data?.message || error.message))
+  }
+}
+
+const flagJob = async (jobId) => {
+  if (!confirm('Flag this job post for further review?')) return
+  
+  try {
+    const response = await axios.post(`/api/admin/jobs/${jobId}/flag`)
+    if (response.data.success) {
+      alert('Job post flagged for review')
+      await loadPendingJobs()
+    }
+  } catch (error) {
+    console.error('Error flagging job:', error)
+    alert('Failed to flag job: ' + (error.response?.data?.message || error.message))
   }
 }
 
@@ -857,6 +1155,19 @@ const exportDirectoryCsv = () => {
 
 onMounted(() => {
   fetchUsers()
+  loadPendingJobs()
+  loadVerificationRequests()
+  loadReports()
+})
+
+watch(activeTab, (newTab) => {
+  if (newTab === 'job-approvals') {
+    loadPendingJobs()
+  } else if (newTab === 'verification') {
+    loadVerificationRequests()
+  } else if (newTab === 'reports') {
+    loadReports()
+  }
 })
 
 watch([directoryRole, directorySearch], () => {

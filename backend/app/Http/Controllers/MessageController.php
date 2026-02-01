@@ -134,5 +134,116 @@ class MessageController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get available users for new message
+     */
+    public function getAvailableUsers(): JsonResponse
+    {
+        try {
+            $userId = Auth::id();
+            
+            $users = User::where('id', '!=', $userId)
+                ->where('role', 'alumni')
+                ->select('id', 'first_name', 'last_name', 'email', 'headline', 'program', 'batch')
+                ->orderBy('first_name')
+                ->get()
+                ->map(function($user) {
+                    return [
+                        'id' => $user->id,
+                        'first_name' => $user->first_name,
+                        'last_name' => $user->last_name,
+                        'full_name' => $user->first_name . ' ' . $user->last_name,
+                        'email' => $user->email,
+                        'headline' => $user->headline,
+                        'program' => $user->program,
+                        'batch' => $user->batch,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $users
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Poll for new messages since timestamp
+     */
+    public function pollMessages(Request $request): JsonResponse
+    {
+        try {
+            $userId = Auth::id();
+            $since = $request->query('since');
+            $otherUserId = $request->query('other_user_id');
+
+            if (!$since || !$otherUserId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing required parameters'
+                ], 400);
+            }
+
+            // Get new messages in this conversation
+            $messages = Message::where(function($query) use ($userId, $otherUserId) {
+                $query->where('sender_id', $userId)
+                      ->where('receiver_id', $otherUserId);
+            })->orWhere(function($query) use ($userId, $otherUserId) {
+                $query->where('sender_id', $otherUserId)
+                      ->where('receiver_id', $userId);
+            })
+            ->where('sent_at', '>', $since)
+            ->with(['sender:id,first_name,last_name,email', 'receiver:id,first_name,last_name,email'])
+            ->orderBy('sent_at', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+            // Mark new messages from other user as read
+            Message::where('sender_id', $otherUserId)
+                   ->where('receiver_id', $userId)
+                   ->where('is_read', false)
+                   ->update(['is_read' => true]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $messages
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get unread message count
+     */
+    public function getUnreadCount(): JsonResponse
+    {
+        try {
+            $userId = Auth::id();
+            
+            $unreadCount = Message::where('receiver_id', $userId)
+                                 ->where('is_read', false)
+                                 ->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => ['unread_count' => $unreadCount]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
 

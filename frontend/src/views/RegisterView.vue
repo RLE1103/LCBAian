@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 border-4 border-gray-300">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8 border-4 border-gray-300">
       <!-- Logo and Header -->
       <div class="text-center mb-8">
         <div class="flex items-center justify-center mb-4">
@@ -28,6 +28,19 @@
           </div>
           
           <div>
+            <label for="middleName" class="block text-sm font-medium text-gray-700 mb-2">Middle Name <span class="text-gray-400 text-xs">(Optional)</span></label>
+            <input
+              id="middleName"
+              v-model="form.middle_name"
+              type="text"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              placeholder="Middle name"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
             <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
             <input
               id="lastName"
@@ -39,6 +52,17 @@
               :class="{ 'border-red-500': errors.last_name }"
             />
             <p v-if="errors.last_name" class="text-red-500 text-sm mt-1">{{ errors.last_name }}</p>
+          </div>
+
+          <div>
+            <label for="suffix" class="block text-sm font-medium text-gray-700 mb-2">Suffix <span class="text-gray-400 text-xs">(Optional)</span></label>
+            <input
+              id="suffix"
+              v-model="form.suffix"
+              type="text"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              placeholder="Jr., Sr., III, etc."
+            />
           </div>
         </div>
 
@@ -108,32 +132,67 @@
             :class="{ 'border-red-500': errors.program }"
           >
             <option value="">Select your program</option>
-            <option value="AB Political Science">AB Political Science</option>
-            <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
-            <option value="Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)">Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)</option>
-            <option value="BS Computer Science">BS Computer Science</option>
-            <option value="BS Psychology">BS Psychology</option>
-            <option value="BS Computer Engineering">BS Computer Engineering</option>
-            <option value="BS Accountancy">BS Accountancy</option>
-            <option value="BS Business Administration (Majors in Human Resources Management, Marketing Management)">BS Business Administration (Majors in Human Resources Management, Marketing Management)</option>
-            <option value="BS Entrepreneurship in Culinary Arts">BS Entrepreneurship in Culinary Arts</option>
+            <optgroup label="Undergraduate Programs">
+              <option value="AB Political Science">AB Political Science</option>
+              <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
+              <option value="Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)">Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)</option>
+              <option value="BS Computer Science">BS Computer Science</option>
+              <option value="BS Psychology">BS Psychology</option>
+              <option value="BS Computer Engineering">BS Computer Engineering</option>
+              <option value="BS Accountancy">BS Accountancy</option>
+              <option value="BS Business Administration (Majors in Human Resources Management, Marketing Management)">BS Business Administration (Majors in Human Resources Management, Marketing Management)</option>
+              <option value="BS Entrepreneurship in Culinary Arts">BS Entrepreneurship in Culinary Arts</option>
+            </optgroup>
+            <optgroup label="Master's Programs">
+              <option value="Master of Arts in Education Major in Guidance and Counseling">Master of Arts in Education Major in Guidance and Counseling</option>
+              <option value="Master in Business Administration">Master in Business Administration</option>
+              <option value="Master of Science in Psychology">Master of Science in Psychology</option>
+              <option value="Master of Arts in Education Major in Administration and Supervision">Master of Arts in Education Major in Administration and Supervision</option>
+              <option value="Master of Arts in Education Major in English">Master of Arts in Education Major in English</option>
+              <option value="Master of Arts in Education Major in Filipino">Master of Arts in Education Major in Filipino</option>
+              <option value="Master of Arts in Education Major in Social Studies">Master of Arts in Education Major in Social Studies</option>
+              <option value="Master in Management major in Public Administration">Master in Management major in Public Administration</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="Senior High School Graduate">Senior High School Graduate</option>
+              <option value="High School Graduate">High School Graduate</option>
+              <option value="Elementary Graduate">Elementary Graduate</option>
+            </optgroup>
           </select>
           <p v-if="errors.program" class="text-red-500 text-sm mt-1">{{ errors.program }}</p>
         </div>
 
-        <div>
-          <label for="batch" class="block text-sm font-medium text-gray-700 mb-2">Graduation Year</label>
-          <input
-            id="batch"
-            v-model="form.batch"
-            type="number"
-            min="1990"
-            :max="new Date().getFullYear()"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-            placeholder="e.g., 2020"
-            :class="{ 'border-red-500': errors.batch }"
-          />
-          <p v-if="errors.batch" class="text-red-500 text-sm mt-1">{{ errors.batch }}</p>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="batch" class="block text-sm font-medium text-gray-700 mb-2">Graduation Year</label>
+            <input
+              id="batch"
+              v-model="form.batch"
+              type="number"
+              min="1990"
+              :max="new Date().getFullYear()"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              placeholder="e.g., 2020"
+              :class="{ 'border-red-500': errors.batch }"
+            />
+            <p v-if="errors.batch" class="text-red-500 text-sm mt-1">{{ errors.batch }}</p>
+          </div>
+
+          <div>
+            <label for="highestAttainment" class="block text-sm font-medium text-gray-700 mb-2">Highest Educational Attainment</label>
+            <select
+              id="highestAttainment"
+              v-model="form.highest_educational_attainment"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            >
+              <option value="">Select level</option>
+              <option value="high_school">High School</option>
+              <option value="senior_high">Senior High School</option>
+              <option value="bachelors">Bachelor's Degree</option>
+              <option value="masters">Master's Degree</option>
+              <option value="doctorate">Doctorate</option>
+            </select>
+          </div>
         </div>
 
         <div class="flex items-center">
@@ -146,9 +205,7 @@
           />
           <label for="terms" class="ml-2 text-sm text-gray-600">
             I agree to the 
-            <a href="#" class="text-blue-600 hover:text-blue-800">Terms of Service</a> 
-            and 
-            <a href="#" class="text-blue-600 hover:text-blue-800">Privacy Policy</a>
+            <router-link to="/terms" target="_blank" class="text-blue-600 hover:text-blue-800 underline">Community Guidelines & Terms of Use</router-link>
           </label>
         </div>
 
@@ -216,13 +273,16 @@ const authStore = useAuthStore()
 // Form data
 const form = reactive({
   first_name: '',
+  middle_name: '',
   last_name: '',
+  suffix: '',
   email: '',
   password: '',
   password_confirmation: '',
   role: 'alumni', // Registration is only for alumni
   program: '',
   batch: '',
+  highest_educational_attainment: '',
   terms: false
 })
 

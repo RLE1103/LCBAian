@@ -1,31 +1,31 @@
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <!-- Welcome Header -->
-    <div class="mb-8">
-      <div class="flex items-center justify-between">
+    <div class="mb-6 md:mb-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900">Welcome back, {{ userFullName }}!</h1>
-          <p class="text-gray-600 mt-2">Here's what's happening in your LCBAian network today</p>
+          <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Welcome back, {{ userFullName }}!</h1>
+          <p class="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">Here's what's happening in your LCBAian network today</p>
         </div>
         <div class="flex items-center space-x-4">
-          <button @click="refreshData" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+          <button @click="refreshData" class="bg-blue-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm md:text-base">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            Refresh
+            <span class="hidden sm:inline">Refresh</span>
             </button>
           </div>
           </div>
         </div>
         
     <!-- Stats Overview -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
       <RouterLink to="/messages" class="group">
-        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform group-hover:scale-105">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 md:p-6 text-white hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform group-hover:scale-105">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-blue-100 text-sm font-medium">Messages</p>
-              <p class="text-3xl font-bold">{{ stats.messages }}</p>
+              <p class="text-blue-100 text-xs md:text-sm font-medium">Messages</p>
+              <p class="text-2xl md:text-3xl font-bold">{{ stats.messages }}</p>
               <p class="text-blue-200 text-xs">{{ stats.unreadMessages }} unread</p>
             </div>
             <div class="bg-blue-400 bg-opacity-30 rounded-full p-3">
@@ -38,11 +38,11 @@
       </RouterLink>
 
       <RouterLink to="/jobs" class="group">
-        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white hover:from-green-600 hover:to-green-700 transition-all duration-200 transform group-hover:scale-105">
+        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-4 md:p-6 text-white hover:from-green-600 hover:to-green-700 transition-all duration-200 transform group-hover:scale-105">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-green-100 text-sm font-medium">Jobs listed in the last 30 days</p>
-              <p class="text-3xl font-bold">{{ stats.jobApplications }}</p>
+              <p class="text-green-100 text-xs md:text-sm font-medium">Jobs listed in the last 30 days</p>
+              <p class="text-2xl md:text-3xl font-bold">{{ stats.jobApplications }}</p>
               <p class="text-green-200 text-xs">Updated daily</p>
             </div>
             <div class="bg-green-400 bg-opacity-30 rounded-full p-3">
@@ -55,11 +55,11 @@
       </RouterLink>
 
       <RouterLink to="/alumni" class="group">
-        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white hover:from-purple-600 hover:to-purple-700 transition-all duration-200 transform group-hover:scale-105">
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 md:p-6 text-white hover:from-purple-600 hover:to-purple-700 transition-all duration-200 transform group-hover:scale-105">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-purple-100 text-sm font-medium">Connections</p>
-              <p class="text-3xl font-bold">{{ stats.connections }}</p>
+              <p class="text-purple-100 text-xs md:text-sm font-medium">Connections</p>
+              <p class="text-2xl md:text-3xl font-bold">{{ stats.connections }}</p>
               <p class="text-purple-200 text-xs">{{ stats.newConnections }} new this week</p>
             </div>
             <div class="bg-purple-400 bg-opacity-30 rounded-full p-3">
@@ -72,11 +72,11 @@
       </RouterLink>
 
       <RouterLink to="/events" class="group">
-        <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform group-hover:scale-105">
+        <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 md:p-6 text-white hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform group-hover:scale-105">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-orange-100 text-sm font-medium">Events</p>
-              <p class="text-3xl font-bold">{{ stats.events }}</p>
+              <p class="text-orange-100 text-xs md:text-sm font-medium">Events</p>
+              <p class="text-2xl md:text-3xl font-bold">{{ stats.events }}</p>
               <p class="text-orange-200 text-xs">{{ stats.upcomingEvents }} upcoming</p>
             </div>
             <div class="bg-orange-400 bg-opacity-30 rounded-full p-3">
@@ -90,20 +90,20 @@
     </div>
 
     <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
       <!-- Left Column - Recent Activity & Notifications -->
-      <div class="lg:col-span-2 space-y-6">
+      <div class="lg:col-span-2 space-y-4 md:space-y-6">
         <!-- Recent Activity -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-gray-900">Recent Activity</h2>
-            <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">View All</button>
+        <div class="bg-white rounded-xl shadow-lg p-4 md:p-6">
+          <div class="flex items-center justify-between mb-4 md:mb-6">
+            <h2 class="text-lg md:text-xl font-bold text-gray-900">Recent Activity</h2>
+            <button class="text-blue-600 hover:text-blue-800 text-xs md:text-sm font-medium">View All</button>
           </div>
-          <div class="space-y-4">
-            <div v-for="activity in recentActivity" :key="activity.id" class="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+          <div class="space-y-3 md:space-y-4">
+            <div v-for="activity in recentActivity" :key="activity.id" class="flex items-start space-x-3 md:space-x-4 p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
               <div class="flex-shrink-0">
                 <div :class="[
-                  'w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm',
+                  'w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm',
                   activity.type === 'message' ? 'bg-blue-500' :
                   activity.type === 'job' ? 'bg-green-500' :
                   activity.type === 'connection' ? 'bg-purple-500' :
@@ -113,8 +113,8 @@
                 </div>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
-                <p class="text-sm text-gray-600">{{ activity.description }}</p>
+                <p class="text-xs md:text-sm font-medium text-gray-900">{{ activity.title }}</p>
+                <p class="text-xs md:text-sm text-gray-600">{{ activity.description }}</p>
                 <p class="text-xs text-gray-500 mt-1">{{ formatTime(activity.timestamp) }}</p>
               </div>
               <div v-if="activity.action" class="flex-shrink-0">
@@ -269,6 +269,9 @@
           </div>
         </div>
 
+        <!-- Birthday Corner -->
+        <BirthdayCorner />
+
         <!-- Upcoming Events -->
         <div class="bg-white rounded-xl shadow-lg p-6">
           <div class="flex items-center justify-between mb-6">
@@ -320,6 +323,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
 import axios from '../config/api'
+import BirthdayCorner from '../components/BirthdayCorner.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()

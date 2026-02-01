@@ -15,13 +15,16 @@ import ProfileView from '../views/ProfileView.vue'
 import NewsAnnouncementsView from '../views/NewsAnnouncementsView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
+import TermsGuidelinesView from '../views/TermsGuidelinesView.vue'
 
 const router = createRouter({
 	history: createWebHistory(),
 	routes: [
 		// Public routes
 		{ path: '/login', name: 'login', component: LoginView, meta: { requiresGuest: true } },
-		{ path: '/register', name: 'register', component: RegisterView, meta: { requiresGuest: true } },
+		{ path: '/terms-guidelines', name: 'terms-guidelines', component: TermsGuidelinesView, meta: { requiresGuest: true, hideNavigation: true } },
+		{ path: '/register', name: 'register', component: RegisterView, meta: { requiresGuest: true, hideNavigation: true } },
+		{ path: '/terms', redirect: '/terms-guidelines' },
 		
 		// Protected routes
 		{ path: '/', name: 'dashboard', component: DashboardView, meta: { requiresAuth: true } },
@@ -44,6 +47,14 @@ const router = createRouter({
 // Navigation guards
 router.beforeEach(async (to, from, next) => {
 	const authStore = useAuthStore()
+	
+	// Check for terms agreement before registration
+	if (to.name === 'register') {
+		const agreed = sessionStorage.getItem('terms_agreed')
+		if (!agreed || agreed !== 'true') {
+			return next('/terms-guidelines')
+		}
+	}
 	
 	// Check if route requires authentication
 	if (to.meta.requiresAuth) {

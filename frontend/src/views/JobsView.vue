@@ -1,20 +1,21 @@
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Jobs</h1>
-    <div class="flex items-center space-x-4">
-      <button @click="showCreateJobModal = true" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6 gap-3">
+      <h1 class="text-xl md:text-2xl font-bold text-gray-800">Jobs</h1>
+    <div class="flex items-center space-x-2 md:space-x-4">
+      <button @click="showCreateJobModal = true" class="bg-blue-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-blue-700 text-sm md:text-base whitespace-nowrap">
         Post a Job
       </button>
-        <button class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
-          Bookmarked Jobs
+        <button class="border border-gray-300 text-gray-700 px-3 md:px-4 py-2 rounded-lg hover:bg-gray-50 text-sm md:text-base whitespace-nowrap">
+          <span class="hidden sm:inline">Bookmarked Jobs</span>
+          <span class="sm:hidden">Bookmarks</span>
             </button>
           </div>
     </div>
 
     <!-- Search and Filters -->
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="bg-white rounded-lg shadow-md p-4 md:p-6 mb-4 md:mb-6">
       <div class="flex flex-col lg:flex-row gap-4">
         <!-- Search Bar -->
         <div class="flex-1">
@@ -37,26 +38,23 @@
         <div class="flex flex-wrap gap-2">
           <select v-model="selectedLocation" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="">All Locations</option>
-            <option value="remote">Remote</option>
-            <option value="new-york">New York</option>
-            <option value="san-francisco">San Francisco</option>
-            <option value="chicago">Chicago</option>
+            <option v-for="location in filterOptions.locations" :key="location" :value="location">
+              {{ location }}
+            </option>
           </select>
 
           <select v-model="selectedWorkType" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="">All Work Types</option>
-            <option value="full-time">Full-time</option>
-            <option value="part-time">Part-time</option>
-            <option value="internship">Internship</option>
-            <option value="contract">Contract</option>
+            <option v-for="workType in filterOptions.workTypes" :key="workType" :value="workType">
+              {{ workType }}
+            </option>
           </select>
 
           <select v-model="selectedIndustry" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="">All Industries</option>
-            <option value="technology">Technology</option>
-            <option value="finance">Finance</option>
-            <option value="healthcare">Healthcare</option>
-            <option value="education">Education</option>
+            <option v-for="industry in filterOptions.industries" :key="industry" :value="industry">
+              {{ industry }}
+            </option>
           </select>
 
           <select v-model="selectedExperience" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
@@ -83,7 +81,7 @@
           </div>
 
           <div 
-            v-for="job in filteredJobs" 
+            v-for="job in paginatedJobs" 
             :key="job.job_id"
             @click="selectJob(job)"
             :class="[
@@ -95,13 +93,19 @@
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-2">
                   <h3 class="text-lg font-semibold text-gray-900">{{ job.title }}</h3>
-                  <span v-if="job.posted_by_admin" class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                    Alumni Posted
+                  <span v-if="job.status === 'approved'" class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                    </svg>
+                    Verified
                   </span>
       </div>
                 
-                <div class="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                  <span class="font-medium">{{ job.company_name }}</span>
+                <p class="text-sm text-gray-600 mb-1">{{ job.company_name }}</p>
+                <p v-if="job.poster" class="text-xs text-gray-500 mb-2">
+                  Posted by: {{ job.poster.first_name }} {{ job.poster.last_name }}
+                </p>
+                <div class="flex items-center gap-4 text-xs text-gray-500 mb-3">
                   <span>{{ job.location }}</span>
                   <span>{{ formatTime(job.created_at) }}</span>
     </div>
@@ -127,6 +131,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
                       </svg>
                     </button>
+                    <button @click.stop="openReportModal(job)" title="Report" class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path>
+                      </svg>
+                    </button>
                     <button class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
@@ -139,12 +148,38 @@
             </div>
           </div>
 
-        <!-- Pagination -->
-        <div class="mt-6 flex justify-center">
-          <button class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-            Load More Jobs
+        <!-- Pagination Controls -->
+        <div v-if="totalPages > 1" class="mt-6 flex items-center justify-center gap-2">
+          <button 
+            @click="goToPage(currentPage - 1)"
+            :disabled="currentPage === 1"
+            class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            &lt;
           </button>
-                </div>
+          
+          <button
+            v-for="page in totalPages"
+            :key="page"
+            @click="goToPage(page)"
+            :class="[
+              'px-3 py-2 border rounded-lg min-w-[40px]',
+              currentPage === page 
+                ? 'bg-blue-600 text-white border-blue-600' 
+                : 'border-gray-300 hover:bg-gray-50 text-gray-700'
+            ]"
+          >
+            {{ page }}
+          </button>
+          
+          <button 
+            @click="goToPage(currentPage + 1)"
+            :disabled="currentPage === totalPages"
+            class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            &gt;
+          </button>
+        </div>
               </div>
 
       <!-- Right Column - Quick Panels -->
@@ -359,11 +394,29 @@
           <div class="flex items-center justify-between mb-6">
                 <div>
               <h2 class="text-2xl font-bold text-gray-900">{{ selectedJob?.title }}</h2>
-              <div class="flex items-center gap-4 text-gray-600 mt-2">
-                <span class="font-medium">{{ selectedJob?.company_name }}</span>
-                <span>{{ selectedJob?.location }}</span>
-                <span>{{ formatTime(selectedJob?.created_at) }}</span>
+              <div class="flex flex-col gap-2 mt-2">
+                <div class="flex items-center gap-4 text-gray-600">
+                  <span class="font-medium">{{ selectedJob?.company_name }}</span>
+                  <span>{{ selectedJob?.location }}</span>
+                  <span>{{ formatTime(selectedJob?.created_at) }}</span>
+                </div>
+                <p v-if="selectedJob?.poster" class="text-sm text-gray-600">
+                  Posted by: {{ selectedJob.poster.first_name }} {{ selectedJob.poster.last_name }}
+                </p>
               </div>
+              
+              <!-- Apply Button -->
+              <a 
+                v-if="selectedJob?.application_link"
+                :href="selectedJob.application_link"
+                target="_blank"
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                </svg>
+                Apply Now
+              </a>
             </div>
             <button @click="showJobModal = false" class="text-gray-400 hover:text-gray-600">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -397,79 +450,65 @@
             <div v-if="activeTab === 'overview'">
               <div class="prose max-w-none">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Job Description</h3>
-                <p class="text-gray-700 mb-6">{{ selectedJob?.description }}</p>
+                <p class="text-gray-700 mb-6 whitespace-pre-wrap">{{ selectedJob?.description }}</p>
                 
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Requirements</h3>
-                <ul class="list-disc list-inside text-gray-700 space-y-2">
-                  <li>Bachelor's degree in Computer Science or related field</li>
-                  <li>3+ years of experience in software development</li>
-                  <li>Proficiency in JavaScript, React, and Node.js</li>
-                  <li>Experience with cloud platforms (AWS, Azure, or GCP)</li>
-                  <li>Strong problem-solving and communication skills</li>
-                </ul>
-
+                <!-- Only show required_skills if exists -->
+                <div v-if="selectedJob?.required_skills && selectedJob.required_skills.length > 0" class="mb-6">
+                  <h3 class="text-lg font-semibold text-gray-900 mb-4">Required Skills</h3>
+                  <ul class="list-disc list-inside text-gray-700 space-y-2">
+                    <li v-for="skill in selectedJob.required_skills" :key="skill">{{ skill }}</li>
+                  </ul>
+                </div>
+                
+                <!-- Show preferred_skills if exists -->
+                <div v-if="selectedJob?.preferred_skills && selectedJob.preferred_skills.length > 0">
+                  <h3 class="text-lg font-semibold text-gray-900 mb-4">Preferred Skills</h3>
+                  <ul class="list-disc list-inside text-gray-700 space-y-2">
+                    <li v-for="skill in selectedJob.preferred_skills" :key="skill">{{ skill }}</li>
+                  </ul>
+                </div>
+                
+                <div v-if="!selectedJob?.required_skills?.length && !selectedJob?.preferred_skills?.length" class="text-gray-500 italic">
+                  No specific skills requirements listed
                 </div>
               </div>
+            </div>
 
             <!-- About Company Tab -->
             <div v-if="activeTab === 'company'">
               <div class="bg-gray-50 rounded-lg p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">About {{ selectedJob?.company_name }}</h3>
-                <p class="text-gray-700 mb-4">
-                  {{ selectedJob?.company_name }} is a leading technology company focused on innovation and growth. 
-                  We're committed to creating a diverse and inclusive workplace where everyone can thrive.
-                </p>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span class="font-medium text-gray-900">Company Size:</span>
-                    <span class="text-gray-700 ml-2">500+ employees</span>
-                  </div>
-                  <div>
+                
+                <!-- Only show database fields -->
+                <div v-if="selectedJob?.industry || selectedJob?.location || selectedJob?.work_type" class="grid grid-cols-2 gap-4 text-sm">
+                  <div v-if="selectedJob?.industry">
                     <span class="font-medium text-gray-900">Industry:</span>
-                    <span class="text-gray-700 ml-2">Technology</span>
-          </div>
-                  <div>
-                    <span class="font-medium text-gray-900">Founded:</span>
-                    <span class="text-gray-700 ml-2">2015</span>
-            </div>
-                <div>
+                    <span class="text-gray-700 ml-2">{{ selectedJob.industry }}</span>
+                  </div>
+                  <div v-if="selectedJob?.location">
                     <span class="font-medium text-gray-900">Location:</span>
-                    <span class="text-gray-700 ml-2">{{ selectedJob?.location }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-            <!-- Applicants Tab -->
-            <div v-if="activeTab === 'applicants'">
-              <div class="space-y-4">
-                <div v-for="applicant in jobApplicants" :key="applicant.id" class="border border-gray-200 rounded-lg p-4">
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                      <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
-                        {{ applicant.user.first_name[0] }}{{ applicant.user.last_name[0] }}
-                      </div>
-                <div>
-                        <h4 class="font-medium text-gray-900">{{ applicant.user.full_name }}</h4>
-                        <p class="text-sm text-gray-600">{{ applicant.user.headline }}</p>
+                    <span class="text-gray-700 ml-2">{{ selectedJob.location }}</span>
+                  </div>
+                  <div v-if="selectedJob?.work_type">
+                    <span class="font-medium text-gray-900">Work Type:</span>
+                    <span class="text-gray-700 ml-2">{{ selectedJob.work_type }}</span>
+                  </div>
+                  <div v-if="selectedJob?.experience_level">
+                    <span class="font-medium text-gray-900">Experience Level:</span>
+                    <span class="text-gray-700 ml-2">{{ selectedJob.experience_level }}</span>
+                  </div>
+                  <div v-if="selectedJob?.salary_range">
+                    <span class="font-medium text-gray-900">Salary Range:</span>
+                    <span class="text-gray-700 ml-2">{{ selectedJob.salary_range }}</span>
+                  </div>
                 </div>
-              </div>
-                    <div class="flex items-center space-x-2">
-                      <span :class="[
-                        'px-2 py-1 rounded-full text-xs font-medium',
-                        applicant.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        applicant.status === 'reviewed' ? 'bg-blue-100 text-blue-800' :
-                        applicant.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
-                      ]">
-                        {{ applicant.status }}
-                      </span>
-                      <button class="text-blue-600 hover:text-blue-800 text-sm">Message</button>
+                
+                <p v-else class="text-gray-500 italic text-center py-4">
+                  Limited company information available for this position.
+                </p>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+
     </div>
 
           <div class="flex justify-end">
@@ -485,8 +524,8 @@
   </div>
   
   <!-- Create Job Modal -->
-  <div v-if="showCreateJobModal" class="fixed inset-0 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-6 w-full max-w-2xl border-4 border-gray-300 shadow-2xl">
+  <div v-if="showCreateJobModal" class="fixed inset-0 flex items-center justify-center z-50 p-4" @click.self="showCreateJobModal = false">
+    <div class="bg-white rounded-lg p-6 w-full max-w-2xl border-4 border-gray-300 shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-gray-900">Post a Job</h3>
         <button @click="showCreateJobModal = false" class="text-gray-400 hover:text-gray-600">
@@ -538,6 +577,11 @@
           <input v-model="newJob.salary_range" type="text" placeholder="e.g. 40k-60k" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         </div>
         <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Application Link (Optional)</label>
+          <input v-model="newJob.application_link" type="url" placeholder="https://example.com/apply" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <p class="text-xs text-gray-500 mt-1">Link where applicants can apply for this position</p>
+        </div>
+        <div class="md:col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-2">Required Skills (comma-separated)</label>
           <input v-model="requiredSkillsInput" type="text" placeholder="e.g. Vue, Laravel, MySQL" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         </div>
@@ -557,11 +601,24 @@
       </div>
     </div>
   </div>
+
+  <!-- Report Modal -->
+  <ReportModal 
+    :isOpen="showReportModal" 
+    :entityType="'job_post'" 
+    :entityId="reportingJobId" 
+    @close="showReportModal = false"
+    @submitted="handleReportSubmitted"
+  />
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from '../config/api'
+import { useAuthStore } from '../stores/auth'
+import ReportModal from '../components/ReportModal.vue'
+
+const authStore = useAuthStore()
 
 // Reactive data
 const searchQuery = ref('')
@@ -574,6 +631,17 @@ const showJobModal = ref(false)
 const showCreateJobModal = ref(false)
 const activeTab = ref('overview')
 const loading = ref(false)
+
+// Report Modal State
+const showReportModal = ref(false)
+const reportingJobId = ref(null)
+
+// Filter options from database
+const filterOptions = ref({
+  locations: [],
+  industries: [],
+  workTypes: []
+})
 
 // Fetch jobs from API
 const jobs = ref([])
@@ -603,10 +671,20 @@ const fetchJobs = async () => {
   }
 }
 
+const fetchFilterOptions = async () => {
+  try {
+    const response = await axios.get('/api/job-posts/filter-options')
+    if (response?.data?.success) {
+      filterOptions.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Error fetching filter options:', error)
+  }
+}
+
 const savedJobs = ref([])
 const recommendedJobs = ref([])
 const userJobPosts = ref([])
-const jobApplicants = ref([])
 // Career Matching
 const careerMatches = ref([])
 const matchingLoading = ref(false)
@@ -622,21 +700,40 @@ const newJob = ref({
   required_skills: [],
   industry: '',
   experience_level: '',
-  salary_range: ''
+  salary_range: '',
+  application_link: ''
 })
 const requiredSkillsInput = ref('')
 
 const jobDetailTabs = [
   { key: 'overview', label: 'Overview' },
-  { key: 'company', label: 'About the Company' },
-  { key: 'applicants', label: 'Applicants' }
+  { key: 'company', label: 'About the Company' }
 ]
+
+// Pagination
+const currentPage = ref(1)
+const itemsPerPage = 10
 
 // Computed properties
 const filteredJobs = computed(() => {
   // Since we're filtering on the backend, just return the jobs
   return jobs.value
 })
+
+const totalPages = computed(() => Math.ceil(filteredJobs.value.length / itemsPerPage))
+
+const paginatedJobs = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredJobs.value.slice(start, end)
+})
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
 
 // Methods
 const selectJob = (job) => {
@@ -672,19 +769,49 @@ const toggleSaveJob = (job) => {
 
 // Create job via backend
 const createJob = async () => {
+  if (!newJob.value.title || !newJob.value.description) {
+    alert('Please fill in the required fields (Title and Description)')
+    return
+  }
+
   try {
+    // Prepare required_skills array
     newJob.value.required_skills = requiredSkillsInput.value
       ? requiredSkillsInput.value.split(',').map(s => s.trim()).filter(Boolean)
       : []
+
     const response = await axios.post('/api/job-posts', newJob.value)
+    
     if (response?.data?.success) {
-      showCreateJobModal.value = false
-      newJob.value = { title: '', description: '', company_name: '', location: '', work_type: '', required_skills: [], industry: '', experience_level: '', salary_range: '' }
+      // Show success message
+      alert('Job posted successfully!')
+      
+      // Reset form
+      newJob.value = { 
+        title: '', 
+        description: '', 
+        company_name: '', 
+        location: '', 
+        work_type: '', 
+        required_skills: [], 
+        industry: '', 
+        experience_level: '', 
+        salary_range: '',
+        application_link: ''
+      }
       requiredSkillsInput.value = ''
+      
+      // Close modal
+      showCreateJobModal.value = false
+      
+      // Refresh jobs list
       await fetchJobs()
+    } else {
+      alert('Failed to create job: ' + (response?.data?.message || 'Unknown error'))
     }
   } catch (error) {
     console.error('Error creating job:', error)
+    alert('Error creating job: ' + (error.response?.data?.message || error.message || 'Unknown error'))
   }
 }
 
@@ -721,29 +848,44 @@ const getMatchPercentage = (match) => {
 const loadCareerMatching = async () => {
   matchingLoading.value = true
   try {
-    const response = await axios.get('/api/jobs/quick-recommendations', {
+    // Use detailed recommendations for better match information
+    const response = await axios.get('/api/jobs/recommended', {
       params: { limit: 5 }
     })
     
     if (response.data.success) {
-      // Transform data to match expected format
-      const matches = response.data.data || []
-      careerMatches.value = matches.map(match => {
-        // Handle both quick-recommendations format (just job objects) and detailed format
-        if (match.job) {
-          return match // Already in detailed format
-        } else {
-          // Quick format - transform to match structure
-          return {
-            job: match,
-            similarity_score: match.similarity_score || 0,
-            match_percentage: match.similarity_score ? Math.round(match.similarity_score * 100) : 0,
-            matched_skills: [],
-            missing_skills: [],
-            bonus_skills: []
-          }
-        }
+      // Detailed recommendations already have all the match information
+      careerMatches.value = response.data.data || []
+    } else {
+      // Fallback to quick recommendations if detailed fails
+      const quickResponse = await axios.get('/api/jobs/quick-recommendations', {
+        params: { limit: 5 }
       })
+      
+      if (quickResponse.data.success) {
+        // Transform quick format to match structure
+        const matches = quickResponse.data.data || []
+        careerMatches.value = matches.map(match => {
+          if (match.job) {
+            return match
+          } else {
+            // Calculate match details on frontend if needed
+            const userSkills = authStore.user?.skills || []
+            const jobSkills = match.required_skills || []
+            const matchedSkills = userSkills.filter(s => jobSkills.includes(s))
+            const missingSkills = jobSkills.filter(s => !userSkills.includes(s))
+            
+            return {
+              job: match,
+              similarity_score: match.similarity_score || 0,
+              match_percentage: match.similarity_score ? Math.round(match.similarity_score * 100) : 0,
+              matched_skills: matchedSkills,
+              missing_skills: missingSkills,
+              bonus_skills: []
+            }
+          }
+        })
+      }
     }
   } catch (error) {
     console.error('Error loading career matching:', error)
@@ -771,8 +913,19 @@ const viewAllCareerMatches = async () => {
   }
 }
 
+const openReportModal = (job) => {
+  reportingJobId.value = job.job_id
+  showReportModal.value = true
+}
+
+const handleReportSubmitted = () => {
+  showReportModal.value = false
+  reportingJobId.value = null
+}
+
 onMounted(() => {
   fetchJobs()
+  fetchFilterOptions()
   loadSavedJobs()
   loadCareerMatching()
 })

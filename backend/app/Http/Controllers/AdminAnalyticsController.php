@@ -154,8 +154,8 @@ class AdminAnalyticsController extends Controller
             // Get cluster analytics
             $clusterAnalytics = $this->clusteringService->getClusterAnalytics();
             
-            // Get Skills Gap Analysis
-            $skillsGapAnalysis = $this->getSkillsGapAnalysis();
+            // Get cluster insights
+            $clusterInsights = $this->clusteringService->generateClusterInsights();
 
             return response()->json([
                 'success' => true,
@@ -167,7 +167,7 @@ class AdminAnalyticsController extends Controller
                         'total_events' => $totalEvents
                     ],
                     'clustering' => $clusterAnalytics,
-                    'skills_gap_analysis' => $skillsGapAnalysis
+                    'cluster_insights' => $clusterInsights
                 ]
             ]);
 
@@ -178,82 +178,6 @@ class AdminAnalyticsController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
-    }
-
-    /**
-     * Get Skills Gap Analysis - Demand vs Supply
-     * Demand: Skills from job posts (required_skills)
-     * Supply: Skills from alumni profiles
-     */
-    private function getSkillsGapAnalysis(): array
-    {
-        // Get demand skills from job posts
-        $demandSkills = \App\Models\JobPost::whereNotNull('required_skills')
-            ->pluck('required_skills')
-            ->filter()
-            ->flatten()
-            ->countBy()
-            ->sortDesc()
-            ->toArray();
-
-        // Get supply skills from alumni
-        $supplySkills = \App\Models\User::where('role', 'alumni')
-            ->whereNotNull('skills')
-            ->pluck('skills')
-            ->filter()
-            ->flatten()
-            ->countBy()
-            ->sortDesc()
-            ->toArray();
-
-        // Calculate gap for each skill
-        $skillsGap = [];
-        $allSkills = array_unique(array_merge(array_keys($demandSkills), array_keys($supplySkills)));
-        
-        foreach ($allSkills as $skill) {
-            $demand = $demandSkills[$skill] ?? 0;
-            $supply = $supplySkills[$skill] ?? 0;
-            $gap = $demand - $supply;
-            
-            // Calculate gap percentage (positive = shortage, negative = surplus)
-            $gapPercentage = $demand > 0 ? round(($gap / $demand) * 100, 1) : 0;
-            
-            $skillsGap[$skill] = [
-                'skill' => $skill,
-                'demand' => $demand,
-                'supply' => $supply,
-                'gap' => $gap,
-                'gap_percentage' => $gapPercentage,
-                'status' => $gap > 0 ? 'shortage' : ($gap < 0 ? 'surplus' : 'balanced')
-            ];
-        }
-
-        // Sort by gap (largest shortage first)
-        usort($skillsGap, function($a, $b) {
-            return $b['gap'] <=> $a['gap'];
-        });
-
-        // Get top skills with shortages (most critical for curriculum planning)
-        $criticalShortages = array_values(array_filter($skillsGap, function($item) {
-            return $item['status'] === 'shortage';
-        }));
-
-        // Get top skills with surplus
-        $surpluses = array_values(array_filter($skillsGap, function($item) {
-            return $item['status'] === 'surplus';
-        }));
-
-        return [
-            'summary' => [
-                'total_skills_in_demand' => count($demandSkills),
-                'total_skills_supplied' => count($supplySkills),
-                'skills_with_shortage' => count($criticalShortages),
-                'skills_with_surplus' => count($surpluses)
-            ],
-            'critical_shortages' => array_slice($criticalShortages, 0, 10),
-            'surpluses' => array_slice($surpluses, 0, 10),
-            'all_skills' => array_slice($skillsGap, 0, 20)
-        ];
     }
 
     private function authorizeAdmin(): bool

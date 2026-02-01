@@ -115,15 +115,40 @@ class AuthController extends Controller
 
         $validator = Validator::make($request->all(), [
             'first_name' => 'sometimes|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
             'last_name' => 'sometimes|string|max:255',
+            'suffix' => 'nullable|string|in:Jr.,Sr.,II,III,IV',
             'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
-            'program' => 'nullable|string|max:255',
-            'batch' => 'nullable|integer|min:1990|max:' . date('Y'),
-            'bio' => 'nullable|string|max:1000',
             'headline' => 'nullable|string|max:255',
-            'location' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'website' => 'nullable|url|max:255',
+            'bio' => 'nullable|string|max:1000',
+            // Contact & Socials
+            'linkedin_url' => 'nullable|url|max:255',
+            'portfolio_url' => 'nullable|url|max:255',
+            // Education
+            'program' => 'nullable|string|max:255',
+            'batch' => 'nullable|string|max:20',
+            // Location
+            'city' => 'nullable|string|max:100',
+            'country' => 'nullable|string|max:100',
+            // Career
+            'current_job_title' => 'nullable|string|max:100',
+            'industry' => 'nullable|string|max:100',
+            'experience_level' => 'nullable|string|max:50',
+            'employment_status' => 'nullable|in:employed_full_time,employed_part_time,self_employed,in_study,unemployed_looking,unemployed_not_looking',
+            'years_of_experience' => 'nullable|in:0-2,3-5,6-10,10+',
+            'salary_range' => 'nullable|in:prefer_not_to_say,20000-39999,40000-59999,60000-79999,80000-99999,100000+',
+            // Skills (array of standardized skill names)
+            'skills' => 'nullable|array',
+            'skills.*' => 'string|max:100',
+            // Career Preferences
+            'work_setup_preferences' => 'nullable|array',
+            'work_setup_preferences.*' => 'in:on_site,hybrid,remote',
+            'employment_type_preferences' => 'nullable|array',
+            'employment_type_preferences.*' => 'in:full_time,part_time,contract,internship',
+            'industries_of_interest' => 'nullable|array',
+            'industries_of_interest.*' => 'string|max:100',
+            // Visibility Settings
+            'visibility_settings' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -133,9 +158,27 @@ class AuthController extends Controller
             ], 422);
         }
 
+        // Update skills and increment usage counts
+        if ($request->has('skills')) {
+            $skills = $request->input('skills', []);
+            foreach ($skills as $skillName) {
+                $skill = \App\Models\SkillsTaxonomy::firstOrCreate(
+                    ['name' => $skillName],
+                    ['category' => null]
+                );
+                $skill->incrementUsage();
+            }
+        }
+
         $user->update($request->only([
-            'first_name', 'last_name', 'email', 'program', 'batch',
-            'bio', 'headline', 'location', 'phone', 'website'
+            'first_name', 'last_name', 'email', 'headline', 'bio',
+            'public_email', 'linkedin_url', 'portfolio_url',
+            'program', 'batch',
+            'city', 'country',
+            'current_job_title', 'industry', 'experience_level',
+            'employment_status', 'years_of_experience', 'salary_range',
+            'skills',
+            'work_setup_preferences', 'employment_type_preferences', 'industries_of_interest'
         ]));
 
         return response()->json([

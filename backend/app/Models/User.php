@@ -15,19 +15,48 @@ class User extends Authenticatable
 
     protected $fillable = [
         'first_name',
+        'middle_name',
         'last_name',
+        'suffix',
         'email',
         'password',
         'role',
         'profile_picture',
         'headline',
         'bio',
+        'birthdate',
         'skills',
         'cluster_group',
         'career_interests',
         'current_job_title',
         'industry',
         'experience_level',
+        // Contact & Socials
+        'linkedin_url',
+        'portfolio_url',
+        // Location
+        'location',
+        'city',
+        'country',
+        // Career
+        'employment_status',
+        'employment_sector',
+        'years_of_experience',
+        'salary_range',
+        // Career Preferences
+        'work_setup_preferences',
+        'employment_type_preferences',
+        'industries_of_interest',
+        // Education
+        'program',
+        'batch',
+        'highest_educational_attainment',
+        // LCBA Employee/Faculty
+        'is_lcba_employee_faculty',
+        'lcba_employee_id',
+        'lcba_verification_status',
+        // Privacy
+        'privacy_settings',
     ];
 
     protected $hidden = [
@@ -39,8 +68,13 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'birthdate' => 'date',
             'skills' => 'array',
             'career_interests' => 'array',
+            'work_setup_preferences' => 'array',
+            'employment_type_preferences' => 'array',
+            'industries_of_interest' => 'array',
+            'privacy_settings' => 'array',
         ];
     }
 
@@ -115,10 +149,37 @@ class User extends Authenticatable
         return $this->hasMany(AdminLog::class);
     }
 
+    public function educationHistory(): HasMany
+    {
+        return $this->hasMany(EducationHistory::class);
+    }
+
+    public function reportsSubmitted(): HasMany
+    {
+        return $this->hasMany(Report::class, 'reporter_user_id');
+    }
+
+    public function reportsReviewed(): HasMany
+    {
+        return $this->hasMany(Report::class, 'reviewed_by_admin_id');
+    }
+
     // Helper methods
     public function getFullNameAttribute(): string
     {
-        return $this->first_name . ' ' . $this->last_name;
+        $name = $this->first_name;
+        
+        if ($this->middle_name) {
+            $name .= ' ' . $this->middle_name;
+        }
+        
+        $name .= ' ' . $this->last_name;
+        
+        if ($this->suffix) {
+            $name .= ' ' . $this->suffix;
+        }
+        
+        return $name;
     }
 
     public function isAdmin(): bool
@@ -134,5 +195,51 @@ class User extends Authenticatable
     public function isAlumni(): bool
     {
         return $this->role === 'alumni';
+    }
+
+    public function isFaculty(): bool
+    {
+        return $this->role === 'faculty';
+    }
+
+    /**
+     * Get privacy setting for a specific field
+     */
+    public function getPrivacySetting(string $field): string
+    {
+        $settings = $this->privacy_settings ?? [];
+        return $settings[$field] ?? 'alumni_only'; // Default to alumni only
+    }
+
+    /**
+     * Check if a viewer can see a specific field based on privacy settings
+     */
+    public function canViewField(string $field, ?User $viewer): bool
+    {
+        // Admin can always see everything
+        if ($viewer && $viewer->isAdmin()) {
+            return true;
+        }
+
+        // User can always see their own fields
+        if ($viewer && $viewer->id === $this->id) {
+            return true;
+        }
+
+        $privacy = $this->getPrivacySetting($field);
+
+        switch ($privacy) {
+            case 'public':
+                return true;
+            case 'alumni_only':
+                return $viewer && $viewer->isAlumni();
+            case 'connections_only':
+                // TODO: Implement connection checking when connections feature is ready
+                return false;
+            case 'admin_only':
+                return false;
+            default:
+                return false;
+        }
     }
 }

@@ -4,7 +4,7 @@
       <!-- Logo and Header -->
       <div class="text-center mb-8">
         <div class="flex items-center justify-center mb-4">
-          <img src="/src/assets/images/LCBAlogo.png" alt="LCBA Logo" class="w-30 h-30 rounded object-cover" />
+          <img src="/src/assets/images/LCBAlogo.png" alt="LCBA Logo" class="w-20 h-20 rounded object-cover" />
         </div>
         <h1 class="text-3xl font-bold text-gray-900">LCBAConnect+</h1>
         <p class="text-gray-600 mt-2">Alumni Network Platform</p>
@@ -99,7 +99,7 @@
       <div class="mt-6 text-center">
         <p class="text-gray-600">
           Don't have an account?
-          <router-link to="/register" class="text-blue-600 hover:text-blue-800 font-medium">
+          <router-link to="/terms-guidelines" class="text-blue-600 hover:text-blue-800 font-medium">
             Create one here
           </router-link>
         </p>

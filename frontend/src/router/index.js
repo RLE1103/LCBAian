@@ -16,6 +16,7 @@ import NewsAnnouncementsView from '../views/NewsAnnouncementsView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import TermsGuidelinesView from '../views/TermsGuidelinesView.vue'
+import PendingVerificationView from '../views/PendingVerificationView.vue'
 
 const router = createRouter({
 	history: createWebHistory(),
@@ -25,6 +26,7 @@ const router = createRouter({
 		{ path: '/terms-guidelines', name: 'terms-guidelines', component: TermsGuidelinesView, meta: { hideNavigation: true } },
 		{ path: '/register', name: 'register', component: RegisterView, meta: { requiresGuest: true, hideNavigation: true } },
 		{ path: '/terms', redirect: '/terms-guidelines' },
+		{ path: '/pending-verification', name: 'pending-verification', component: PendingVerificationView, meta: { requiresAuth: true, hideNavigation: true, allowUnverified: true } },
 		
 		// Protected routes
 		{ path: '/', name: 'dashboard', component: DashboardView, meta: { requiresAuth: true } },
@@ -57,6 +59,19 @@ router.beforeEach(async (to, from, next) => {
 			if (!isAuth) {
 				return next('/login')
 			}
+		}
+		
+		// Check verification status (except for allowed routes and admins)
+		if (!to.meta.allowUnverified && authStore.user && !authStore.user.is_verified && authStore.userRole !== 'admin') {
+			// Redirect unverified users to pending verification page
+			if (to.path !== '/pending-verification') {
+				return next('/pending-verification')
+			}
+		}
+		
+		// If user is verified and trying to access pending verification, redirect to dashboard
+		if (to.path === '/pending-verification' && authStore.user?.is_verified) {
+			return next('/')
 		}
 		
 		// Check role-based access

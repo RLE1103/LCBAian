@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\JobPost;
 use App\Models\User;
+use App\Mail\JobApprovedEmail;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class AdminJobApprovalController extends Controller
 {
@@ -48,11 +50,18 @@ class AdminJobApprovalController extends Controller
         }
 
         try {
-            $job = JobPost::findOrFail($id);
+            $job = JobPost::with('poster')->findOrFail($id);
             
             $job->update(['status' => 'approved']);
 
-            // TODO: Send notification to job poster that their job was approved
+            // Send notification to job poster that their job was approved
+            if ($job->poster && $job->poster->email) {
+                try {
+                    Mail::to($job->poster->email)->send(new JobApprovedEmail($job, true));
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send job approval email: ' . $e->getMessage());
+                }
+            }
             
             return response()->json([
                 'success' => true,
@@ -78,12 +87,20 @@ class AdminJobApprovalController extends Controller
         }
 
         try {
-            $job = JobPost::findOrFail($id);
+            $job = JobPost::with('poster')->findOrFail($id);
             
             $job->update(['status' => 'rejected']);
 
-            // TODO: Send notification to job poster with rejection reason
+            // Send notification to job poster with rejection reason
             $reason = $request->input('reason', 'Your job post did not meet our community guidelines.');
+            
+            if ($job->poster && $job->poster->email) {
+                try {
+                    Mail::to($job->poster->email)->send(new JobApprovedEmail($job, false));
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send job rejection email: ' . $e->getMessage());
+                }
+            }
             
             return response()->json([
                 'success' => true,

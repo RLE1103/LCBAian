@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Mail\UserRegistrationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -42,11 +44,23 @@ class AuthController extends Controller
             'role' => $request->role,
             'program' => $request->program,
             'batch' => $request->batch,
+            'is_verified' => false, // New users require admin approval
         ]);
 
+        // Send email notification to all admins about new registration
+        try {
+            $admins = User::where('role', 'admin')->get();
+            foreach ($admins as $admin) {
+                Mail::to($admin->email)->send(new UserRegistrationNotification($user));
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send registration notification: ' . $e->getMessage());
+        }
+        
         return response()->json([
-            'message' => 'User registered successfully',
-            'user' => $user
+            'message' => 'Registration successful. Your account is pending verification by our administrators.',
+            'user' => $user,
+            'requires_verification' => true
         ], 201);
     }
 

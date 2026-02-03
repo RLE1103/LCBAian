@@ -133,7 +133,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import axios from '../config/api'
+import { useToast } from '../composables/useToast'
 
+const toast = useToast()
 const authStore = useAuthStore()
 const posts = ref([])
 const loading = ref(false)
@@ -190,7 +192,7 @@ const removeImage = () => {
 
 const submitPost = async () => {
   if (!newPost.value.content.trim()) {
-    alert('Please enter some content for your post')
+    toast.warning('Please enter some content for your post', 'Validation Error')
     return
   }
   
@@ -220,7 +222,7 @@ const submitPost = async () => {
     console.log('Response received:', res.data)
     
     if (res?.data?.success) {
-      alert('Post created successfully!')
+      toast.success('Post created successfully!', 'Success')
       // Reset form
       newPost.value.content = ''
       newPost.value.visibility = 'public'  // Reset to public
@@ -238,7 +240,7 @@ const submitPost = async () => {
   } catch (e) {
     console.error('Error creating post:', e)
     console.error('Error response:', e.response?.data)
-    alert('Failed to create post: ' + (e.response?.data?.message || e.message))
+    toast.error('Failed to create post: ' + (e.response?.data?.message || e.message), 'Error')
   } finally {
     posting.value = false
   }

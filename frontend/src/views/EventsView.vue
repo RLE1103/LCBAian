@@ -559,6 +559,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from '../config/api'
+import { useToast } from '../composables/useToast'
+
+const toast = useToast()
 
 // Reactive data
 const searchQuery = ref('')
@@ -621,27 +624,27 @@ const fetchEvents = async () => {
 
 const createEvent = async () => {
   if (!newEvent.value.title || !newEvent.value.title.trim()) {
-    alert('Please enter an event title')
+    toast.warning('Please enter an event title', 'Validation Error')
     return
   }
 
   if (!newEvent.value.description || !newEvent.value.description.trim()) {
-    alert('Please enter an event description')
+    toast.warning('Please enter an event description', 'Validation Error')
     return
   }
 
   if (!newEvent.value.start_date) {
-    alert('Please select a start date and time')
+    toast.warning('Please select a start date and time', 'Validation Error')
     return
   }
 
   if (!newEvent.value.end_date) {
-    alert('Please select an end date and time')
+    toast.warning('Please select an end date and time', 'Validation Error')
     return
   }
 
   if (!newEvent.value.location || !newEvent.value.location.trim()) {
-    alert('Please enter a location')
+    toast.warning('Please enter a location', 'Validation Error')
     return
   }
 
@@ -650,7 +653,7 @@ const createEvent = async () => {
     
     if (response.data.success) {
       // Show success message
-      alert('Event created successfully!')
+      toast.success('Event created successfully!', 'Success')
       
       // Reset form
       newEvent.value = {
@@ -668,11 +671,11 @@ const createEvent = async () => {
       // Refresh events list
       await fetchEvents()
     } else {
-      alert('Failed to create event: ' + (response.data.message || 'Unknown error'))
+      toast.error('Failed to create event: ' + (response.data.message || 'Unknown error'), 'Error')
     }
   } catch (error) {
     console.error('Error creating event:', error)
-    alert('Error creating event: ' + (error.response?.data?.message || error.message || 'Unknown error'))
+    toast.error('Error creating event: ' + (error.response?.data?.message || error.message || 'Unknown error'), 'Error')
   }
 }
 
@@ -865,10 +868,10 @@ const shareEvent = (event) => {
   } else {
     // Fallback: Copy to clipboard
     navigator.clipboard.writeText(`${shareText}\n${eventUrl}`).then(() => {
-      alert('Event link copied to clipboard!')
+      toast.success('Event link copied to clipboard!', 'Success')
     }).catch(err => {
       console.error('Failed to copy:', err)
-      alert('Failed to copy link')
+      toast.error('Failed to copy link', 'Error')
     })
   }
 }

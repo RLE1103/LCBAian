@@ -736,6 +736,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from '../config/api'
+import { useToast } from '../composables/useToast'
+
+const toast = useToast()
 
 // Reactive data
 const activeTab = ref('verification')
@@ -886,15 +889,40 @@ const bulkDeny = () => {
   }
 }
 
-const approveRequest = (request) => {
-  if (confirm(`Approve verification request for ${request.full_name}?`)) {
-    request.status = 'approved'
+const approveRequest = async (request) => {
+  if (!confirm(`Approve verification request for ${request.full_name}?`)) return
+  
+  try {
+    const response = await axios.post(`/api/admin/users/${request.id}/approve`)
+    if (response.data.success) {
+      toast.success(`${request.full_name} has been approved and can now access the platform!`, 'Success')
+      request.status = 'approved'
+      request.is_verified = true
+      // Reload verification requests
+      await loadVerificationRequests()
+    }
+  } catch (error) {
+    console.error('Error approving user:', error)
+    toast.error('Failed to approve user: ' + (error.response?.data?.message || error.message), 'Error')
   }
 }
 
-const denyRequest = (request) => {
-  if (confirm(`Deny verification request for ${request.full_name}?`)) {
-    request.status = 'denied'
+const denyRequest = async (request) => {
+  const reason = prompt('Please provide a reason for denial (optional):')
+  if (reason === null) return // User cancelled
+  
+  if (!confirm(`Deny and remove verification request for ${request.full_name}?`)) return
+  
+  try {
+    const response = await axios.post(`/api/admin/users/${request.id}/reject`, { reason })
+    if (response.data.success) {
+      toast.success(`${request.full_name}'s registration has been rejected and removed.`, 'Success')
+      // Reload verification requests
+      await loadVerificationRequests()
+    }
+  } catch (error) {
+    console.error('Error rejecting user:', error)
+    toast.error('Failed to reject user: ' + (error.response?.data?.message || error.message), 'Error')
   }
 }
 
@@ -1024,12 +1052,12 @@ const resolveReport = async (reportId) => {
   try {
     const response = await axios.post(`/api/reports/${reportId}/resolve`)
     if (response.data.success) {
-      alert('Report resolved successfully')
+      toast.success('Report resolved successfully', 'Success')
       await loadReports()
     }
   } catch (error) {
     console.error('Error resolving report:', error)
-    alert('Failed to resolve report: ' + (error.response?.data?.message || error.message))
+    toast.error('Failed to resolve report: ' + (error.response?.data?.message || error.message), 'Error')
   }
 }
 
@@ -1042,12 +1070,12 @@ const dismissReport = async (reportId) => {
       admin_notes: 'Report dismissed by admin'
     })
     if (response.data.success) {
-      alert('Report dismissed')
+      toast.success('Report dismissed', 'Success')
       await loadReports()
     }
   } catch (error) {
     console.error('Error dismissing report:', error)
-    alert('Failed to dismiss report: ' + (error.response?.data?.message || error.message))
+    toast.error('Failed to dismiss report: ' + (error.response?.data?.message || error.message), 'Error')
   }
 }
 
@@ -1062,7 +1090,7 @@ const updateReportStatus = async (reportId, status, notes = '') => {
     }
   } catch (error) {
     console.error('Error updating report:', error)
-    alert('Failed to update report')
+    toast.error('Failed to update report', 'Error')
   }
 }
 
@@ -1093,7 +1121,7 @@ const loadPendingJobs = async () => {
     }
   } catch (error) {
     console.error('Error loading pending jobs:', error)
-    alert('Failed to load pending jobs')
+    toast.error('Failed to load pending jobs', 'Error')
   } finally {
     loadingJobs.value = false
   }
@@ -1105,12 +1133,12 @@ const approveJob = async (jobId) => {
   try {
     const response = await axios.post(`/api/admin/jobs/${jobId}/approve`)
     if (response.data.success) {
-      alert('Job post approved successfully!')
+      toast.success('Job post approved successfully!', 'Success')
       await loadPendingJobs()
     }
   } catch (error) {
     console.error('Error approving job:', error)
-    alert('Failed to approve job: ' + (error.response?.data?.message || error.message))
+    toast.error('Failed to approve job: ' + (error.response?.data?.message || error.message), 'Error')
   }
 }
 
@@ -1121,12 +1149,12 @@ const rejectJob = async (jobId) => {
   try {
     const response = await axios.post(`/api/admin/jobs/${jobId}/reject`, { reason })
     if (response.data.success) {
-      alert('Job post rejected')
+      toast.success('Job post rejected', 'Success')
       await loadPendingJobs()
     }
   } catch (error) {
     console.error('Error rejecting job:', error)
-    alert('Failed to reject job: ' + (error.response?.data?.message || error.message))
+    toast.error('Failed to reject job: ' + (error.response?.data?.message || error.message), 'Error')
   }
 }
 
@@ -1136,12 +1164,12 @@ const flagJob = async (jobId) => {
   try {
     const response = await axios.post(`/api/admin/jobs/${jobId}/flag`)
     if (response.data.success) {
-      alert('Job post flagged for review')
+      toast.success('Job post flagged for review', 'Success')
       await loadPendingJobs()
     }
   } catch (error) {
     console.error('Error flagging job:', error)
-    alert('Failed to flag job: ' + (error.response?.data?.message || error.message))
+    toast.error('Failed to flag job: ' + (error.response?.data?.message || error.message), 'Error')
   }
 }
 

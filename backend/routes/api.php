@@ -18,6 +18,7 @@ use App\Http\Controllers\AuthController;
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/health', [App\Http\Controllers\HealthController::class, 'check']); // Public health check
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -86,6 +87,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/jobs/{id}/reject', [App\Http\Controllers\AdminJobApprovalController::class, 'reject']); // Admin only
     Route::post('/admin/jobs/{id}/flag', [App\Http\Controllers\AdminJobApprovalController::class, 'flag']); // Admin only
     Route::get('/admin/jobs/statistics', [App\Http\Controllers\AdminJobApprovalController::class, 'getStatistics']); // Admin only
+    
+    // Admin User Verification routes
+    Route::post('/admin/users/{id}/approve', [App\Http\Controllers\UserController::class, 'approveUser']); // Admin only
+    Route::post('/admin/users/{id}/reject', [App\Http\Controllers\UserController::class, 'rejectUser']); // Admin only
+    
+    // System Health & Metrics (Admin only)
+    Route::get('/admin/health/metrics', [App\Http\Controllers\HealthController::class, 'metrics']); // Admin only
     
     // Education History routes
     Route::get('/user/education', [App\Http\Controllers\EducationHistoryController::class, 'index']);

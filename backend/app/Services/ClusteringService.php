@@ -249,7 +249,19 @@ class ClusteringService
         for ($k = $minK; $k <= $maxK; $k++) {
             try {
                 $kmeans = new KMeans($k, 100, 0.001);
-                $clusters = $kmeans->cluster($dataset);
+                
+                // Train the model and get predictions
+                $kmeans->train($dataset);
+                $predictions = $kmeans->predict($dataset);
+                
+                // Get cluster assignments
+                $clusters = [];
+                foreach ($predictions as $index => $clusterId) {
+                    if (!isset($clusters[$clusterId])) {
+                        $clusters[$clusterId] = [];
+                    }
+                    $clusters[$clusterId][] = $index;
+                }
                 
                 // Calculate inertia (sum of squared distances to centroids)
                 $inertia = 0;
@@ -340,7 +352,7 @@ class ClusteringService
         $maxDrop = 0;
         $elbowK = $minK;
         
-        for ($i = 1; $i < count($rateOfChange); $i++) {
+        for ($i = 1; $i < count($rateOfChange) - 1; $i++) {
             $k1 = $kValues[$i];
             $k2 = $kValues[$i + 1];
             

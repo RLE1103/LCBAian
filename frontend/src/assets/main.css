@@ -1,12 +1,37 @@
 @import "tailwindcss";
 
+/* Dark Mode CSS Variables */
+:root {
+  /* Light theme (default) */
+  --bg-primary: #dbeafe; /* bg-blue-100 */
+  --bg-secondary: #ffffff;
+  --bg-sidebar: #1e3a8a; /* bg-blue-900 */
+  --text-primary: #111827; /* text-gray-900 */
+  --text-secondary: #6b7280; /* text-gray-600 */
+  --border-color: #e5e7eb; /* border-gray-300 */
+  --accent-color: #2563eb; /* blue-600 */
+}
+
+html.dark {
+  /* Dark theme */
+  --bg-primary: #1f2937; /* gray-800 */
+  --bg-secondary: #111827; /* gray-900 */
+  --bg-sidebar: #0f172a; /* slate-900 */
+  --text-primary: #f9fafb; /* gray-50 */
+  --text-secondary: #d1d5db; /* gray-300 */
+  --border-color: #374151; /* gray-700 */
+  --accent-color: #3b82f6; /* blue-500 */
+}
+
 /* Prevent horizontal scroll and set base background */
 html, body, #app {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  background-color: #dbeafe; /* bg-blue-100 - matches main content */
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   height: 100%;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Mobile-friendly touch targets */

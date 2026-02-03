@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Mail\AccountApprovedEmail;
+use App\Mail\AccountRejectedEmail;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
@@ -15,35 +19,41 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = User::query();
+            // Create cache key based on query parameters
+            $cacheKey = 'users_' . md5(json_encode($request->all()));
+            
+            // Check cache first (15 minute cache)
+            $users = Cache::remember($cacheKey, 900, function () use ($request) {
+                $query = User::query();
 
-            // Search filter
-            if ($request->has('search') && $request->search) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('first_name', 'like', "%{$search}%")
-                      ->orWhere('last_name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('headline', 'like', "%{$search}%");
-                });
-            }
+                // Search filter
+                if ($request->has('search') && $request->search) {
+                    $search = $request->search;
+                    $query->where(function($q) use ($search) {
+                        $q->where('first_name', 'like', "%{$search}%")
+                          ->orWhere('last_name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%")
+                          ->orWhere('headline', 'like', "%{$search}%");
+                    });
+                }
 
-            // Role filter
-            if ($request->has('role') && $request->role) {
-                $query->where('role', $request->role);
-            }
+                // Role filter
+                if ($request->has('role') && $request->role) {
+                    $query->where('role', $request->role);
+                }
 
-            // Program filter
-            if ($request->has('program') && $request->program) {
-                $query->where('program', $request->program);
-            }
+                // Program filter
+                if ($request->has('program') && $request->program) {
+                    $query->where('program', $request->program);
+                }
 
-            // Batch filter
-            if ($request->has('batch') && $request->batch) {
-                $query->where('batch', $request->batch);
-            }
+                // Batch filter
+                if ($request->has('batch') && $request->batch) {
+                    $query->where('batch', $request->batch);
+                }
 
-            $users = $query->get();
+                return $query->get();
+            });
 
             return response()->json([
                 'success' => true,
@@ -206,6 +216,104 @@ class UserController extends Controller
                     'programs' => $programs,
                     'batches' => $batches,
                 ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Approve a user (admin only)
+     */
+    public function approveUser(Request $request, $id): JsonResponse
+    {
+        try {
+            // Check if user is admin
+            if (Auth::user()->role !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Admin access required.'
+                ], 403);
+            }
+
+            $user = User::findOrFail($id);
+
+            // Prevent modifying admin accounts
+            if ($user->role === 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot modify admin accounts.'
+                ], 403);
+            }
+
+            $user->is_verified = true;
+            $user->save();
+
+            // Clear user cache when user is updated
+            Cache::forget('users_*');
+
+            // Send approval email to user
+            try {
+                Mail::to($user->email)->send(new AccountApprovedEmail($user));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send approval email: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User approved successfully.',
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reject a user (admin only)
+     */
+    public function rejectUser(Request $request, $id): JsonResponse
+    {
+        try {
+            // Check if user is admin
+            if (Auth::user()->role !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Admin access required.'
+                ], 403);
+            }
+
+            $user = User::findOrFail($id);
+
+            // Prevent modifying admin accounts
+            if ($user->role === 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot modify admin accounts.'
+                ], 403);
+            }
+
+            $reason = $request->input('reason', 'Your registration did not meet our verification requirements.');
+
+            // Send rejection email to user before deleting
+            try {
+                Mail::to($user->email)->send(new AccountRejectedEmail($user, $reason));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send rejection email: ' . $e->getMessage());
+            }
+
+            // Delete the user account
+            $user->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User rejected and removed.'
             ]);
         } catch (\Exception $e) {
             return response()->json([

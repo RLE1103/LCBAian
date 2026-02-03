@@ -517,7 +517,9 @@
 import { ref, onMounted } from 'vue'
 import axios from '../config/api'
 import { useAuthStore } from '../stores/auth'
+import { useToast } from '../composables/useToast'
 
+const toast = useToast()
 const authStore = useAuthStore()
 const saving = ref(false)
 const skillInput = ref('')
@@ -690,7 +692,7 @@ const saveProfile = async () => {
     const res = await axios.put('/api/user/profile', payload)
     if (res?.data) {
       await authStore.checkAuth()
-      alert('Profile updated successfully')
+      toast.success('Profile updated successfully', 'Success')
     }
   } catch (e) {
     console.error('Save profile failed:', e)

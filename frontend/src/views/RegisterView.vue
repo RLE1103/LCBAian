@@ -341,13 +341,29 @@ const handleRegister = async () => {
   successMessage.value = ''
   
   try {
-    await authStore.register(form)
-    successMessage.value = 'Account created successfully! Redirecting to login...'
+    const response = await authStore.register(form)
     
-    // Redirect to login after 2 seconds
-    setTimeout(() => {
-      router.push('/login')
-    }, 2000)
+    // Check if registration requires verification
+    if (response?.requires_verification) {
+      successMessage.value = 'Account created successfully! Your account is pending admin approval...'
+      
+      // Auto-login and redirect to pending verification page
+      setTimeout(async () => {
+        try {
+          // Login with the same credentials
+          await authStore.login({ email: form.email, password: form.password })
+          router.push('/pending-verification')
+        } catch (loginError) {
+          console.error('Auto-login failed:', loginError)
+          router.push('/login')
+        }
+      }, 2000)
+    } else {
+      successMessage.value = 'Account created successfully! Redirecting to login...'
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
+    }
   } catch (error) {
     console.error('Registration error:', error)
     if (error.response?.data?.errors) {

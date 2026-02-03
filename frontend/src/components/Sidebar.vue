@@ -1,5 +1,9 @@
 <template>
   <aside 
+    id="mobile-sidebar"
+    role="navigation"
+    aria-label="Main navigation"
+    :aria-hidden="!isMobileMenuOpen && 'true'"
     :class="[
       'bg-blue-900 text-white flex flex-col shadow-lg overflow-hidden transition-all duration-300 ease-in-out',
       'fixed inset-y-0 left-0 md:relative md:inset-auto md:h-full',
@@ -29,23 +33,23 @@
       </div>
       
       <!-- Navigation (Scrollable) -->
-      <nav class="flex-1 overflow-y-auto overflow-x-hidden mt-6 min-h-0">
-        <ul class="space-y-2 pb-4">
-          <li v-if="!isCollapsed" class="text-xs text-blue-300 px-4">Features</li>
+      <nav class="flex-1 overflow-y-auto overflow-x-hidden mt-6 min-h-0" aria-label="Primary navigation">
+        <ul class="space-y-2 pb-4" role="list">
+          <li v-if="!isCollapsed" class="text-xs text-blue-300 px-4" role="presentation" aria-hidden="true">Features</li>
           <li>
-            <RouterLink to="/" :class="linkClasses('/')" @click="handleNavClick" :title="isCollapsed ? 'Dashboard' : ''">
-              <span>🏠</span><span v-if="!isCollapsed">Dashboard</span>
+            <RouterLink to="/" :class="linkClasses('/')" @click="handleNavClick" :title="isCollapsed ? 'Dashboard' : ''" aria-label="Dashboard">
+              <span aria-hidden="true">🏠</span><span v-if="!isCollapsed">Dashboard</span>
             </RouterLink>
           </li>
           <li>
-            <RouterLink to="/messages" :class="linkClasses('/messages', 'relative')" @click="handleNavClick" :title="isCollapsed ? 'Messages' : ''">
-              <span>✉️</span><span v-if="!isCollapsed">Messages</span>
-              <span v-if="unreadCount > 0 && !isCollapsed" class="ml-auto text-xs bg-red-500 text-white rounded-full px-2 absolute right-4">{{ unreadCount }}</span>
+            <RouterLink to="/messages" :class="linkClasses('/messages', 'relative')" @click="handleNavClick" :title="isCollapsed ? 'Messages' : ''" aria-label="Messages">
+              <span aria-hidden="true">✉️</span><span v-if="!isCollapsed">Messages</span>
+              <span v-if="unreadCount > 0 && !isCollapsed" class="ml-auto text-xs bg-red-500 text-white rounded-full px-2 absolute right-4" aria-label="`${unreadCount} unread messages`">{{ unreadCount }}</span>
             </RouterLink>
           </li>
           <li>
-            <RouterLink to="/profile" :class="linkClasses('/profile')" @click="handleNavClick" :title="isCollapsed ? 'Profile' : ''">
-              <span>👤</span><span v-if="!isCollapsed">Profile</span>
+            <RouterLink to="/profile" :class="linkClasses('/profile')" @click="handleNavClick" :title="isCollapsed ? 'Profile' : ''" aria-label="Profile">
+              <span aria-hidden="true">👤</span><span v-if="!isCollapsed">Profile</span>
             </RouterLink>
           </li>
           <li v-if="!isCollapsed" class="mt-4 text-xs text-blue-300 px-4">Recruitment</li>

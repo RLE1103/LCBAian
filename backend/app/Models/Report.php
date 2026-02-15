@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema;
 
 class Report extends Model
 {
@@ -53,13 +54,20 @@ class Report extends Model
     {
         switch ($this->reported_entity_type) {
             case 'job_post':
-                return JobPost::find($this->reported_entity_id);
+                if (!Schema::hasTable('job_posts')) return null;
+                return JobPost::where('job_id', $this->reported_entity_id)->first();
             case 'user':
+                if (!Schema::hasTable('users')) return null;
                 return User::find($this->reported_entity_id);
             case 'post':
-                return Post::find($this->reported_entity_id);
+                if (!Schema::hasTable('posts')) return null;
+                return Post::where('post_id', $this->reported_entity_id)->first();
             case 'comment':
-                return Comment::find($this->reported_entity_id);
+                if (!Schema::hasTable('comments')) return null;
+                return Comment::where('comment_id', $this->reported_entity_id)->first();
+            case 'event':
+                if (!Schema::hasTable('events')) return null;
+                return Event::find($this->reported_entity_id);
             default:
                 return null;
         }

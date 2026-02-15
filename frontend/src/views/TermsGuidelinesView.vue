@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
-      <!-- Back Button -->
-      <div class="mb-6">
+      <!-- Back Button (only show when NOT in first-login mode) -->
+      <div v-if="!isFirstLogin" class="mb-6">
         <button 
           @click="goBack" 
           class="flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
@@ -142,17 +142,73 @@
           <p class="text-sm">Contact the LCBA Alumni Affairs Office or platform administrators for assistance.</p>
         </section>
       </div>
+
+      <!-- Go to Dashboard Button (only show in first-login mode) -->
+      <div v-if="isFirstLogin" class="mt-8 flex justify-center">
+        <button 
+          @click="acceptAndProceed"
+          :disabled="accepting"
+          class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg transition-colors"
+        >
+          {{ accepting ? 'Processing...' : 'I Agree with the Terms and Conditions' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import axios from '../config/api'
 
 const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+
+const accepting = ref(false)
+
+// Check if we're in first-login mode
+const isFirstLogin = computed(() => route.query.firstLogin === 'true')
 
 const goBack = () => {
   // Go back to the previous page
   router.back()
 }
+
+const acceptAndProceed = async () => {
+  accepting.value = true
+  
+  try {
+    // Call the accept-guidelines API
+    const response = await axios.post('/api/accept-guidelines')
+    
+    // Update user in auth store
+    authStore.user = response.data.user
+    sessionStorage.setItem('user_data', JSON.stringify(response.data.user))
+    
+    // Redirect to dashboard
+    router.push('/')
+  } catch (error) {
+    console.error('Error accepting guidelines:', error)
+    alert('An error occurred. Please try again.')
+  } finally {
+    accepting.value = false
+  }
+}
+
+// Disable browser back button in first-login mode
+onMounted(() => {
+  if (isFirstLogin.value) {
+    // Push a state to prevent back navigation
+    window.history.pushState(null, '', window.location.href)
+    
+    window.addEventListener('popstate', () => {
+      if (isFirstLogin.value) {
+        window.history.pushState(null, '', window.location.href)
+      }
+    })
+  }
+})
 </script>

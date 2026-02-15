@@ -6,18 +6,14 @@
         <h1 class="text-xl md:text-2xl font-bold text-gray-800">Alumni Directory</h1>
         <p class="text-sm md:text-base text-gray-600 mt-1">Connect with fellow LCBA alumni worldwide</p>
       </div>
-      <div class="flex items-center space-x-2 md:space-x-4">
-        <button class="border border-gray-300 text-gray-700 px-3 md:px-4 py-2 rounded-lg hover:bg-gray-50 text-sm md:text-base whitespace-nowrap">
-          Export Directory
-        </button>
-      </div>
+      <div class="flex items-center space-x-2 md:space-x-4"></div>
     </div>
 
     <!-- Search and Filters -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-6">
       <div class="flex flex-col lg:flex-row gap-4">
         <!-- Search Bar -->
-        <div class="flex-1">
+        <div class="w-full lg:w-80 xl:w-96">
           <div class="relative">
             <input 
               v-model="searchQuery"
@@ -55,13 +51,6 @@
               {{ city }}
             </option>
           </select>
-
-          <select v-model="selectedAvailability" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <option value="">All Availability</option>
-            <option value="mentor">Open to Mentor</option>
-            <option value="hiring">Hiring</option>
-            <option value="work">Open to Work</option>
-          </select>
         </div>
       </div>
     </div>
@@ -97,7 +86,11 @@
           </div>
 
         <!-- Alumni Cards -->
-        <div v-if="filteredAlumni.length === 0" class="text-center py-12 text-gray-500">
+        <div v-if="loading" class="text-center py-12 text-gray-500">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading alumni...</p>
+        </div>
+        <div v-else-if="filteredAlumni.length === 0" class="text-center py-12 text-gray-500">
           <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
           </svg>
@@ -114,8 +107,16 @@
             @click="viewProfile(alumni)"
           >
             <div class="flex items-center mb-4">
-              <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl mr-4">
-                {{ alumni.first_name[0] }}{{ alumni.last_name[0] }}
+              <div class="w-16 h-16 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white font-bold text-xl mr-4">
+                <img
+                  v-if="alumni.profile_picture"
+                  :src="getProfilePictureUrl(alumni.profile_picture)"
+                  alt="Profile picture"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center">
+                  {{ alumni.first_name[0] }}{{ alumni.last_name[0] }}
+                </div>
               </div>
                 <div>
                 <h3 class="text-lg font-semibold text-gray-900">{{ alumni.full_name }}</h3>
@@ -137,11 +138,9 @@
                   +{{ alumni.skills.length - 3 }} more
                 </span>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 mb-2">
                 <span v-if="alumni.is_verified" class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">🏅 Verified</span>
-                <span v-if="alumni.is_mentor" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">🎓 Mentor</span>
-                <span v-if="alumni.is_hiring" class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">📢 Hiring</span>
-                <span v-if="alumni.is_open_to_work" class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">💼 Open to Work</span>
+                <span v-if="alumni.lcba_verification_status === 'verified' || alumni.is_lcba_employee_faculty" class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">🏢 LCBA Employee</span>
               </div>
             </div>
 
@@ -172,8 +171,16 @@
           >
             <div class="flex items-center justify-between">
               <div class="flex items-center">
-                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
-                  {{ alumni.first_name[0] }}{{ alumni.last_name[0] }}
+                <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white font-bold mr-4">
+                  <img
+                    v-if="alumni.profile_picture"
+                    :src="getProfilePictureUrl(alumni.profile_picture)"
+                    alt="Profile picture"
+                    class="w-full h-full object-cover"
+                  />
+                  <div v-else class="w-full h-full flex items-center justify-center">
+                    {{ alumni.first_name[0] }}{{ alumni.last_name[0] }}
+                  </div>
                 </div>
                 <div>
                   <h3 class="text-lg font-semibold text-gray-900">{{ alumni.full_name }}</h3>
@@ -193,8 +200,7 @@
               <div class="flex items-center space-x-4">
                 <div class="flex items-center gap-2">
                   <span v-if="alumni.is_verified" class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">🏅 Verified</span>
-                  <span v-if="alumni.is_mentor" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">🎓 Mentor</span>
-                  <span v-if="alumni.is_hiring" class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">📢 Hiring</span>
+                  <span v-if="alumni.lcba_verification_status === 'verified' || alumni.is_lcba_employee_faculty" class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">🏢 LCBA Employee</span>
                 </div>
                 
                 <div class="flex space-x-2">
@@ -262,8 +268,16 @@
               class="flex items-center justify-between"
             >
               <div class="flex items-center">
-                <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
-                  {{ suggestion.first_name[0] }}{{ suggestion.last_name[0] }}
+                <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white font-bold text-sm mr-3">
+                  <img
+                    v-if="suggestion.profile_picture"
+                    :src="getProfilePictureUrl(suggestion.profile_picture)"
+                    alt="Profile picture"
+                    class="w-full h-full object-cover"
+                  />
+                  <div v-else class="w-full h-full flex items-center justify-center">
+                    {{ suggestion.first_name[0] }}{{ suggestion.last_name[0] }}
+                  </div>
                 </div>
                 <div>
                   <h4 class="font-medium text-gray-900">{{ suggestion.full_name }}</h4>
@@ -273,75 +287,46 @@
               </div>
               <div class="flex space-x-1">
                 <button 
-                  @click="connectWithAlumni(suggestion)"
-                  class="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  Connect
-                </button>
-                <button 
                   @click="sendMessage(suggestion)"
-                  class="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                  class="text-blue-600 hover:text-blue-800 text-sm font-medium"
                 >
                   Message
                 </button>
               </div>
             </div>
-                </div>
-              </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div class="space-y-2">
-            <button 
-              @click="filterByAvailability('mentor')"
-              class="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg flex items-center"
-            >
-              <span class="mr-2">🎓</span>
-              Find Mentors
-            </button>
-            <button 
-              @click="filterByAvailability('hiring')"
-              class="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg flex items-center"
-            >
-              <span class="mr-2">📢</span>
-              View Hiring Alumni
-            </button>
-            <button 
-              @click="filterByAvailability('work')"
-              class="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg flex items-center"
-            >
-              <span class="mr-2">💼</span>
-              Open to Work
-            </button>
-            <button 
-              @click="viewBatchAlumni"
-              class="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg flex items-center"
-            >
-              <span class="mr-2">👥</span>
-              Same Batch Alumni
-            </button>
-            <button 
-              @click="viewCompanyNetworks"
-              class="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg flex items-center"
-            >
-              <span class="mr-2">🏢</span>
-              Company Networks
-            </button>
               </div>
             </div>
 
-        <!-- Recent Activity -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-          <div v-if="recentActivity.length > 0" class="space-y-3">
-            <div v-for="(activity, index) in recentActivity" :key="index" class="text-sm">
-              <p class="text-gray-700">{{ activity.text }}</p>
-              <p class="text-gray-500 text-xs">{{ activity.time }}</p>
+        <!-- Recent Activity / Logs (Admin Only) -->
+        <div v-if="isAdmin" class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Logs</h3>
+          <div v-if="adminLogs.length > 0" class="space-y-3">
+            <div v-for="(log, index) in paginatedLogs" :key="index" class="text-sm border-b border-gray-100 pb-2">
+              <p class="text-gray-700">{{ log.description }}</p>
+              <p class="text-gray-500 text-xs mt-1">{{ formatActivityTime(log.created_at) }}</p>
+            </div>
+            
+            <!-- Pagination for Logs -->
+            <div v-if="totalLogPages > 1" class="flex items-center justify-center gap-2 mt-4 pt-4 border-t">
+              <button 
+                @click="goToLogPage(currentLogPage - 1)"
+                :disabled="currentLogPage === 1"
+                class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                &lt;
+              </button>
+              <span class="text-sm text-gray-600">Page {{ currentLogPage }} of {{ totalLogPages }}</span>
+              <button 
+                @click="goToLogPage(currentLogPage + 1)"
+                :disabled="currentLogPage === totalLogPages"
+                class="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                &gt;
+              </button>
             </div>
           </div>
           <div v-else class="text-center py-4">
-            <p class="text-sm text-gray-500">No recent activity</p>
+            <p class="text-sm text-gray-500">No activity logs in the last 30 days</p>
           </div>
           </div>
         </div>
@@ -349,14 +334,22 @@
     </div>
 
     <!-- Profile Modal -->
-    <div v-if="showProfileModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto border-4 border-gray-300 shadow-2xl">
+    <div v-if="showProfileModal" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showProfileModal = false">
+      <div class="bg-white rounded-lg w-full max-w-4xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto border-2 border-black shadow-2xl">
         <div class="p-6">
           <!-- Modal Header -->
           <div class="flex items-center justify-between mb-6">
             <div class="flex items-center">
-              <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mr-4">
-                {{ selectedAlumni.first_name[0] }}{{ selectedAlumni.last_name[0] }}
+              <div class="w-20 h-20 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white font-bold text-2xl mr-4">
+                <img
+                  v-if="selectedAlumni.profile_picture"
+                  :src="getProfilePictureUrl(selectedAlumni.profile_picture)"
+                  alt="Profile picture"
+                  class="w-full h-full object-cover"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center">
+                  {{ selectedAlumni.first_name[0] }}{{ selectedAlumni.last_name[0] }}
+                </div>
               </div>
                 <div>
                 <h2 class="text-2xl font-bold text-gray-900">{{ selectedAlumni.full_name }}</h2>
@@ -398,15 +391,80 @@
                 <div>
                   <h3 class="text-lg font-semibold text-gray-900 mb-4">About</h3>
                   <p class="text-gray-700 mb-4">{{ selectedAlumni.bio || 'No bio available' }}</p>
+
+                  <h3 class="text-lg font-semibold text-gray-900 mb-4">Contact</h3>
+                  <div class="space-y-3 mb-6">
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">Email Address</p>
+                      <div v-if="canViewField('email')" class="text-sm text-gray-600">
+                        {{ selectedAlumni.email || 'Not provided' }}
+                      </div>
+                      <div v-else class="flex items-center text-sm text-gray-500">
+                        <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 0h12a2 2 0 002-2v-5a2 2 0 00-2-2h-1V7a5 5 0 00-10 0v2H6a2 2 0 00-2 2v5a2 2 0 002 2z"></path>
+                        </svg>
+                        Information is Private
+                      </div>
+                    </div>
+
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">Phone Number</p>
+                      <div v-if="canViewField('contact')" class="text-sm text-gray-600">
+                        {{ selectedAlumni.phone_number || 'Not provided' }}
+                      </div>
+                      <div v-else class="flex items-center text-sm text-gray-500">
+                        <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 0h12a2 2 0 002-2v-5a2 2 0 00-2-2h-1V7a5 5 0 00-10 0v2H6a2 2 0 00-2 2v5a2 2 0 002 2z"></path>
+                        </svg>
+                        Information is Private
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <h3 class="text-lg font-semibold text-gray-900 mb-4">Personal</h3>
+                  <div class="space-y-3 mb-6">
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">Birthday</p>
+                      <div v-if="canViewField('birthdate')" class="text-sm text-gray-600">
+                        {{ formatBirthday(selectedAlumni.birthdate) || 'Not provided' }}
+                      </div>
+                      <div v-else class="flex items-center text-sm text-gray-500">
+                        <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 0h12a2 2 0 002-2v-5a2 2 0 00-2-2h-1V7a5 5 0 00-10 0v2H6a2 2 0 00-2 2v5a2 2 0 002 2z"></path>
+                        </svg>
+                        Information is Private
+                      </div>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">Location</p>
+                      <div v-if="canViewField('location')" class="text-sm text-gray-600">
+                        {{ selectedAlumni.city }}{{ selectedAlumni.city && selectedAlumni.country ? ', ' : '' }}{{ selectedAlumni.country }}
+                      </div>
+                      <div v-else class="flex items-center text-sm text-gray-500">
+                        <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 0h12a2 2 0 002-2v-5a2 2 0 00-2-2h-1V7a5 5 0 00-10 0v2H6a2 2 0 00-2 2v5a2 2 0 002 2z"></path>
+                        </svg>
+                        Information is Private
+                      </div>
+                    </div>
+                  </div>
                   
                   <h3 class="text-lg font-semibold text-gray-900 mb-4">Education</h3>
                   <div class="space-y-3">
                     <div class="border border-gray-200 rounded-lg p-4">
-                      <h4 class="font-medium text-gray-900">LCBA (Laguna College of Business and Arts)</h4>
-                      <p class="text-sm text-gray-600">{{ selectedAlumni.program }} • {{ selectedAlumni.batch }}</p>
-              </div>
-            </div>
-          </div>
+                      <div v-if="canViewField('education')">
+                        <h4 class="font-medium text-gray-900">LCBA (Laguna College of Business and Arts)</h4>
+                        <p class="text-sm text-gray-600">{{ selectedAlumni.program }} • {{ selectedAlumni.batch }}</p>
+                      </div>
+                      <div v-else class="flex items-center text-sm text-gray-500">
+                        <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 0h12a2 2 0 002-2v-5a2 2 0 00-2-2h-1V7a5 5 0 00-10 0v2H6a2 2 0 00-2 2v5a2 2 0 002 2z"></path>
+                        </svg>
+                        Information is Private
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <div>
                   <h3 class="text-lg font-semibold text-gray-900 mb-4">Skills</h3>
@@ -423,9 +481,7 @@
                   <h3 class="text-lg font-semibold text-gray-900 mb-4">Badges</h3>
                   <div class="flex flex-wrap gap-2">
                     <span v-if="selectedAlumni.is_verified" class="bg-yellow-100 text-yellow-800 text-sm px-3 py-1 rounded-full">🏅 Verified Alumni</span>
-                    <span v-if="selectedAlumni.is_mentor" class="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">🎓 Mentor</span>
-                    <span v-if="selectedAlumni.is_hiring" class="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">📢 Hiring</span>
-                    <span v-if="selectedAlumni.is_open_to_work" class="bg-orange-100 text-orange-800 text-sm px-3 py-1 rounded-full">💼 Open to Work</span>
+                  <span v-if="selectedAlumni.lcba_verification_status === 'verified' || selectedAlumni.is_lcba_employee_faculty" class="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">🏢 LCBA Employee</span>
                   </div>
           </div>
         </div>
@@ -436,53 +492,55 @@
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Work Experience</h3>
               
               <!-- Only show if user has experience data -->
-              <div v-if="selectedAlumni.current_job_title || selectedAlumni.industry" class="space-y-4">
+              <div v-if="hasCareerData || hasLocationData" class="space-y-4">
                 <div class="border border-gray-200 rounded-lg p-4">
-                  <div class="flex items-start gap-3 mb-3">
-                    <div class="w-12 h-12 bg-blue-100 rounded flex items-center justify-center text-blue-600 font-bold flex-shrink-0">
-                      💼
+                  <div v-if="canViewField('career')">
+                    <div class="flex items-start gap-3 mb-3">
+                      <div class="w-12 h-12 bg-blue-100 rounded flex items-center justify-center text-blue-600 font-bold flex-shrink-0">
+                        💼
+                      </div>
+                      <div class="flex-1">
+                        <h4 class="font-medium text-gray-900">{{ selectedAlumni.current_job_title }}</h4>
+                        <p v-if="selectedAlumni.industry" class="text-sm text-gray-600">{{ selectedAlumni.industry }}</p>
+                        <p v-if="selectedAlumni.employment_status" class="text-xs text-gray-500 mt-1">
+                          {{ formatEmploymentStatus(selectedAlumni.employment_status) }}
+                        </p>
+                      </div>
                     </div>
-                    <div class="flex-1">
-                      <h4 class="font-medium text-gray-900">{{ selectedAlumni.current_job_title }}</h4>
-                      <p v-if="selectedAlumni.industry" class="text-sm text-gray-600">{{ selectedAlumni.industry }}</p>
-                      <p v-if="selectedAlumni.employment_status" class="text-xs text-gray-500 mt-1">
-                        {{ formatEmploymentStatus(selectedAlumni.employment_status) }}
-                      </p>
+                  
+                    <div v-if="selectedAlumni.years_of_experience" class="text-sm text-gray-600 mb-2">
+                      <span class="font-medium">Experience:</span> {{ selectedAlumni.years_of_experience }} years
+                    </div>
+                  
+                    <div v-if="selectedAlumni.employment_sector" class="text-sm text-gray-600 mb-2">
+                      <span class="font-medium">Sector:</span> {{ formatEmploymentSector(selectedAlumni.employment_sector) }}
+                    </div>
+
+                    <div v-if="selectedAlumni.salary_range" class="text-sm text-gray-600 mb-2">
+                      <span class="font-medium">Salary:</span> {{ selectedAlumni.salary_range }}
                     </div>
                   </div>
-                  
-                  <div v-if="selectedAlumni.years_of_experience" class="text-sm text-gray-600 mb-2">
-                    <span class="font-medium">Experience:</span> {{ selectedAlumni.years_of_experience }} years
+                  <div v-else class="flex items-center text-sm text-gray-500 mb-2">
+                    <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 0h12a2 2 0 002-2v-5a2 2 0 00-2-2h-1V7a5 5 0 00-10 0v2H6a2 2 0 00-2 2v5a2 2 0 002 2z"></path>
+                    </svg>
+                    Information is Private
                   </div>
                   
-                  <div v-if="selectedAlumni.employment_sector" class="text-sm text-gray-600 mb-2">
-                    <span class="font-medium">Sector:</span> {{ formatEmploymentSector(selectedAlumni.employment_sector) }}
-                  </div>
-                  
-                  <div v-if="selectedAlumni.city || selectedAlumni.country" class="text-sm text-gray-600">
+                  <div v-if="canViewField('location')" class="text-sm text-gray-600">
                     <span class="font-medium">Location:</span> {{ selectedAlumni.city }}{{ selectedAlumni.city && selectedAlumni.country ? ', ' : '' }}{{ selectedAlumni.country }}
+                  </div>
+                  <div v-else class="flex items-center text-sm text-gray-500">
+                    <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 0h12a2 2 0 002-2v-5a2 2 0 00-2-2h-1V7a5 5 0 00-10 0v2H6a2 2 0 00-2 2v5a2 2 0 002 2z"></path>
+                    </svg>
+                    Information is Private
                   </div>
                 </div>
               </div>
               
               <div v-else class="text-center py-8 text-gray-500">
                 <p class="text-sm">No work experience information available</p>
-              </div>
-            </div>
-
-            <!-- Posts Tab -->
-            <div v-if="activeProfileTab === 'posts'">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Posts</h3>
-              
-              <div v-if="userPosts.length > 0" class="space-y-4">
-                <div v-for="post in userPosts.slice(0, 5)" :key="post.post_id" class="border border-gray-200 rounded-lg p-4">
-                  <p class="text-gray-700">{{ post.content }}</p>
-                  <p class="text-sm text-gray-500 mt-2">{{ formatPostDate(post.created_at) }}</p>
-                </div>
-              </div>
-              
-              <div v-else class="text-center py-8 text-gray-500">
-                <p class="text-sm">No posts or activity yet</p>
               </div>
             </div>
 
@@ -504,6 +562,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import axios from '../config/api'
 
 const router = useRouter()
@@ -514,7 +573,6 @@ const selectedProgram = ref('')
 const selectedBatch = ref('')
 const selectedCompany = ref('')
 const selectedLocation = ref('')
-const selectedAvailability = ref('')
 const viewMode = ref('grid')
 const showProfileModal = ref(false)
 const selectedAlumni = ref({})
@@ -524,6 +582,15 @@ const loading = ref(false)
 // Pagination
 const currentPage = ref(1)
 const itemsPerPage = 10
+
+// Admin Logs
+const adminLogs = ref([])
+const currentLogPage = ref(1)
+const logsPerPage = 10
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.isAdmin)
+const isAdminOrStaff = computed(() => ['admin', 'staff'].includes(authStore.userRole))
+const isViewerAlumni = computed(() => authStore.isAlumni)
 
 // Filter options from database
 const filterOptions = ref({
@@ -536,6 +603,66 @@ const filterOptions = ref({
 // Fetch alumni from API
 const alumni = ref([])
 const userPosts = ref([])
+
+const canViewField = (field) => {
+  if (isAdminOrStaff.value) return true
+  const privacy = selectedAlumni.value?.privacy_settings?.[field] || 'public'
+  if (privacy === 'admin_only') return false
+  if (privacy === 'alumni_only') return isViewerAlumni.value
+  if (privacy === 'private') return false
+  return true
+}
+
+const formatBirthday = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+const hasCareerData = computed(() => {
+  const a = selectedAlumni.value
+  return Boolean(
+    a?.current_job_title ||
+    a?.industry ||
+    a?.employment_status ||
+    a?.years_of_experience ||
+    a?.employment_sector ||
+    a?.salary_range
+  )
+})
+
+const hasLocationData = computed(() => {
+  const a = selectedAlumni.value
+  return Boolean(a?.city || a?.country)
+})
+
+const normalizeSkills = (skills) => {
+  if (Array.isArray(skills)) return skills
+  if (!skills) return []
+  if (typeof skills === 'string') {
+    try {
+      const parsed = JSON.parse(skills)
+      if (Array.isArray(parsed)) return parsed
+      if (typeof parsed === 'string') {
+        return parsed.split(',').map(s => s.trim()).filter(Boolean)
+      }
+      return []
+    } catch (error) {
+      return skills.split(',').map(s => s.trim()).filter(Boolean)
+    }
+  }
+  return []
+}
+
+const getProfilePictureUrl = (profilePicture) => {
+  if (!profilePicture) return ''
+  if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) return profilePicture
+  const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
+  if (profilePicture.startsWith('/uploads/')) return `${baseUrl}${profilePicture}`
+  if (profilePicture.startsWith('uploads/')) return `${baseUrl}/${profilePicture}`
+  return `${baseUrl}/uploads/profile_pictures/${profilePicture}`
+}
 
 const fetchAlumni = async () => {
   loading.value = true
@@ -558,23 +685,35 @@ const fetchAlumni = async () => {
         first_name: user.first_name,
         last_name: user.last_name,
         full_name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        profile_picture: user.profile_picture,
         program: user.program,
         batch: user.batch,
         headline: user.headline,
         company: user.current_job_title,
         bio: user.bio,
+        birthdate: user.birthdate,
         city: user.city,
         country: user.country,
+        location: user.location,
+        phone_number: user.phone_number,
+        contact_number: user.contact_number,
+        address: user.address,
         industry: user.industry,
         current_job_title: user.current_job_title,
         employment_status: user.employment_status,
         years_of_experience: user.years_of_experience,
         employment_sector: user.employment_sector,
-        skills: Array.isArray(user.skills) ? user.skills : (user.skills ? JSON.parse(user.skills) : []),
-        is_verified: true,
-        is_mentor: user.role === 'mentor',
+        salary_range: user.salary_range,
+        skills: normalizeSkills(user.skills),
+        lcba_verification_status: user.lcba_verification_status === 'rejected'
+          ? 'unverified'
+          : (user.lcba_verification_status || (user.is_lcba_employee_faculty ? 'verified' : '')),
+        is_verified: !!user.is_verified,
+        is_lcba_employee_faculty: !!user.is_lcba_employee_faculty,
         is_hiring: false,
-        is_open_to_work: !user.current_job_title
+        is_open_to_work: !user.current_job_title,
+        privacy_settings: user.privacy_settings || {}
       }))
     }
   } catch (error) {
@@ -616,8 +755,17 @@ const fetchSuggestedConnections = async () => {
     
     if (response.data.success) {
       const usersData = Array.isArray(response.data.data) ? response.data.data : (response.data.data.data || [])
+      const filteredUsers = usersData.filter(user => user.id !== currentUser.id)
+      const randomizedUsers = [...filteredUsers]
       
-      suggestedConnections.value = usersData.slice(0, 3).map(user => {
+      for (let i = randomizedUsers.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1))
+        const temp = randomizedUsers[i]
+        randomizedUsers[i] = randomizedUsers[j]
+        randomizedUsers[j] = temp
+      }
+      
+      suggestedConnections.value = randomizedUsers.slice(0, 3).map(user => {
         let reason = ''
         
         // Determine reason for suggestion
@@ -638,6 +786,7 @@ const fetchSuggestedConnections = async () => {
           first_name: user.first_name,
           last_name: user.last_name,
           full_name: `${user.first_name} ${user.last_name}`,
+          profile_picture: user.profile_picture,
           program: user.program,
           batch: user.batch,
           headline: user.current_job_title || user.headline || 'LCBA Alumni',
@@ -652,8 +801,7 @@ const fetchSuggestedConnections = async () => {
 
 const profileTabs = [
   { key: 'about', label: 'About' },
-  { key: 'experience', label: 'Experience' },
-  { key: 'posts', label: 'Posts & Activity' }
+  { key: 'experience', label: 'Experience' }
 ]
 
 // Computed properties
@@ -686,25 +834,19 @@ const filteredAlumni = computed(() => {
     filtered = filtered.filter(alumni => alumni.city === selectedLocation.value)
   }
 
-  // Apply availability filter
-  if (selectedAvailability.value) {
-    switch (selectedAvailability.value) {
-      case 'mentor':
-        filtered = filtered.filter(alumni => alumni.is_mentor)
-        break
-      case 'hiring':
-        filtered = filtered.filter(alumni => alumni.is_hiring)
-        break
-      case 'work':
-        filtered = filtered.filter(alumni => alumni.is_open_to_work)
-        break
-    }
-  }
-
   return filtered
 })
 
 const totalPages = computed(() => Math.ceil(filteredAlumni.value.length / itemsPerPage))
+
+// Admin Logs Computed
+const totalLogPages = computed(() => Math.ceil(adminLogs.value.length / logsPerPage))
+
+const paginatedLogs = computed(() => {
+  const start = (currentLogPage.value - 1) * logsPerPage
+  const end = start + logsPerPage
+  return adminLogs.value.slice(start, end)
+})
 
 const paginatedAlumni = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
@@ -716,6 +858,12 @@ const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+const goToLogPage = (page) => {
+  if (page >= 1 && page <= totalLogPages.value) {
+    currentLogPage.value = page
   }
 }
 
@@ -747,7 +895,7 @@ const sendMessage = async (alumni) => {
     // This will create a conversation if it doesn't exist
     const response = await axios.post('/api/messages', {
       receiver_id: alumni.id,
-      content: 'Hi! I\'d like to connect.'
+      content: 'Hi'
     })
     
     if (response.data.success) {
@@ -762,33 +910,29 @@ const sendMessage = async (alumni) => {
   }
 }
 
-const connectWithAlumni = (alumni) => {
-  console.log('Connect with:', alumni.full_name)
-}
 
-
-const filterByAvailability = (type) => {
-  // Reset filters first
-  selectedProgram.value = ''
-  selectedBatch.value = ''
-  selectedLocation.value = ''
-  selectedAvailability.value = type
-  searchQuery.value = ''
+// Fetch Admin Logs
+const fetchAdminLogs = async () => {
+  if (!isAdmin.value) return
   
-  // Filter alumni based on availability type
-  if (type === 'mentor') {
-    // Filter to show only mentors
-    alumni.value = alumni.value.filter(a => a.is_mentor)
-  } else if (type === 'hiring') {
-    // Filter to show only those hiring
-    alumni.value = alumni.value.filter(a => a.is_hiring)
-  } else if (type === 'work') {
-    // Filter to show only those open to work
-    alumni.value = alumni.value.filter(a => a.is_open_to_work)
+  try {
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
+    const response = await axios.get('/api/admin-logs', {
+      params: {
+        from: thirtyDaysAgo.toISOString().split('T')[0],
+        limit: 100
+      }
+    })
+    
+    if (response?.data?.success) {
+      adminLogs.value = response.data.data.data || response.data.data || []
+    }
+  } catch (error) {
+    console.error('Error fetching admin logs:', error)
+    adminLogs.value = []
   }
-  
-  // Refetch with filters
-  fetchAlumni()
 }
 
 const viewBatchAlumni = () => {
@@ -805,50 +949,9 @@ const viewBatchAlumni = () => {
   }
 }
 
-const viewCompanyNetworks = () => {
-  const authStore = useAuthStore()
-  const currentUser = authStore.user
-  
-  if (currentUser && currentUser.current_job_title) {
-    // Search for alumni in similar industries or companies
-    selectedProgram.value = ''
-    selectedBatch.value = ''
-    if (currentUser.industry) {
-      searchQuery.value = currentUser.industry
-    }
-    fetchAlumni()
-  } else {
-    alert('Please update your profile with your current company/industry information')
-  }
-}
-
 // Recent Activity Data
-const recentActivity = ref([])
-
 const fetchRecentActivity = async () => {
-  try {
-    // Fetch recent user registrations/updates
-    const response = await axios.get('/api/users', {
-      params: {
-        role: 'alumni',
-        sort: 'created_at',
-        limit: 5
-      }
-    })
-    
-    if (response.data.success) {
-      const usersData = Array.isArray(response.data.data) ? response.data.data : (response.data.data.data || [])
-      
-      recentActivity.value = usersData.map(user => ({
-        text: `${user.first_name} ${user.last_name} joined the platform`,
-        time: formatActivityTime(user.created_at),
-        type: 'join'
-      }))
-    }
-  } catch (error) {
-    console.error('Error fetching recent activity:', error)
-    recentActivity.value = []
-  }
+  // Removed - no longer needed
 }
 
 const formatActivityTime = (dateString) => {
@@ -910,7 +1013,9 @@ onMounted(() => {
   fetchAlumni()
   fetchFilterOptions()
   fetchSuggestedConnections()
-  fetchRecentActivity()
+  if (isAdmin.value) {
+    fetchAdminLogs()
+  }
 })
 
 // Watch for filter changes and refetch

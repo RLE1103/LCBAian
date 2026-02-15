@@ -10,12 +10,13 @@ return new class extends Migration
     {
         Schema::create('applications', function (Blueprint $table) {
             $table->id('application_id');
-            $table->foreignId('alumni_id')->constrained('alumni', 'alumni_id')->cascadeOnDelete();
-            $table->foreignId('job_id')->constrained('job_postings', 'job_id')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('job_id')->constrained('job_posts', 'job_id')->cascadeOnDelete();
+            $table->string('resume_path')->nullable();
             $table->string('status')->default('pending');
-            $table->timestamp('date_applied')->useCurrent();
+            $table->timestamp('applied_at')->useCurrent();
             $table->timestamps();
-            $table->unique(['alumni_id', 'job_id']);
+            $table->unique(['user_id', 'job_id']);
         });
     }
 
@@ -24,5 +25,4 @@ return new class extends Migration
         Schema::dropIfExists('applications');
     }
 };
-
 

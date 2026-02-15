@@ -80,7 +80,6 @@ class AuditLogMiddleware
         if (str_contains($path, 'admin/users') && str_contains($path, 'reject')) return 'reject_user';
         if (str_contains($path, 'admin/jobs') && str_contains($path, 'approve')) return 'approve_job';
         if (str_contains($path, 'admin/jobs') && str_contains($path, 'reject')) return 'reject_job';
-        if (str_contains($path, 'admin/jobs') && str_contains($path, 'flag')) return 'flag_job';
         if (str_contains($path, 'reports') && str_contains($path, 'resolve')) return 'resolve_report';
         if (str_contains($path, 'admin/analytics/run-clustering')) return 'run_clustering';
 

@@ -49,8 +49,18 @@ class JobPostController extends Controller
             }
 
             // Experience level filter
-            if ($request->has('experience_level') && $request->experience_level) {
-                $query->where('experience_level', $request->experience_level);
+            if ($request->has('experience_level') && $request->experience_level !== '') {
+                $experienceLevel = trim($request->experience_level);
+                if (preg_match('/^\d+\s*\+$/', $experienceLevel)) {
+                    $minValue = (int) $experienceLevel;
+                    $query->where('experience_level', '>=', $minValue);
+                } elseif (preg_match('/^(\d+)\s*-\s*(\d+)$/', $experienceLevel, $matches)) {
+                    $minValue = (int) $matches[1];
+                    $maxValue = (int) $matches[2];
+                    $query->whereBetween('experience_level', [$minValue, $maxValue]);
+                } elseif (is_numeric($experienceLevel)) {
+                    $query->where('experience_level', (int) $experienceLevel);
+                }
             }
 
             $jobs = $query->orderBy('created_at', 'desc')
@@ -74,7 +84,12 @@ class JobPostController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $job = JobPost::with('poster:id,first_name,last_name,middle_name')->findOrFail($id);
+            $query = JobPost::with('poster:id,first_name,last_name,middle_name');
+            $user = Auth::user();
+            if (!$user || $user->role !== 'admin') {
+                $query->where('status', 'approved');
+            }
+            $job = $query->findOrFail($id);
 
             return response()->json([
                 'success' => true,
@@ -103,7 +118,7 @@ class JobPostController extends Controller
                 'required_skills' => 'nullable|array',
                 'preferred_skills' => 'nullable|array',
                 'industry' => 'nullable|string|max:100',
-                'experience_level' => 'nullable|string|max:50',
+                'experience_level' => 'nullable|integer|min:0|max:100',
                 'salary_range' => 'nullable|string|max:50',
                 'application_link' => 'nullable|url|max:500',
                 'is_active' => 'boolean',
@@ -123,7 +138,7 @@ class JobPostController extends Controller
                 'success' => true,
                 'data' => $job,
                 'message' => 'Job post submitted and pending admin approval'
-            ]);
+            ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -138,21 +153,27 @@ class JobPostController extends Controller
     public function getFilterOptions(): JsonResponse
     {
         try {
-            $locations = JobPost::whereNotNull('location')
+            $user = Auth::user();
+            $baseQuery = JobPost::query();
+            if (!$user || $user->role !== 'admin') {
+                $baseQuery->where('status', 'approved');
+            }
+
+            $locations = (clone $baseQuery)->whereNotNull('location')
                 ->distinct()
                 ->pluck('location')
                 ->filter()
                 ->sort()
                 ->values();
 
-            $industries = JobPost::whereNotNull('industry')
+            $industries = (clone $baseQuery)->whereNotNull('industry')
                 ->distinct()
                 ->pluck('industry')
                 ->filter()
                 ->sort()
                 ->values();
 
-            $workTypes = JobPost::whereNotNull('work_type')
+            $workTypes = (clone $baseQuery)->whereNotNull('work_type')
                 ->distinct()
                 ->pluck('work_type')
                 ->filter()
@@ -175,4 +196,3 @@ class JobPostController extends Controller
         }
     }
 }
-

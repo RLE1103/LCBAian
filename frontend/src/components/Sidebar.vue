@@ -3,7 +3,9 @@
     id="mobile-sidebar"
     role="navigation"
     aria-label="Main navigation"
-    :aria-hidden="!isMobileMenuOpen && 'true'"
+    :aria-hidden="isSidebarHidden ? 'true' : null"
+    :inert="isSidebarHidden ? '' : null"
+    ref="sidebarRef"
     :class="[
       'bg-blue-900 text-white flex flex-col shadow-lg overflow-hidden transition-all duration-300 ease-in-out',
       'fixed inset-y-0 left-0 md:relative md:inset-auto md:h-full',
@@ -15,23 +17,6 @@
     ]"
   >
     <div class="flex flex-col h-full overflow-hidden">
-      <!-- LCBA Logo Placeholder -->
-      <div class="flex items-center gap-3 p-4 border-b border-blue-800 flex-shrink-0" :class="{ 'justify-center': isCollapsed }">
-        <img src="\src\assets\images\LCBAlogo.png" alt="LCBA Logo" :class="isCollapsed ? 'w-10 h-10' : 'w-16 h-16'" class="rounded object-cover" />
-        <div v-if="!isCollapsed" class="font-bold text-lg leading-tight">LCBAConnect+</div>
-      </div>
-      
-      <!-- Logo and User -->
-      <div class="flex items-center gap-3 p-4 border-b border-blue-800 flex-shrink-0" :class="{ 'justify-center': isCollapsed }">
-        <div class="w-12 h-12 rounded-full border-4 border-yellow-400 flex items-center justify-center bg-blue-700 overflow-hidden">
-          <img :src="userAvatar" :alt="userFullName" class="w-10 h-10 rounded-full" />
-        </div>
-        <div v-if="!isCollapsed">
-          <div class="text-sm font-semibold leading-tight">{{ userFullName }}</div>
-          <div class="text-xs leading-tight text-blue-300">{{ userRole }}</div>
-        </div>
-      </div>
-      
       <!-- Navigation (Scrollable) -->
       <nav class="flex-1 overflow-y-auto overflow-x-hidden mt-6 min-h-0" aria-label="Primary navigation">
         <ul class="space-y-2 pb-4" role="list">
@@ -108,7 +93,7 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { computed, ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from '../config/api'
 
 // Props
@@ -130,9 +115,6 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-// Computed properties for user data
-const userFullName = computed(() => authStore.fullName || 'User')
-const userRole = computed(() => authStore.userRole || 'User')
 const isAdmin = computed(() => authStore.isAdmin)
 
 // Unread messages count
@@ -154,9 +136,22 @@ onMounted(() => {
   fetchUnreadCount()
 })
 
-const userAvatar = computed(() => {
-  const name = userFullName.value
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1e3a8a&color=fff&size=128`
+const sidebarRef = ref(null)
+const isSmallScreen = ref(false)
+const isSidebarHidden = computed(() => isSmallScreen.value && !props.isMobileMenuOpen)
+
+const mediaQuery = window.matchMedia('(min-width: 768px)')
+const updateScreenSize = () => {
+  isSmallScreen.value = !mediaQuery.matches
+}
+
+onMounted(() => {
+  updateScreenSize()
+  mediaQuery.addEventListener('change', updateScreenSize)
+})
+
+onUnmounted(() => {
+  mediaQuery.removeEventListener('change', updateScreenSize)
 })
 
 function linkClasses(targetPath, extra = '') {
@@ -174,4 +169,13 @@ const handleNavClick = () => {
     emit('close')
   }
 }
+
+watch(isSidebarHidden, (hidden) => {
+  if (hidden && sidebarRef.value) {
+    const active = document.activeElement
+    if (active && sidebarRef.value.contains(active)) {
+      active.blur()
+    }
+  }
+})
 </script>

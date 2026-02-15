@@ -15,12 +15,18 @@ class AdminLog extends Model
     protected $fillable = [
         'user_id',
         'action',
+        'model_type',
+        'model_id',
+        'ip_address',
+        'user_agent',
+        'details',
     ];
 
     protected function casts(): array
     {
         return [
             'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

@@ -3,23 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
-use App\Models\Like;
-use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class PostController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Post::with(['user:id,first_name,last_name,email,profile_picture'])
-                        ->withCount(['likes', 'comments']);
+            $query = Post::with(['user:id,first_name,last_name,email,profile_picture']);
 
             // Filter by visibility based on user role
             $user = Auth::user();
-            if ($user->role === 'admin') {
+            if (!$user) {
+                $query->where('visibility', 'public');
+            } elseif ($user->role === 'admin') {
                 // Admins see all posts
             } else {
                 // Regular users see public and alumni_only posts
@@ -28,15 +28,6 @@ class PostController extends Controller
 
             $posts = $query->orderBy('created_at', 'desc')
                           ->paginate($request->get('per_page', 15));
-
-            // Get user's like status for each post
-            foreach ($posts as $post) {
-                $post->is_liked = Like::where('post_id', $post->post_id)
-                                     ->where('user_id', Auth::id())
-                                     ->exists();
-                $post->user_likes = $post->likes()->count();
-                $post->user_comments = $post->comments()->with('user:id,first_name,last_name')->get();
-            }
 
             return response()->json([
                 'success' => true,
@@ -79,7 +70,7 @@ class PostController extends Controller
                 $imagePath = 'posts/' . $filename;
                 
                 // Log for debugging
-                \Log::info('Image uploaded', [
+                Log::info('Image uploaded', [
                     'filename' => $filename,
                     'full_path' => $publicPath . '/' . $filename,
                     'db_path' => $imagePath,
@@ -110,61 +101,4 @@ class PostController extends Controller
         }
     }
 
-    public function toggleLike($id): JsonResponse
-    {
-        try {
-            $like = Like::where('post_id', $id)
-                       ->where('user_id', Auth::id())
-                       ->first();
-
-            if ($like) {
-                $like->delete();
-                $liked = false;
-            } else {
-                Like::create([
-                    'post_id' => $id,
-                    'user_id' => Auth::id()
-                ]);
-                $liked = true;
-            }
-
-            return response()->json([
-                'success' => true,
-                'liked' => $liked,
-                'likes_count' => Like::where('post_id', $id)->count()
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function addComment(Request $request, $id): JsonResponse
-    {
-        try {
-            $validated = $request->validate([
-                'content' => 'required|string',
-            ]);
-
-            $comment = Comment::create([
-                'post_id' => $id,
-                'user_id' => Auth::id(),
-                'content' => $validated['content']
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'data' => $comment,
-                'message' => 'Comment added successfully'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
 }
-

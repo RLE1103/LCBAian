@@ -47,6 +47,86 @@ class ClusteringService
         return $usersData;
     }
 
+    private function normalizeLocationValue(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($value));
+        if ($normalized === '') {
+            return null;
+        }
+
+        $normalized = preg_replace('/\s+/', ' ', $normalized);
+
+        if (strpos($normalized, 'bgc') !== false || strpos($normalized, 'bonifacio global city') !== false) {
+            return 'Manila';
+        }
+
+        if (strpos($normalized, 'taguig') !== false) {
+            return 'Manila';
+        }
+
+        if (strpos($normalized, 'metro manila') !== false) {
+            return 'Manila';
+        }
+
+        if (strpos($normalized, 'manila') !== false) {
+            return 'Manila';
+        }
+
+        if (strpos($normalized, 'quezon city') !== false || $normalized === 'qc') {
+            return 'Quezon City';
+        }
+
+        if (strpos($normalized, 'makati') !== false) {
+            return 'Makati';
+        }
+
+        return trim($value);
+    }
+
+    private function normalizeLocationDisplay(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = preg_replace('/\s+/', ' ', trim($value));
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $normalized = strtolower($trimmed);
+
+        if (strpos($normalized, 'bgc') !== false || strpos($normalized, 'bonifacio global city') !== false) {
+            return 'Taguig City';
+        }
+
+        if (strpos($normalized, 'taguig') !== false) {
+            return 'Taguig City';
+        }
+
+        if (strpos($normalized, 'quezon city') !== false || $normalized === 'qc') {
+            return 'Quezon City';
+        }
+
+        if (strpos($normalized, 'makati') !== false) {
+            return 'Makati City';
+        }
+
+        if (strpos($normalized, 'metro manila') !== false) {
+            return 'Metro Manila';
+        }
+
+        if (strpos($normalized, 'manila') !== false) {
+            return 'Manila';
+        }
+
+        return $trimmed;
+    }
+
     /**
      * Build feature vectors for clustering
      */
@@ -64,8 +144,12 @@ class ClusteringService
         $allPrograms = in_array('program', $fields) ? $usersData->pluck('program')->filter()->unique()->values()->toArray() : [];
         $allIndustries = in_array('industry', $fields) ? $usersData->pluck('industry')->filter()->unique()->values()->toArray() : [];
         $allExperienceLevels = in_array('experience_level', $fields) ? $usersData->pluck('experience_level')->filter()->unique()->values()->toArray() : [];
-        $allLocations = in_array('location', $fields) ? $usersData->pluck('location')->filter()->unique()->values()->toArray() : [];
-        $allCities = in_array('city', $fields) ? $usersData->pluck('city')->filter()->unique()->values()->toArray() : [];
+        $allLocations = in_array('location', $fields) ? $usersData->map(function ($user) {
+            return $this->normalizeLocationValue($user->location);
+        })->filter()->unique()->values()->toArray() : [];
+        $allCities = in_array('city', $fields) ? $usersData->map(function ($user) {
+            return $this->normalizeLocationValue($user->city);
+        })->filter()->unique()->values()->toArray() : [];
         $allCountries = in_array('country', $fields) ? $usersData->pluck('country')->filter()->unique()->values()->toArray() : [];
         $allEmploymentStatuses = in_array('employment_status', $fields) ? $usersData->pluck('employment_status')->filter()->unique()->values()->toArray() : [];
         $allYearsOfExperience = in_array('years_of_experience', $fields) ? $usersData->pluck('years_of_experience')->filter()->unique()->values()->toArray() : [];
@@ -99,12 +183,14 @@ class ClusteringService
                 $vector[] = ($user->experience_level === $level) ? 1 : 0;
             }
             // Location OHE (legacy)
+            $normalizedLocation = $this->normalizeLocationValue($user->location);
             foreach ($allLocations as $loc) {
-                $vector[] = ($user->location === $loc) ? 1 : 0;
+                $vector[] = ($normalizedLocation === $loc) ? 1 : 0;
             }
             // City OHE
+            $normalizedCity = $this->normalizeLocationValue($user->city);
             foreach ($allCities as $city) {
-                $vector[] = ($user->city === $city) ? 1 : 0;
+                $vector[] = ($normalizedCity === $city) ? 1 : 0;
             }
             // Country OHE
             foreach ($allCountries as $country) {
@@ -428,8 +514,12 @@ class ClusteringService
             $skillCounts = $clusterUsers->pluck('skills')->flatten()->countBy()->sortDesc()->take(10);
             $industryCounts = $clusterUsers->pluck('industry')->filter()->countBy()->sortDesc()->take(5);
             $programCounts = $clusterUsers->pluck('program')->filter()->countBy()->sortDesc()->take(5);
-            $locationCounts = $clusterUsers->pluck('location')->filter()->countBy()->sortDesc()->take(5);
-            $cityCounts = $clusterUsers->pluck('city')->filter()->countBy()->sortDesc()->take(5);
+            $locationCounts = $clusterUsers->map(function ($user) {
+                return $this->normalizeLocationDisplay($user->location);
+            })->filter()->countBy()->sortDesc()->take(5);
+            $cityCounts = $clusterUsers->map(function ($user) {
+                return $this->normalizeLocationDisplay($user->city);
+            })->filter()->countBy()->sortDesc()->take(5);
             $countryCounts = $clusterUsers->pluck('country')->filter()->countBy()->sortDesc()->take(5);
             $employmentStatusCounts = $clusterUsers->pluck('employment_status')->filter()->countBy()->sortDesc()->take(5);
             $yearsOfExperienceCounts = $clusterUsers->pluck('years_of_experience')->filter()->countBy()->sortDesc()->take(5);
@@ -472,8 +562,13 @@ class ClusteringService
             $topIndustryCount = $profile['top_industries'][$topIndustry] ?? 0;
             $topIndustryPct = $profile['total_users'] > 0 ? round(($topIndustryCount / $profile['total_users']) * 100) : 0;
             
-            $topCity = array_key_first($profile['top_cities'] ?? []);
-            $topCityCount = $profile['top_cities'][$topCity] ?? 0;
+            $topCitySource = $profile['top_cities'] ?? [];
+            if (empty($topCitySource)) {
+                $topCitySource = $profile['top_locations'] ?? [];
+            }
+
+            $topCity = array_key_first($topCitySource);
+            $topCityCount = $topCitySource[$topCity] ?? 0;
             $topCityPct = $profile['total_users'] > 0 ? round(($topCityCount / $profile['total_users']) * 100) : 0;
             
             $insight = sprintf(
@@ -519,7 +614,41 @@ class ClusteringService
 
         // 2. Build vectors
         $vectorData = $this->buildVectors($usersData, $fields);
-        Log::info('Built vectors with ' . count($vectorData['vectors']) . ' features');
+        $vectorCount = count($vectorData['vectors']);
+        $featureCount = $vectorCount > 0 ? count($vectorData['vectors'][0]) : 0;
+        Log::info('Built vectors with ' . $featureCount . ' features and ' . $vectorCount . ' records');
+
+        if ($vectorCount === 0 || $featureCount === 0) {
+            Log::warning('Clustering aborted: no usable data for selected parameters');
+            return [
+                'success' => false,
+                'message' => 'Clustering failed: no usable data for selected parameters',
+                'data' => [
+                    'active_fields' => $fields
+                ]
+            ];
+        }
+
+        $uniqueVectorCount = collect($vectorData['vectors'])
+            ->map(fn ($vector) => json_encode($vector))
+            ->unique()
+            ->count();
+
+        if ($uniqueVectorCount < 2) {
+            Log::warning('Clustering aborted: insufficient data variation for selected parameters');
+            return [
+                'success' => false,
+                'message' => 'Clustering failed: insufficient data variation for selected parameters',
+                'data' => [
+                    'active_fields' => $fields
+                ]
+            ];
+        }
+
+        if ($numClusters > $uniqueVectorCount) {
+            Log::warning('Requested clusters exceed unique data points, reducing cluster count');
+            $numClusters = $uniqueVectorCount;
+        }
 
         // 3. Run clustering
         $success = $this->runClustering(
@@ -531,6 +660,7 @@ class ClusteringService
         if ($success) {
             $analytics = $this->getClusterAnalytics();
             $profiles = $this->getClusterProfiles();
+            $insights = $this->generateClusterInsights();
             Log::info('Clustering process completed successfully');
             return [
                 'success' => true,
@@ -539,7 +669,9 @@ class ClusteringService
                 'users_processed' => count($vectorData['ids']),
                 'data' => [
                     'analytics' => $analytics,
-                    'profiles' => $profiles
+                    'profiles' => $profiles,
+                    'insights' => $insights,
+                    'active_fields' => $fields
                 ]
             ];
         } else {

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Alumni;
+use App\Models\AdminLog;
 use App\Mail\AccountApprovedEmail;
 use App\Mail\AccountRejectedEmail;
 use Illuminate\Http\Request;
@@ -10,6 +12,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserController extends Controller
 {
@@ -19,12 +26,20 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
+            if ($request->has('role') && $request->role === 'mentor') {
+                return response()->json([
+                    'success' => true,
+                    'data' => []
+                ]);
+            }
             // Create cache key based on query parameters
             $cacheKey = 'users_' . md5(json_encode($request->all()));
-            
-            // Check cache first (15 minute cache)
-            $users = Cache::remember($cacheKey, 900, function () use ($request) {
-                $query = User::query();
+
+            $hasVerificationStatusColumn = Schema::hasColumn('users', 'lcba_verification_status');
+            $hasEmployeeFlagColumn = Schema::hasColumn('users', 'is_lcba_employee_faculty');
+            $buildUsersQuery = function () use ($request) {
+                $query = User::query()
+                    ->where('role', '!=', 'mentor');
 
                 // Search filter
                 if ($request->has('search') && $request->search) {
@@ -53,13 +68,129 @@ class UserController extends Controller
                 }
 
                 return $query->get();
-            });
+            };
+
+            // Check cache first (15 minute cache)
+            try {
+                $users = Cache::remember($cacheKey, 900, $buildUsersQuery);
+            } catch (\Exception $cacheError) {
+                $users = $buildUsersQuery();
+            }
+
+            if ($hasVerificationStatusColumn && $hasEmployeeFlagColumn) {
+                $users = $users->map(function ($user) {
+                    if ($user instanceof User && empty($user->lcba_verification_status)) {
+                        $user->lcba_verification_status = $user->is_lcba_employee_faculty ? 'verified' : 'rejected';
+                    }
+                    return $user;
+                });
+            }
+
+            $includeLegacyAlumni = false;
+            if ($request->has('role') && $request->role) {
+                $includeLegacyAlumni = $request->role === 'alumni';
+            } else {
+                $includeLegacyAlumni = !$users->contains(fn ($user) => ($user->role ?? null) === 'alumni');
+            }
+
+            if ($includeLegacyAlumni && Schema::hasTable('alumni')) {
+                $legacyQuery = Alumni::query();
+
+                if ($request->has('search') && $request->search) {
+                    $search = $request->search;
+                    $legacyQuery->where(function ($q) use ($search) {
+                        $q->where('first_name', 'like', "%{$search}%")
+                          ->orWhere('last_name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%")
+                          ->orWhere('current_job', 'like', "%{$search}%")
+                          ->orWhere('industry', 'like', "%{$search}%")
+                          ->orWhere('course', 'like', "%{$search}%");
+                    });
+                }
+
+                if ($request->has('program') && $request->program) {
+                    $legacyQuery->where('course', $request->program);
+                }
+
+                if ($request->has('batch') && $request->batch) {
+                    $legacyQuery->where('graduation_year', $request->batch);
+                }
+
+                $legacyAlumni = $legacyQuery->get()->map(function ($alumni) {
+                    return [
+                        'id' => $alumni->alumni_id,
+                        'first_name' => $alumni->first_name,
+                        'last_name' => $alumni->last_name,
+                        'email' => $alumni->email,
+                        'role' => 'alumni',
+                        'program' => $alumni->course,
+                        'batch' => $alumni->graduation_year ? (string) $alumni->graduation_year : null,
+                        'headline' => $alumni->current_job ? $alumni->current_job . ' | ' . $alumni->course : null,
+                        'industry' => $alumni->industry,
+                        'current_job_title' => $alumni->current_job,
+                        'bio' => $alumni->bio,
+                        'skills' => [],
+                        'profile_picture' => $alumni->profile_photo,
+                    ];
+                });
+
+                $users = $users->concat($legacyAlumni)->values();
+            }
 
             return response()->json([
                 'success' => true,
                 'data' => $users
             ]);
         } catch (\Exception $e) {
+            if (!($request->has('role') && $request->role && $request->role !== 'alumni') && Schema::hasTable('alumni')) {
+                try {
+                    $legacyQuery = Alumni::query();
+
+                    if ($request->has('search') && $request->search) {
+                        $search = $request->search;
+                        $legacyQuery->where(function ($q) use ($search) {
+                            $q->where('first_name', 'like', "%{$search}%")
+                              ->orWhere('last_name', 'like', "%{$search}%")
+                              ->orWhere('email', 'like', "%{$search}%")
+                              ->orWhere('current_job', 'like', "%{$search}%")
+                              ->orWhere('industry', 'like', "%{$search}%")
+                              ->orWhere('course', 'like', "%{$search}%");
+                        });
+                    }
+
+                    if ($request->has('program') && $request->program) {
+                        $legacyQuery->where('course', $request->program);
+                    }
+
+                    if ($request->has('batch') && $request->batch) {
+                        $legacyQuery->where('graduation_year', $request->batch);
+                    }
+
+                    $legacyAlumni = $legacyQuery->get()->map(function ($alumni) {
+                        return [
+                            'id' => $alumni->alumni_id,
+                            'first_name' => $alumni->first_name,
+                            'last_name' => $alumni->last_name,
+                            'email' => $alumni->email,
+                            'role' => 'alumni',
+                            'program' => $alumni->course,
+                            'batch' => $alumni->graduation_year ? (string) $alumni->graduation_year : null,
+                            'headline' => $alumni->current_job ? $alumni->current_job . ' | ' . $alumni->course : null,
+                            'industry' => $alumni->industry,
+                            'current_job_title' => $alumni->current_job,
+                            'bio' => $alumni->bio,
+                            'skills' => [],
+                            'profile_picture' => $alumni->profile_photo,
+                        ];
+                    });
+
+                    return response()->json([
+                        'success' => true,
+                        'data' => $legacyAlumni
+                    ]);
+                } catch (\Exception $legacyError) {
+                }
+            }
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
@@ -141,7 +272,6 @@ class UserController extends Controller
                 'industries_of_interest.*' => 'string|max:100',
                 // LCBA Employee/Faculty
                 'is_lcba_employee_faculty' => 'nullable|boolean',
-                'lcba_employee_id' => 'nullable|string|max:50',
             ]);
 
             // Update skills and increment usage counts
@@ -208,6 +338,29 @@ class UserController extends Controller
                 ->sort()
                 ->values();
 
+            if ($cities->isEmpty() && $industries->isEmpty() && $programs->isEmpty() && $batches->isEmpty() && Schema::hasTable('alumni')) {
+                $cities = collect();
+                $industries = Alumni::whereNotNull('industry')
+                    ->distinct()
+                    ->pluck('industry')
+                    ->filter()
+                    ->sort()
+                    ->values();
+                $programs = Alumni::whereNotNull('course')
+                    ->distinct()
+                    ->pluck('course')
+                    ->filter()
+                    ->sort()
+                    ->values();
+                $batches = Alumni::whereNotNull('graduation_year')
+                    ->distinct()
+                    ->pluck('graduation_year')
+                    ->map(fn ($year) => (string) $year)
+                    ->filter()
+                    ->sort()
+                    ->values();
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -216,6 +369,91 @@ class UserController extends Controller
                     'programs' => $programs,
                     'batches' => $batches,
                 ]
+            ]);
+        } catch (\Exception $e) {
+            if (Schema::hasTable('alumni')) {
+                try {
+                    $industries = Alumni::whereNotNull('industry')
+                        ->distinct()
+                        ->pluck('industry')
+                        ->filter()
+                        ->sort()
+                        ->values();
+                    $programs = Alumni::whereNotNull('course')
+                        ->distinct()
+                        ->pluck('course')
+                        ->filter()
+                        ->sort()
+                        ->values();
+                    $batches = Alumni::whereNotNull('graduation_year')
+                        ->distinct()
+                        ->pluck('graduation_year')
+                        ->map(fn ($year) => (string) $year)
+                        ->filter()
+                        ->sort()
+                        ->values();
+
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'cities' => collect(),
+                            'industries' => $industries,
+                            'programs' => $programs,
+                            'batches' => $batches,
+                        ]
+                    ]);
+                } catch (\Exception $legacyError) {
+                }
+            }
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getAdminLogs(Request $request): JsonResponse
+    {
+        try {
+            if (Auth::user()->role !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Admin access required.'
+                ], 403);
+            }
+
+            $limit = (int) $request->get('limit', 100);
+            if ($limit < 1) {
+                $limit = 1;
+            }
+            if ($limit > 500) {
+                $limit = 500;
+            }
+
+            $query = AdminLog::query()
+                ->with('user')
+                ->orderByDesc('created_at');
+
+            if ($request->has('from') && $request->from) {
+                $query->whereDate('created_at', '>=', $request->from);
+            }
+
+            $logs = $query->limit($limit)->get()->map(function ($log) {
+                $userName = $log->user ? trim(($log->user->first_name ?? '') . ' ' . ($log->user->last_name ?? '')) : 'Admin';
+                $action = $log->action ?? 'activity';
+
+                return [
+                    'id' => $log->log_id ?? $log->id,
+                    'action' => $action,
+                    'description' => $userName . ' performed ' . $action,
+                    'user_id' => $log->user_id,
+                    'created_at' => $log->created_at,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $logs
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -252,14 +490,16 @@ class UserController extends Controller
             $user->is_verified = true;
             $user->save();
 
-            // Clear user cache when user is updated
-            Cache::forget('users_*');
+            try {
+                Cache::forget('users_*');
+            } catch (\Throwable $e) {
+            }
 
             // Send approval email to user
             try {
                 Mail::to($user->email)->send(new AccountApprovedEmail($user));
             } catch (\Exception $e) {
-                \Log::error('Failed to send approval email: ' . $e->getMessage());
+                Log::error('Failed to send approval email: ' . $e->getMessage());
             }
 
             return response()->json([
@@ -280,18 +520,17 @@ class UserController extends Controller
      */
     public function rejectUser(Request $request, $id): JsonResponse
     {
-        try {
-            // Check if user is admin
-            if (Auth::user()->role !== 'admin') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized. Admin access required.'
-                ], 403);
-            }
+        $authUser = Auth::user();
+        if (!$authUser || $authUser->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
 
+        try {
             $user = User::findOrFail($id);
 
-            // Prevent modifying admin accounts
             if ($user->role === 'admin') {
                 return response()->json([
                     'success' => false,
@@ -301,19 +540,110 @@ class UserController extends Controller
 
             $reason = $request->input('reason', 'Your registration did not meet our verification requirements.');
 
-            // Send rejection email to user before deleting
-            try {
-                Mail::to($user->email)->send(new AccountRejectedEmail($user, $reason));
-            } catch (\Exception $e) {
-                \Log::error('Failed to send rejection email: ' . $e->getMessage());
+            if ($user->email) {
+                try {
+                    Mail::to($user->email)->send(new AccountRejectedEmail($user, $reason));
+                } catch (\Throwable $e) {
+                    Log::error('Failed to send rejection email: ' . $e->getMessage());
+                }
             }
 
-            // Delete the user account
             $user->delete();
 
             return response()->json([
                 'success' => true,
                 'message' => 'User rejected and removed.'
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function approveEmployeeVerification(Request $request, $id): JsonResponse
+    {
+        try {
+            if (Auth::user()->role !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Admin access required.'
+                ], 403);
+            }
+
+            $user = User::findOrFail($id);
+
+            if ($user->role === 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot modify admin accounts.'
+                ], 403);
+            }
+
+            $action = $request->input('action');
+            $hasEmployeeFlag = Schema::hasColumn('users', 'is_lcba_employee_faculty');
+            $hasVerificationStatus = Schema::hasColumn('users', 'lcba_verification_status');
+            if ($action === 'remove') {
+                $updates = [];
+                if ($hasEmployeeFlag) {
+                    $updates['is_lcba_employee_faculty'] = false;
+                }
+                if ($hasVerificationStatus) {
+                    $updates['lcba_verification_status'] = 'rejected';
+                }
+                if (!empty($updates)) {
+                    $user->fill($updates);
+                    $user->save();
+                }
+
+                $adminName = Auth::user()->full_name ?? trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? ''));
+                AdminLog::create([
+                    'user_id' => Auth::id(),
+                    'action' => trim($adminName) . ' marked employee/faculty badge as unverified for user #' . $user->id,
+                    'model_type' => 'User',
+                    'model_id' => $user->id,
+                    'details' => json_encode([
+                        'is_lcba_employee_faculty' => $user->is_lcba_employee_faculty,
+                        'lcba_verification_status' => $user->lcba_verification_status
+                    ]),
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Employee or faculty badge marked as unverified.',
+                    'user' => $user
+                ]);
+            }
+
+            $updates = [];
+            if ($hasEmployeeFlag) {
+                $updates['is_lcba_employee_faculty'] = true;
+            }
+            if ($hasVerificationStatus) {
+                $updates['lcba_verification_status'] = 'verified';
+            }
+            if (!empty($updates)) {
+                $user->fill($updates);
+                $user->save();
+            }
+
+            $adminName = Auth::user()->full_name ?? trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? ''));
+            AdminLog::create([
+                'user_id' => Auth::id(),
+                'action' => trim($adminName) . ' marked employee/faculty badge as verified for user #' . $user->id,
+                'model_type' => 'User',
+                'model_id' => $user->id,
+                'details' => json_encode([
+                    'is_lcba_employee_faculty' => $user->is_lcba_employee_faculty,
+                    'lcba_verification_status' => $user->lcba_verification_status
+                ]),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Employee or faculty badge marked as verified.',
+                'user' => $user
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -322,5 +652,362 @@ class UserController extends Controller
             ], 500);
         }
     }
-}
 
+    public function rejectEmployeeVerification(Request $request, $id): JsonResponse
+    {
+        try {
+            if (Auth::user()->role !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized. Admin access required.'
+                ], 403);
+            }
+
+            $user = User::findOrFail($id);
+
+            if ($user->role === 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot modify admin accounts.'
+                ], 403);
+            }
+
+            $updates = [];
+            if (Schema::hasColumn('users', 'is_lcba_employee_faculty')) {
+                $updates['is_lcba_employee_faculty'] = false;
+            }
+            if (Schema::hasColumn('users', 'lcba_verification_status')) {
+                $updates['lcba_verification_status'] = 'rejected';
+            }
+            if (!empty($updates)) {
+                $user->fill($updates);
+                $user->save();
+            }
+
+            $notificationMessage = 'Your Employee ID submission was marked as unverified. Please ensure the document is clear and valid.';
+            if ($user->email) {
+                try {
+                    Mail::raw($notificationMessage, function ($message) use ($user) {
+                        $message->to($user->email)
+                            ->subject('Employee ID Verification Rejected');
+                    });
+                } catch (\Throwable $e) {
+                    Log::error('Failed to send employee verification rejection email: ' . $e->getMessage());
+                }
+            }
+
+            $adminName = Auth::user()->full_name ?? trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? ''));
+            AdminLog::create([
+                'user_id' => Auth::id(),
+                'action' => trim($adminName) . ' marked employee/faculty badge as unverified for user #' . $user->id,
+                'model_type' => 'User',
+                'model_id' => $user->id,
+                'details' => json_encode([
+                    'is_lcba_employee_faculty' => $user->is_lcba_employee_faculty,
+                    'lcba_verification_status' => $user->lcba_verification_status,
+                    'reason' => $request->input('reason'),
+                    'notification_message' => $notificationMessage
+                ]),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Employee or faculty badge marked as unverified.',
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getEmployeeIdImage($id)
+    {
+        $authUser = Auth::user();
+        if (!$authUser || !in_array($authUser->role, ['admin', 'staff'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
+        try {
+            $user = User::findOrFail($id);
+            if (!$user->lcba_employee_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee ID image not found.'
+                ], 404);
+            }
+
+            $storagePath = storage_path('app/employee_ids/' . $user->lcba_employee_id);
+            $publicPath = public_path('uploads/employee_ids/' . $user->lcba_employee_id);
+
+            if (!file_exists($storagePath) && file_exists($publicPath)) {
+                $storageDir = storage_path('app/employee_ids');
+                if (!file_exists($storageDir)) {
+                    mkdir($storageDir, 0755, true);
+                }
+                @rename($publicPath, $storagePath);
+            }
+
+            if (!file_exists($storagePath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee ID image not found.'
+                ], 404);
+            }
+
+            return response()->file($storagePath);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateStatus(Request $request, $id): JsonResponse
+    {
+        $authUser = Auth::user();
+        if (!$authUser || $authUser->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
+        try {
+            $rawIsActive = $request->input('is_active');
+            $isActive = filter_var($rawIsActive, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($isActive === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid is_active value.'
+                ], 422);
+            }
+
+            $user = User::findOrFail($id);
+
+            if ($user->role === 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot modify admin accounts.'
+                ], 403);
+            }
+
+            $user->is_active = $isActive;
+            if ($isActive) {
+                $user->status = 'active';
+            } elseif ($user->status !== 'suspended') {
+                $user->status = 'inactive';
+            }
+            $user->save();
+
+            try {
+                Cache::forget('users_*');
+            } catch (\Throwable $e) {
+            }
+
+            $adminName = $authUser->full_name ?? trim(($authUser->first_name ?? '') . ' ' . ($authUser->last_name ?? ''));
+            $actionLabel = $isActive ? 'activated' : 'deactivated';
+            AdminLog::create([
+                'user_id' => $authUser->id,
+                'action' => trim($adminName) . ' ' . $actionLabel . ' user #' . $user->id,
+                'model_type' => 'User',
+                'model_id' => $user->id,
+                'details' => json_encode([
+                    'is_active' => $user->is_active,
+                    'status' => $user->status
+                ]),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User status updated.',
+                'data' => $user
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateRole(Request $request, $id): JsonResponse
+    {
+        $authUser = Auth::user();
+        if (!$authUser || $authUser->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
+        $newRole = $request->input('role');
+        if (!$newRole || !in_array($newRole, ['admin', 'alumni'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid role value.'
+            ], 422);
+        }
+
+        $adminPassword = (string) $request->input('admin_password', '');
+        if ($adminPassword === '' || !Hash::check($adminPassword, $authUser->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid admin password.'
+            ], 403);
+        }
+
+        try {
+            $user = User::findOrFail($id);
+
+            if ($user->id === $authUser->id && $newRole !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You cannot remove your own admin privileges.'
+                ], 403);
+            }
+
+            if ($user->role === $newRole) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'User role already set.',
+                    'data' => $user
+                ]);
+            }
+
+            $previousRole = $user->role;
+            $user->role = $newRole;
+            $user->save();
+
+            try {
+                Cache::forget('users_*');
+            } catch (\Throwable $e) {
+            }
+
+            $adminName = $authUser->full_name ?? trim(($authUser->first_name ?? '') . ' ' . ($authUser->last_name ?? ''));
+            $actionLabel = $newRole === 'admin' ? 'granted admin privileges to' : 'removed admin privileges from';
+            AdminLog::create([
+                'user_id' => $authUser->id,
+                'action' => trim($adminName) . ' ' . $actionLabel . ' user #' . $user->id,
+                'model_type' => 'User',
+                'model_id' => $user->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'details' => json_encode([
+                    'previous_role' => $previousRole,
+                    'new_role' => $newRole
+                ]),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User role updated.',
+                'data' => $user
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function resetPassword(Request $request, $id): JsonResponse
+    {
+        $authUser = Auth::user();
+        if (!$authUser || $authUser->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
+        try {
+            $user = User::findOrFail($id);
+
+            if ($user->role === 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot modify admin accounts.'
+                ], 403);
+            }
+
+            $mode = $request->input('mode', 'temporary');
+            if (!in_array($mode, ['temporary', 'email'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid reset mode.'
+                ], 422);
+            }
+
+            $tempPassword = $mode === 'temporary'
+                ? trim((string) $request->input('temp_password', ''))
+                : Str::random(12);
+
+            if (!$tempPassword) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Temporary password is required.'
+                ], 422);
+            }
+
+            $user->password = Hash::make($tempPassword);
+            $user->save();
+
+            try {
+                Cache::forget('users_*');
+            } catch (\Throwable $e) {
+            }
+
+            $adminName = $authUser->full_name ?? trim(($authUser->first_name ?? '') . ' ' . ($authUser->last_name ?? ''));
+            AdminLog::create([
+                'user_id' => $authUser->id,
+                'action' => trim($adminName) . ' reset password for user #' . $user->id,
+                'model_type' => 'User',
+                'model_id' => $user->id,
+                'details' => json_encode([
+                    'mode' => $mode
+                ]),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $mode === 'email' ? 'Password reset link sent.' : 'Password reset successfully.',
+                'data' => [
+                    'user_id' => $user->id
+                ]
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found.'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+}

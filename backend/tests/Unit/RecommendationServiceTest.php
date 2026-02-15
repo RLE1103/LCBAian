@@ -20,7 +20,7 @@ class RecommendationServiceTest extends \Tests\TestCase
         $set1 = ['PHP', 'Laravel', 'MySQL'];
         $set2 = ['PHP', 'Laravel', 'JavaScript'];
 
-        $similarity = RecommendationService::jaccardSimilarity($set1, $set2);
+        $similarity = RecommendationService::calculateJaccard($set1, $set2);
 
         // Intersection: PHP, Laravel (2 items)
         // Union: PHP, Laravel, MySQL, JavaScript (4 items)
@@ -35,7 +35,7 @@ class RecommendationServiceTest extends \Tests\TestCase
     {
         $set = ['PHP', 'Laravel', 'MySQL'];
         
-        $similarity = RecommendationService::jaccardSimilarity($set, $set);
+        $similarity = RecommendationService::calculateJaccard($set, $set);
 
         $this->assertEquals(1.0, $similarity);
     }
@@ -48,7 +48,7 @@ class RecommendationServiceTest extends \Tests\TestCase
         $set1 = ['PHP', 'Laravel'];
         $set2 = ['Python', 'Django'];
 
-        $similarity = RecommendationService::jaccardSimilarity($set1, $set2);
+        $similarity = RecommendationService::calculateJaccard($set1, $set2);
 
         $this->assertEquals(0.0, $similarity);
     }
@@ -58,7 +58,7 @@ class RecommendationServiceTest extends \Tests\TestCase
      */
     public function test_jaccard_similarity_empty_sets(): void
     {
-        $similarity = RecommendationService::jaccardSimilarity([], []);
+        $similarity = RecommendationService::calculateJaccard([], []);
 
         $this->assertEquals(0.0, $similarity);
     }
@@ -68,17 +68,12 @@ class RecommendationServiceTest extends \Tests\TestCase
      */
     public function test_cosine_similarity_calculation(): void
     {
-        // Test with simple vectors
-        $vector1 = [1, 1, 0];
-        $vector2 = [1, 0, 1];
+        $set1 = ['PHP', 'Laravel', 'MySQL'];
+        $set2 = ['PHP', 'Laravel', 'JavaScript'];
 
-        $similarity = RecommendationService::cosineSimilarity($vector1, $vector2);
+        $similarity = RecommendationService::calculateCosine($set1, $set2);
 
-        // Dot product: 1*1 + 1*0 + 0*1 = 1
-        // Magnitude v1: sqrt(1 + 1 + 0) = sqrt(2) ≈ 1.414
-        // Magnitude v2: sqrt(1 + 0 + 1) = sqrt(2) ≈ 1.414
-        // Cosine: 1 / (1.414 * 1.414) ≈ 0.5
-        $this->assertEqualsWithDelta(0.5, $similarity, 0.01);
+        $this->assertEqualsWithDelta(0.6667, $similarity, 0.01);
     }
 
     /**
@@ -86,11 +81,11 @@ class RecommendationServiceTest extends \Tests\TestCase
      */
     public function test_cosine_similarity_identical_vectors(): void
     {
-        $vector = [1, 2, 3];
+        $set = ['PHP', 'Laravel', 'MySQL'];
 
-        $similarity = RecommendationService::cosineSimilarity($vector, $vector);
+        $similarity = RecommendationService::calculateCosine($set, $set);
 
-        $this->assertEquals(1.0, $similarity);
+        $this->assertEqualsWithDelta(1.0, $similarity, 0.0001);
     }
 
     /**
@@ -99,19 +94,19 @@ class RecommendationServiceTest extends \Tests\TestCase
     public function test_calculate_similarity_score(): void
     {
         $user = User::factory()->create([
-            'skills' => json_encode(['PHP', 'Laravel', 'MySQL']),
+            'skills' => ['PHP', 'Laravel', 'MySQL'],
             'program' => 'BSCS',
             'industry' => 'Technology',
-            'career_preferences' => json_encode([
-                'work_setup' => 'remote',
-                'employment_type' => 'full_time',
-            ]),
+            'work_setup_preferences' => ['remote'],
+            'employment_type_preferences' => ['full_time'],
+            'industries_of_interest' => ['Technology'],
         ]);
 
         $job = JobPost::factory()->create([
-            'required_skills' => json_encode(['PHP', 'Laravel']),
-            'preferred_skills' => json_encode(['MySQL']),
+            'required_skills' => ['PHP', 'Laravel'],
+            'preferred_skills' => ['MySQL'],
             'work_type' => 'full_time',
+            'industry' => 'Technology',
         ]);
 
         $score = RecommendationService::calculateSimilarityScore($user, $job);
@@ -127,18 +122,18 @@ class RecommendationServiceTest extends \Tests\TestCase
     public function test_get_recommended_jobs_returns_sorted_results(): void
     {
         $user = User::factory()->create([
-            'skills' => json_encode(['PHP', 'Laravel']),
+            'skills' => ['PHP', 'Laravel'],
             'program' => 'BSCS',
         ]);
 
         // Create jobs with varying relevance
         $highMatch = JobPost::factory()->create([
-            'required_skills' => json_encode(['PHP', 'Laravel']),
+            'required_skills' => ['PHP', 'Laravel'],
             'status' => 'approved',
         ]);
 
         $lowMatch = JobPost::factory()->create([
-            'required_skills' => json_encode(['Python']),
+            'required_skills' => ['Python'],
             'status' => 'approved',
         ]);
 

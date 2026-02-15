@@ -8,22 +8,22 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('job_postings', function (Blueprint $table) {
+        Schema::create('job_posts', function (Blueprint $table) {
             $table->id('job_id');
-            $table->string('employer_name');
-            $table->string('job_title');
+            $table->boolean('posted_by_admin')->default(false);
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('title');
             $table->text('description');
-            $table->text('requirements')->nullable();
-            $table->timestamp('posted_date')->useCurrent();
-            $table->foreignId('admin_id')->nullable()->constrained('admins', 'admin_id')->nullOnDelete();
-            $table->timestamps();
+            $table->string('company_name')->nullable();
+            $table->string('location')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('created_at')->useCurrent();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('job_postings');
+        Schema::dropIfExists('job_posts');
     }
 };
-
 

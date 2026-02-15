@@ -82,8 +82,14 @@
             ]"
           >
             <div class="relative">
-              <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                {{ conversation.other_user?.first_name?.[0] }}{{ conversation.other_user?.last_name?.[0] }}
+              <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
+                <img
+                  v-if="conversation.other_user?.profile_picture"
+                  :src="getProfilePictureUrl(conversation.other_user.profile_picture)"
+                  alt="Profile"
+                  class="w-full h-full object-cover"
+                />
+                <span v-else>{{ conversation.other_user?.first_name?.[0] }}{{ conversation.other_user?.last_name?.[0] }}</span>
               </div>
               <div v-if="conversation.unread_count > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {{ conversation.unread_count }}
@@ -140,8 +146,14 @@
             </button>
             
             <div class="flex items-center flex-1">
-              <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
-                {{ selectedConversation.other_user?.first_name?.[0] }}{{ selectedConversation.other_user?.last_name?.[0] }}
+              <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3 overflow-hidden">
+                <img
+                  v-if="selectedProfileUser?.profile_picture || selectedConversation.other_user?.profile_picture"
+                  :src="getProfilePictureUrl(selectedProfileUser?.profile_picture || selectedConversation.other_user?.profile_picture)"
+                  alt="Profile"
+                  class="w-full h-full object-cover"
+                />
+                <span v-else>{{ selectedConversation.other_user?.first_name?.[0] }}{{ selectedConversation.other_user?.last_name?.[0] }}</span>
               </div>
               <div>
                 <h3 class="font-semibold text-gray-900">{{ selectedConversation.other_user?.first_name }} {{ selectedConversation.other_user?.last_name }}</h3>
@@ -210,6 +222,7 @@
             
             <div class="flex-1">
               <input
+                ref="messageInput"
                 v-model="newMessage"
                 @keypress.enter="sendMessage"
                 type="text"
@@ -240,62 +253,62 @@
     <div v-if="selectedConversation" class="w-1/4 bg-white border-l border-gray-200 p-4 hidden lg:block">
       <!-- Profile Card -->
       <div class="text-center mb-6">
-        <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-3">
-          {{ selectedConversation.other_user?.first_name?.[0] }}{{ selectedConversation.other_user?.last_name?.[0] }}
+        <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-3 overflow-hidden">
+          <img
+            v-if="selectedProfileUser?.profile_picture || selectedConversation.other_user?.profile_picture"
+            :src="getProfilePictureUrl(selectedProfileUser?.profile_picture || selectedConversation.other_user?.profile_picture)"
+            alt="Profile"
+            class="w-full h-full object-cover"
+          />
+          <span v-else>{{ selectedConversation.other_user?.first_name?.[0] }}{{ selectedConversation.other_user?.last_name?.[0] }}</span>
         </div>
-        <h3 class="font-semibold text-gray-900">{{ selectedConversation.other_user?.first_name }} {{ selectedConversation.other_user?.last_name }}</h3>
-        <p class="text-sm text-gray-500">Alumni</p>
-        <p class="text-sm text-gray-500">No bio available</p>
+        <h3 class="font-semibold text-gray-900">{{ selectedProfileUser?.full_name || `${selectedConversation.other_user?.first_name} ${selectedConversation.other_user?.last_name}` }}</h3>
+        <p class="text-sm text-gray-500">{{ selectedProfileUser?.headline || selectedProfileUser?.current_job_title || 'Alumni' }}</p>
+        <p class="text-sm text-gray-500">{{ selectedProfileUser?.bio || 'No bio available' }}</p>
       </div>
 
       <!-- Quick Actions -->
       <div class="space-y-2 mb-6">
-        <button class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
-          View Full Profile
-        </button>
-        <button class="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50">
-          Recommend for Job
+        <button @click="openProfileModal" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
+          View Profile
         </button>
       </div>
 
-      <!-- Mutual Connections -->
       <div class="mb-6">
-        <h4 class="font-semibold text-gray-900 mb-3">Mutual Connections</h4>
-        <div class="space-y-2">
-          <div class="flex items-center">
-            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
-              AC
-            </div>
-            <span class="text-sm text-gray-700">Alex Chen</span>
-          </div>
-          <div class="flex items-center">
-            <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
-              SM
-            </div>
-            <span class="text-sm text-gray-700">Sarah Martinez</span>
-            </div>
-          </div>
-        </div>
-
-      <!-- Recent Activity -->
-          <div>
-        <h4 class="font-semibold text-gray-900 mb-3">Recent Activity</h4>
+        <h4 class="font-semibold text-gray-900 mb-3">Profile Links</h4>
         <div class="space-y-3">
           <div class="text-sm">
-            <p class="text-gray-700">Posted a job at Tech Corp</p>
-            <p class="text-gray-500 text-xs">2 days ago</p>
+            <p class="text-gray-600">LinkedIn URL</p>
+            <a
+              v-if="selectedProfileUser?.linkedin_url"
+              :href="formatUrl(selectedProfileUser.linkedin_url)"
+              target="_blank"
+              class="text-blue-600 hover:text-blue-800 break-all"
+            >
+              {{ selectedProfileUser.linkedin_url }}
+            </a>
+            <p v-else class="text-gray-400">Not provided</p>
           </div>
           <div class="text-sm">
-            <p class="text-gray-700">Attended Alumni Meetup</p>
-            <p class="text-gray-500 text-xs">1 week ago</p>
+            <p class="text-gray-600">Personal URL</p>
+            <a
+              v-if="selectedProfileUser?.portfolio_url"
+              :href="formatUrl(selectedProfileUser.portfolio_url)"
+              target="_blank"
+              class="text-blue-600 hover:text-blue-800 break-all"
+            >
+              {{ selectedProfileUser.portfolio_url }}
+            </a>
+            <p v-else class="text-gray-400">Not provided</p>
           </div>
         </div>
       </div>
+      <div class="text-center text-xs text-gray-400">LCBAConnect+ © 2026</div>
       </div>
 
     <!-- New Message Modal -->
-    <div v-if="showNewMessageModal" class="fixed inset-0 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 w-full max-w-md border-4 border-gray-300 shadow-2xl">
+    <div v-if="showNewMessageModal" class="fixed inset-0 bg-black/40 flex items-start md:items-center justify-center z-[200] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showNewMessageModal = false">
+      <div class="bg-white rounded-lg p-6 w-full max-w-md border-2 border-black shadow-2xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">New Message</h3>
           <button @click="showNewMessageModal = false" class="text-gray-400 hover:text-gray-600">
@@ -307,12 +320,39 @@
         
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">Select Recipient</label>
-          <select v-model="newMessageRecipient" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="">Choose an alumni...</option>
-            <option v-for="user in availableUsers" :key="user.id" :value="user.id">
-              {{ user.full_name }}{{ user.program ? ` - ${user.program}` : '' }}{{ user.batch ? ` (${user.batch})` : '' }}
-            </option>
-          </select>
+          <div class="relative">
+            <input
+              v-model="recipientSearch"
+              type="text"
+              placeholder="Search alumni..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              @focus="recipientDropdownOpen = true"
+              @input="onRecipientSearchInput"
+              @blur="closeRecipientDropdown"
+            />
+            <div v-if="recipientDropdownOpen" class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <button
+                v-for="user in filteredAvailableUsers"
+                :key="user.id"
+                type="button"
+                class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                @mousedown.prevent="selectRecipient(user)"
+              >
+                <div class="text-sm text-gray-900">{{ user.full_name }}</div>
+                <div class="text-xs text-gray-500">
+                  <span v-if="user.program">{{ user.program }}</span>
+                  <span v-if="user.program && user.batch"> • </span>
+                  <span v-if="user.batch">{{ user.batch }}</span>
+                </div>
+              </button>
+              <div v-if="filteredAvailableUsers.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                No matching alumni found.
+              </div>
+            </div>
+          </div>
+          <div v-if="selectedRecipientLabel" class="mt-2 text-xs text-gray-600">
+            Selected: {{ selectedRecipientLabel }}
+          </div>
         </div>
         
         <div class="mb-4">
@@ -333,6 +373,123 @@
             Send Message
           </button>
         </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showProfileModal" class="fixed inset-0 bg-black/40 flex items-start md:items-center justify-center z-[200] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showProfileModal = false">
+      <div class="bg-white rounded-lg w-full max-w-4xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto border-2 border-black shadow-2xl">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+              <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mr-4 overflow-hidden">
+                <img
+                  v-if="selectedProfileUser?.profile_picture"
+                  :src="getProfilePictureUrl(selectedProfileUser.profile_picture)"
+                  alt="Profile"
+                  class="w-full h-full object-cover"
+                />
+                <span v-else>{{ selectedProfileUser?.first_name?.[0] }}{{ selectedProfileUser?.last_name?.[0] }}</span>
+              </div>
+              <div>
+                <h2 class="text-2xl font-bold text-gray-900">{{ selectedProfileUser?.full_name || `${selectedProfileUser?.first_name || ''} ${selectedProfileUser?.last_name || ''}` }}</h2>
+                <p class="text-gray-600">{{ selectedProfileUser?.program }} {{ selectedProfileUser?.batch }}</p>
+                <p class="text-gray-500">{{ selectedProfileUser?.headline || selectedProfileUser?.current_job_title || 'Alumni' }}</p>
+              </div>
+            </div>
+            <button @click="showProfileModal = false" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="border-b border-gray-200 mb-6">
+            <nav class="flex space-x-6">
+              <button
+                v-for="tab in profileTabs"
+                :key="tab.key"
+                @click="activeProfileTab = tab.key"
+                :class="[
+                  'py-2 px-1 border-b-2 font-medium text-sm',
+                  activeProfileTab === tab.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                ]"
+              >
+                {{ tab.label }}
+              </button>
+            </nav>
+          </div>
+
+          <div v-if="activeProfileTab === 'about'">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">About</h3>
+                <p class="text-gray-700 mb-4">{{ selectedProfileUser?.bio || 'No bio available' }}</p>
+                <div class="space-y-2 text-sm">
+                  <div><span class="text-gray-500">Email:</span> <span class="text-gray-700">{{ selectedProfileUser?.email || 'N/A' }}</span></div>
+                  <div><span class="text-gray-500">Location:</span> <span class="text-gray-700">{{ selectedProfileUser?.city || 'N/A' }}{{ selectedProfileUser?.country ? `, ${selectedProfileUser.country}` : '' }}</span></div>
+                </div>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">Skills</h3>
+                <div class="flex flex-wrap gap-2 mb-4">
+                  <span
+                    v-for="skill in selectedProfileUser?.skills || []"
+                    :key="skill"
+                    class="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full"
+                  >
+                    {{ skill }}
+                  </span>
+                  <span v-if="(selectedProfileUser?.skills || []).length === 0" class="text-sm text-gray-500">No skills listed</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">Links</h3>
+                <div class="space-y-2 text-sm">
+                  <div>
+                    <span class="text-gray-500">LinkedIn:</span>
+                    <a v-if="selectedProfileUser?.linkedin_url" :href="formatUrl(selectedProfileUser.linkedin_url)" target="_blank" class="text-blue-600 hover:text-blue-800 break-all">
+                      {{ selectedProfileUser.linkedin_url }}
+                    </a>
+                    <span v-else class="text-gray-700">N/A</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-500">Personal URL:</span>
+                    <a v-if="selectedProfileUser?.portfolio_url" :href="formatUrl(selectedProfileUser.portfolio_url)" target="_blank" class="text-blue-600 hover:text-blue-800 break-all">
+                      {{ selectedProfileUser.portfolio_url }}
+                    </a>
+                    <span v-else class="text-gray-700">N/A</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="activeProfileTab === 'experience'">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Work Experience</h3>
+            <div v-if="selectedProfileUser?.current_job_title || selectedProfileUser?.industry" class="space-y-4">
+              <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <div class="w-12 h-12 bg-blue-100 rounded flex items-center justify-center text-blue-600 font-bold flex-shrink-0">
+                    💼
+                  </div>
+                  <div class="flex-1">
+                    <h4 class="font-medium text-gray-900">{{ selectedProfileUser?.current_job_title || 'Current Role' }}</h4>
+                    <p v-if="selectedProfileUser?.industry" class="text-sm text-gray-600">{{ selectedProfileUser.industry }}</p>
+                    <p v-if="selectedProfileUser?.years_of_experience" class="text-sm text-gray-600">{{ selectedProfileUser.years_of_experience }} years experience</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p v-else class="text-sm text-gray-500">No experience details available.</p>
+          </div>
+
+          <div class="flex justify-end space-x-2 mt-6">
+            <button @click="showProfileModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+              Close
+            </button>
+            <button @click="startProfileMessage" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              Send Message
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -358,7 +515,12 @@ const isTyping = ref(false)
 const showNewMessageModal = ref(false)
 const newMessageRecipient = ref('')
 const newMessageContent = ref('')
-const loading = ref(false)
+const recipientSearch = ref('')
+const recipientDropdownOpen = ref(false)
+const showProfileModal = ref(false)
+const selectedProfileUser = ref(null)
+const activeProfileTab = ref('about')
+const messageInput = ref(null)
 
 // Polling
 const pollingInterval = ref(null)
@@ -382,7 +544,6 @@ const sortMessages = (messages) => {
 }
 
 const fetchConversations = async () => {
-  loading.value = true
   try {
     const response = await axios.get('/api/messages')
     if (response?.data?.success && Array.isArray(response.data.data)) {
@@ -393,8 +554,6 @@ const fetchConversations = async () => {
   } catch (error) {
     console.error('Error fetching conversations:', error)
     conversations.value = []
-  } finally {
-    loading.value = false
   }
 }
 
@@ -495,24 +654,45 @@ const loadAvailableUsers = async () => {
 }
 
 const availableUsers = ref([])
+const profileTabs = [
+  { key: 'about', label: 'About' },
+  { key: 'experience', label: 'Experience' }
+]
 
 // Computed properties
 const messageFilters = computed(() => [
   { key: 'all', label: 'All', count: conversations.value.length },
-  { key: 'unread', label: 'Unread', count: conversations.value.reduce((sum, conv) => sum + conv.unread_count, 0) },
-  { key: 'starred', label: 'Starred', count: 0 },
-  { key: 'archived', label: 'Archived', count: 0 }
+  { key: 'unread', label: 'Unread', count: conversations.value.reduce((sum, conv) => sum + conv.unread_count, 0) }
 ])
+
+const searchTerm = computed(() => searchQuery.value.trim().toLowerCase())
+const recipientTerm = computed(() => recipientSearch.value.trim().toLowerCase())
+const filteredAvailableUsers = computed(() => {
+  if (!recipientTerm.value) return availableUsers.value
+  return availableUsers.value.filter(user =>
+    user.full_name?.toLowerCase().includes(recipientTerm.value) ||
+    user.email?.toLowerCase().includes(recipientTerm.value) ||
+    user.program?.toLowerCase().includes(recipientTerm.value) ||
+    user.batch?.toString().toLowerCase().includes(recipientTerm.value) ||
+    user.headline?.toLowerCase().includes(recipientTerm.value)
+  )
+})
+
+const selectedRecipientLabel = computed(() => {
+  const user = availableUsers.value.find(u => u.id === newMessageRecipient.value)
+  return user ? user.full_name : ''
+})
 
 const filteredConversations = computed(() => {
   let filtered = conversations.value
 
   // Apply search filter
-  if (searchQuery.value) {
+  if (searchTerm.value) {
     filtered = filtered.filter(conv => 
-      conv.other_user?.first_name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      conv.other_user?.last_name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      conv.last_message?.content?.toLowerCase().includes(searchQuery.value.toLowerCase())
+      conv.other_user?.first_name?.toLowerCase().includes(searchTerm.value) ||
+      conv.other_user?.last_name?.toLowerCase().includes(searchTerm.value) ||
+      conv.other_user?.email?.toLowerCase().includes(searchTerm.value) ||
+      conv.last_message?.content?.toLowerCase().includes(searchTerm.value)
     )
   }
 
@@ -520,12 +700,6 @@ const filteredConversations = computed(() => {
   switch (activeFilter.value) {
     case 'unread':
       filtered = filtered.filter(conv => conv.unread_count > 0)
-      break
-    case 'starred':
-      // Implement starred logic
-      break
-    case 'archived':
-      // Implement archived logic
       break
   }
 
@@ -537,6 +711,7 @@ const selectConversation = (conversation) => {
   selectedConversation.value = conversation
   // Load messages for this conversation
   loadMessages(conversation.other_user.id)
+  loadSelectedUserProfile(conversation.other_user.id)
 }
 
 const sendMessage = async () => {
@@ -586,6 +761,8 @@ const sendNewMessage = async () => {
       showNewMessageModal.value = false
       newMessageRecipient.value = ''
       newMessageContent.value = ''
+      recipientSearch.value = ''
+      recipientDropdownOpen.value = false
       
       // Refresh conversations
       await fetchConversations()
@@ -595,34 +772,167 @@ const sendNewMessage = async () => {
   }
 }
 
+const normalizeSkills = (skills) => {
+  if (Array.isArray(skills)) return skills
+  if (!skills) return []
+  if (typeof skills === 'string') {
+    try {
+      const parsed = JSON.parse(skills)
+      if (Array.isArray(parsed)) return parsed
+      if (typeof parsed === 'string') {
+        return parsed.split(',').map(s => s.trim()).filter(Boolean)
+      }
+      return []
+    } catch (error) {
+      return skills.split(',').map(s => s.trim()).filter(Boolean)
+    }
+  }
+  return []
+}
+
+const loadSelectedUserProfile = async (userId) => {
+  if (!userId) {
+    selectedProfileUser.value = null
+    return
+  }
+  try {
+    const response = await axios.get(`/api/users/${userId}`)
+    if (response?.data?.success && response.data.data) {
+      const user = response.data.data
+      selectedProfileUser.value = {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        full_name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        program: user.program,
+        batch: user.batch,
+        headline: user.headline,
+        current_job_title: user.current_job_title,
+        bio: user.bio,
+        city: user.city,
+        country: user.country,
+        industry: user.industry,
+        years_of_experience: user.years_of_experience,
+        linkedin_url: user.linkedin_url,
+        portfolio_url: user.portfolio_url,
+        skills: normalizeSkills(user.skills),
+        profile_picture: user.profile_picture
+      }
+    } else {
+      selectedProfileUser.value = null
+    }
+  } catch (error) {
+    selectedProfileUser.value = null
+  }
+}
+
+const openProfileModal = async () => {
+  if (!selectedConversation.value?.other_user?.id) return
+  await loadSelectedUserProfile(selectedConversation.value.other_user.id)
+  showProfileModal.value = true
+  activeProfileTab.value = 'about'
+}
+
+const startProfileMessage = async () => {
+  if (!selectedProfileUser.value?.id) return
+  try {
+    const response = await axios.post('/api/messages', {
+      receiver_id: selectedProfileUser.value.id,
+      content: "Hi! I'd like to connect."
+    })
+    if (response?.data?.success) {
+      await fetchConversations()
+      const conversation = conversations.value.find(c => c.other_user?.id === selectedProfileUser.value.id)
+      if (conversation) {
+        selectConversation(conversation)
+      }
+      showProfileModal.value = false
+    }
+  } catch (error) {
+    showProfileModal.value = false
+  }
+}
+
+const formatUrl = (url) => {
+  if (!url) return ''
+  return url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`
+}
+
+const getProfilePictureUrl = (profilePicture) => {
+  if (!profilePicture) return ''
+  if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) return profilePicture
+  const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
+  if (profilePicture.startsWith('/uploads/')) return `${baseUrl}${profilePicture}`
+  return `${baseUrl}/uploads/profile_pictures/${profilePicture}`
+}
+
+const onRecipientSearchInput = () => {
+  recipientDropdownOpen.value = true
+  newMessageRecipient.value = ''
+}
+
+const selectRecipient = (user) => {
+  newMessageRecipient.value = user.id
+  recipientSearch.value = user.full_name
+  recipientDropdownOpen.value = false
+}
+
+const closeRecipientDropdown = () => {
+  setTimeout(() => {
+    recipientDropdownOpen.value = false
+  }, 150)
+}
+
+const parseMessageDate = (value) => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  const stringValue = String(value)
+  if (/[zZ]|[+-]\d{2}:\d{2}$/.test(stringValue)) {
+    const withoutZone = stringValue.replace(/([zZ]|[+-]\d{2}:\d{2})$/, '')
+    if (withoutZone.includes('T')) {
+      const [datePart, timePart] = withoutZone.split('T')
+      return buildLocalDateTime(datePart, timePart)
+    }
+    if (withoutZone.includes(' ')) {
+      const [datePart, timePart] = withoutZone.split(' ')
+      return buildLocalDateTime(datePart, timePart)
+    }
+  }
+  return new Date(stringValue)
+}
+
+const buildLocalDateTime = (datePart, timePart = '00:00:00') => {
+  const [year, month, day] = (datePart || '').split('-').map(Number)
+  if (!year || !month || !day) return new Date(datePart)
+  const [hour, minute, second] = (timePart || '').split(':').map(Number)
+  return new Date(year, month - 1, day, hour || 0, minute || 0, second || 0)
+}
+
 const formatTime = (date) => {
-  if (!date) return ''
-  
+  const messageDate = parseMessageDate(date)
+  if (!messageDate || Number.isNaN(messageDate.getTime())) return ''
   const now = new Date()
-  const messageDate = new Date(date)
   const diff = now - messageDate
-  
-  // Just now (< 60 seconds)
+
   if (diff < 60000) return 'Just now'
-  
-  // Minutes (< 60 minutes)
   const minutes = Math.floor(diff / 60000)
-  if (minutes < 60) return `${minutes}m ago`
-  
-  // Hours (< 24 hours)
+  if (minutes < 60) return `${minutes}m`
   const hours = Math.floor(diff / 3600000)
-  if (hours < 24) return `${hours}h ago`
-  
-  // Days (< 7 days)
+  if (hours < 24) return `${hours}h`
   const days = Math.floor(diff / 86400000)
-  if (days < 7) return `${days}d ago`
-  
-  // Full date for older messages
-  return messageDate.toLocaleDateString('en-US', {
+  if (days < 7) return `${days}d`
+
+  const datePart = messageDate.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: messageDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
   })
+  const timePart = messageDate.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit'
+  })
+  return `${datePart} ${timePart}`
 }
 
 onMounted(() => {

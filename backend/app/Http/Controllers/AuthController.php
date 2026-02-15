@@ -2,12 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Mail\UserRegistrationNotification;
+use App\Models\AdminLog;
+use App\Models\User;
+use App\Http\Requests\Auth\ChangePasswordRequest;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -17,33 +25,19 @@ class AuthController extends Controller
      * Note: Admin role is not available for public registration
      * Only 'alumni' role is allowed
      */
-    public function register(Request $request)
+    public function register(RegisterRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|string|in:alumni',
-            'program' => 'nullable|string|max:255',
-            'batch' => 'nullable|integer|min:1990|max:' . date('Y'),
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $validated = $request->validated();
 
         $user = User::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-            'program' => $request->program,
-            'batch' => $request->batch,
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role' => $validated['role'],
+            'program' => $validated['program'] ?? null,
+            'batch' => $validated['batch'] ?? null,
+            'highest_educational_attainment' => $validated['highest_educational_attainment'] ?? null,
             'is_verified' => false, // New users require admin approval
         ]);
 
@@ -54,7 +48,7 @@ class AuthController extends Controller
                 Mail::to($admin->email)->send(new UserRegistrationNotification($user));
             }
         } catch (\Exception $e) {
-            \Log::error('Failed to send registration notification: ' . $e->getMessage());
+            Log::error('Failed to send registration notification: ' . $e->getMessage());
         }
         
         return response()->json([
@@ -67,37 +61,176 @@ class AuthController extends Controller
     /**
      * Login user
      */
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $user = User::where('email', $validated['email'])->first();
 
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
 
-        // Create token
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $storedPassword = $user->password;
+        $hashInfo = Hash::info($storedPassword);
+        if (($hashInfo['algo'] ?? 0) === 0) {
+            if (!hash_equals((string) $storedPassword, (string) $validated['password'])) {
+                throw ValidationException::withMessages([
+                    'email' => ['The provided credentials are incorrect.'],
+                ]);
+            }
+        } else {
+            if (!Hash::check($validated['password'], $storedPassword)) {
+                throw ValidationException::withMessages([
+                    'email' => ['The provided credentials are incorrect.'],
+                ]);
+            }
+        }
+
+        if ($user->role !== 'admin' && $user->status === 'suspended') {
+            return response()->json([
+                'message' => "You're Account has been suspended"
+            ], 403);
+        }
+        
+        if ($user->role !== 'admin' && ($user->is_active === false || $user->status === 'inactive')) {
+            return response()->json([
+                'message' => 'Your account has been deactivated.'
+            ], 403);
+        }
+
+        // Check if user is verified (admins bypass this check)
+        if ($user->role !== 'admin' && Schema::hasColumn('users', 'is_verified') && !$user->is_verified) {
+            return response()->json([
+                'message' => 'Your account is pending verification by our administrators. Please check back later or contact support.',
+                'requires_verification' => true
+            ], 403);
+        }
+
+        $token = null;
+        if ($request->filled('device_name')) {
+            $token = $user->createToken(
+                $request->string('device_name'),
+                $this->tokenAbilitiesFor($user)
+            )->plainTextToken;
+        } elseif ($request->hasSession()) {
+            Auth::login($user);
+            $request->session()->regenerate();
+        } else {
+            return response()->json([
+                'message' => 'device_name is required for token authentication.'
+            ], 422);
+        }
+        $warning = null;
+        if (Schema::hasTable('user_warnings')) {
+            $query = DB::table('user_warnings')->where('user_id', $user->id);
+            if (Schema::hasColumn('user_warnings', 'is_acknowledged')) {
+                $query->where('is_acknowledged', false);
+            } elseif (Schema::hasColumn('user_warnings', 'is_read')) {
+                $query->where('is_read', false);
+            }
+            $warning = $query->orderBy('created_at', 'desc')->first();
+        }
+
+        $responsePayload = [
+            'message' => 'Login successful',
+            'user' => $user,
+            'role' => $user->role,
+            'warning' => $warning ? [
+                'id' => $warning->id,
+                'message' => $warning->warning_message ?? $warning->message ?? null
+            ] : null
+        ];
+
+        if ($token) {
+            $responsePayload['token'] = $token;
+        }
+
+        $this->logAuthEvent($user, 'login');
+
+        return response()->json($responsePayload);
+    }
+
+    public function pendingWarning(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        if ($user->role === 'admin') {
+            return response()->json(['warning' => null]);
+        }
+
+        $warning = null;
+        if (Schema::hasTable('user_warnings')) {
+            $query = DB::table('user_warnings')->where('user_id', $user->id);
+            if (Schema::hasColumn('user_warnings', 'is_acknowledged')) {
+                $query->where('is_acknowledged', false);
+            } elseif (Schema::hasColumn('user_warnings', 'is_read')) {
+                $query->where('is_read', false);
+            }
+            $warning = $query->orderBy('created_at', 'desc')->first();
+        }
 
         return response()->json([
-            'message' => 'Login successful',
-            'token' => $token,
-            'user' => $user,
-            'role' => $user->role
+            'warning' => $warning ? [
+                'id' => $warning->id,
+                'message' => $warning->warning_message ?? $warning->message ?? null
+            ] : null
         ]);
+    }
+
+    public function acknowledgeWarning(Request $request, $warningId)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        if (!Schema::hasTable('user_warnings')) {
+            return response()->json(['message' => 'Warning system not available.'], 404);
+        }
+
+        $query = DB::table('user_warnings')
+            ->where('id', $warningId)
+            ->where('user_id', $user->id);
+        if (Schema::hasColumn('user_warnings', 'is_acknowledged')) {
+            $query->where('is_acknowledged', false);
+        } elseif (Schema::hasColumn('user_warnings', 'is_read')) {
+            $query->where('is_read', false);
+        }
+        $warning = $query->first();
+
+        if (!$warning) {
+            return response()->json(['message' => 'Warning not found.'], 404);
+        }
+
+        $updatePayload = ['updated_at' => now()];
+        if (Schema::hasColumn('user_warnings', 'is_acknowledged')) {
+            $updatePayload['is_acknowledged'] = true;
+        } elseif (Schema::hasColumn('user_warnings', 'is_read')) {
+            $updatePayload['is_read'] = true;
+        }
+        DB::table('user_warnings')
+            ->where('id', $warningId)
+            ->update($updatePayload);
+
+        $ackMessage = 'User #' . $user->id . ' acknowledged warning #' . $warningId;
+        AdminLog::create([
+            'user_id' => $user->id,
+            'action' => $ackMessage,
+            'model_type' => 'UserWarning',
+            'model_id' => $warningId,
+            'details' => json_encode([
+                'user_id' => $user->id,
+                'warning_id' => $warningId
+            ]),
+        ]);
+
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -113,7 +246,21 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        if ($user && $user->currentAccessToken()) {
+            $user->currentAccessToken()->delete();
+        }
+
+        if (Auth::guard('web')->check()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        if ($user) {
+            $this->logAuthEvent($user, 'logout');
+        }
 
         return response()->json([
             'message' => 'Logged out successfully'
@@ -131,16 +278,19 @@ class AuthController extends Controller
             'first_name' => 'sometimes|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'sometimes|string|max:255',
-            'suffix' => 'nullable|string|in:Jr.,Sr.,II,III,IV',
+            'suffix' => 'nullable|string|max:20',
+            'birthdate' => 'nullable|date',
             'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
             'headline' => 'nullable|string|max:255',
             'bio' => 'nullable|string|max:1000',
             // Contact & Socials
+            'phone_number' => 'nullable|string|max:20|regex:/^[0-9]+$/',
             'linkedin_url' => 'nullable|url|max:255',
             'portfolio_url' => 'nullable|url|max:255',
             // Education
             'program' => 'nullable|string|max:255',
             'batch' => 'nullable|string|max:20',
+            'highest_educational_attainment' => 'nullable|in:elementary,high_school,senior_high,bachelors,masters,doctorate',
             // Location
             'city' => 'nullable|string|max:100',
             'country' => 'nullable|string|max:100',
@@ -149,8 +299,9 @@ class AuthController extends Controller
             'industry' => 'nullable|string|max:100',
             'experience_level' => 'nullable|string|max:50',
             'employment_status' => 'nullable|in:employed_full_time,employed_part_time,self_employed,in_study,unemployed_looking,unemployed_not_looking',
-            'years_of_experience' => 'nullable|in:0-2,3-5,6-10,10+',
-            'salary_range' => 'nullable|in:prefer_not_to_say,20000-39999,40000-59999,60000-79999,80000-99999,100000+',
+            'employment_sector' => 'nullable|in:public_government,private,ngo_nonprofit',
+            'years_of_experience' => 'nullable|numeric|min:0|max:100',
+            'salary_range' => 'nullable|string|max:100',
             // Skills (array of standardized skill names)
             'skills' => 'nullable|array',
             'skills.*' => 'string|max:100',
@@ -163,6 +314,10 @@ class AuthController extends Controller
             'industries_of_interest.*' => 'string|max:100',
             // Visibility Settings
             'visibility_settings' => 'nullable|array',
+            // Privacy Settings
+            'privacy_settings' => 'nullable|array',
+            'is_lcba_employee_faculty' => 'nullable|boolean',
+            'lcba_employee_id_photo' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp|max:5120',
         ]);
 
         if ($validator->fails()) {
@@ -184,16 +339,78 @@ class AuthController extends Controller
             }
         }
 
-        $user->update($request->only([
-            'first_name', 'last_name', 'email', 'headline', 'bio',
-            'public_email', 'linkedin_url', 'portfolio_url',
-            'program', 'batch',
+        $updateData = $request->only([
+            'first_name', 'middle_name', 'last_name', 'suffix',
+            'birthdate', 'email', 'headline', 'bio',
+            'public_email', 'phone_number', 'linkedin_url', 'portfolio_url',
+            'program', 'batch', 'highest_educational_attainment',
             'city', 'country',
             'current_job_title', 'industry', 'experience_level',
-            'employment_status', 'years_of_experience', 'salary_range',
+            'employment_status', 'employment_sector', 'years_of_experience', 'salary_range',
             'skills',
-            'work_setup_preferences', 'employment_type_preferences', 'industries_of_interest'
-        ]));
+            'work_setup_preferences', 'employment_type_preferences', 'industries_of_interest',
+            'privacy_settings',
+            'is_lcba_employee_faculty'
+        ]);
+
+        $hasEmployeeFlagColumn = Schema::hasColumn('users', 'is_lcba_employee_faculty');
+        $hasEmployeeIdColumn = Schema::hasColumn('users', 'lcba_employee_id');
+        $hasVerificationStatusColumn = Schema::hasColumn('users', 'lcba_verification_status');
+
+        if (!$hasEmployeeFlagColumn) {
+            unset($updateData['is_lcba_employee_faculty']);
+        }
+
+        if ($request->has('is_lcba_employee_faculty') && !$request->boolean('is_lcba_employee_faculty')) {
+            if ($hasEmployeeIdColumn && $user->lcba_employee_id) {
+                $storageOldPath = storage_path('app/employee_ids/' . $user->lcba_employee_id);
+                $publicOldPath = public_path('uploads/employee_ids/' . $user->lcba_employee_id);
+                if (file_exists($storageOldPath)) {
+                    unlink($storageOldPath);
+                }
+                if (file_exists($publicOldPath)) {
+                    unlink($publicOldPath);
+                }
+            }
+            if ($hasEmployeeIdColumn) {
+                $updateData['lcba_employee_id'] = null;
+            }
+            if ($hasVerificationStatusColumn) {
+                $updateData['lcba_verification_status'] = null;
+            }
+        }
+
+        if ($request->hasFile('lcba_employee_id_photo') && $hasEmployeeIdColumn) {
+            $uploadPath = storage_path('app/employee_ids');
+            if (!file_exists($uploadPath)) {
+                mkdir($uploadPath, 0755, true);
+            }
+
+            if ($user->lcba_employee_id) {
+                $storageOldPath = storage_path('app/employee_ids/' . $user->lcba_employee_id);
+                $publicOldPath = public_path('uploads/employee_ids/' . $user->lcba_employee_id);
+                if (file_exists($storageOldPath)) {
+                    unlink($storageOldPath);
+                }
+                if (file_exists($publicOldPath)) {
+                    unlink($publicOldPath);
+                }
+            }
+
+            $file = $request->file('lcba_employee_id_photo');
+            $filename = $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move($uploadPath, $filename);
+
+            $updateData['lcba_employee_id'] = $filename;
+            if ($hasVerificationStatusColumn) {
+                $updateData['lcba_verification_status'] = 'pending';
+            }
+            if ($hasEmployeeFlagColumn) {
+                $updateData['is_lcba_employee_faculty'] = true;
+            }
+        }
+
+        $user->update($updateData);
 
         return response()->json([
             'message' => 'Profile updated successfully',
@@ -204,11 +421,80 @@ class AuthController extends Controller
     /**
      * Change password
      */
-    public function changePassword(Request $request)
+    public function changePassword(ChangePasswordRequest $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validated();
+
+        if (!Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect'
+            ], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($validated['password'])
+        ]);
+
+        return response()->json([
+            'message' => 'Password changed successfully'
+        ]);
+    }
+
+    private function tokenAbilitiesFor(User $user): array
+    {
+        return $user->role === 'admin' ? ['admin'] : ['user'];
+    }
+
+    private function logAuthEvent(User $user, string $action): void
+    {
+        if (!Schema::hasTable('admin_logs')) {
+            return;
+        }
+
+        AdminLog::create([
+            'user_id' => $user->id,
+            'action' => $action,
+            'model_type' => 'User',
+            'model_id' => $user->id,
+            'details' => json_encode([
+                'email' => $user->email,
+                'role' => $user->role,
+            ]),
+        ]);
+    }
+
+    /**
+     * Accept community guidelines (for first-time login)
+     */
+    public function acceptGuidelines(Request $request)
+    {
+        $user = $request->user();
+
+        // Set guidelines accepted timestamp
+        $user->guidelines_accepted_at = now();
+        
+        // Set first login timestamp if this is the first time
+        if ($user->first_login_at === null) {
+            $user->first_login_at = now();
+        }
+        
+        $user->save();
+
+        return response()->json([
+            'message' => 'Guidelines accepted successfully',
+            'user' => $user->fresh()
+        ]);
+    }
+
+    /**
+     * Upload profile picture
+     */
+    public function uploadProfilePicture(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'current_password' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
+            'profile_picture' => 'required|image|mimes:jpg,jpeg,png,gif,webp|max:5120', // 5MB max
         ]);
 
         if ($validator->fails()) {
@@ -220,18 +506,33 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json([
-                'message' => 'Current password is incorrect'
-            ], 422);
+        // Delete old profile picture if exists
+        if ($user->profile_picture) {
+            $oldPath = public_path('uploads/profile_pictures/' . $user->profile_picture);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
         }
 
-        $user->update([
-            'password' => Hash::make($request->password)
-        ]);
+        // Create directory if it doesn't exist
+        $uploadPath = public_path('uploads/profile_pictures');
+        if (!file_exists($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
+
+        // Store new profile picture
+        $file = $request->file('profile_picture');
+        $filename = $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+        $file->move($uploadPath, $filename);
+
+        // Update user record
+        $user->profile_picture = $filename;
+        $user->save();
 
         return response()->json([
-            'message' => 'Password changed successfully'
+            'message' => 'Profile picture uploaded successfully',
+            'profile_picture_url' => '/uploads/profile_pictures/' . $filename,
+            'user' => $user->fresh()
         ]);
     }
 

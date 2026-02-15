@@ -43,7 +43,7 @@
               @click="showPassword = !showPassword"
               class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              <svg v-if="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
               </svg>
@@ -55,17 +55,7 @@
           <p v-if="errors.password" class="text-red-500 text-sm mt-1">{{ errors.password }}</p>
         </div>
 
-        <div class="flex items-center justify-between">
-          <label class="flex items-center">
-            <input
-              v-model="form.remember"
-              type="checkbox"
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span class="ml-2 text-sm text-gray-600">Remember me</span>
-          </label>
-          <a href="#" class="text-sm text-blue-600 hover:text-blue-800">Forgot password?</a>
-        </div>
+
 
         <button
           type="submit"
@@ -171,8 +161,6 @@ const handleLogin = async () => {
     const userRole = authStore.user?.role
     if (userRole === 'admin') {
       router.push('/')
-    } else if (userRole === 'mentor') {
-      router.push('/')
     } else if (userRole === 'alumni') {
       router.push('/')
     } else {
@@ -180,7 +168,20 @@ const handleLogin = async () => {
     }
   } catch (error) {
     console.error('Login error:', error)
-    errorMessage.value = error.response?.data?.message || 'Login failed. Please check your credentials.'
+    const status = error.response?.status
+    const message = error.response?.data?.message
+    const emailError = error.response?.data?.errors?.email?.[0]
+    if (message && message.toLowerCase().includes('validation error')) {
+      errorMessage.value = 'Invalid email or password. Please try again.'
+    } else if (emailError) {
+      errorMessage.value = 'Invalid email or password. Please try again.'
+    } else if (message) {
+      errorMessage.value = message
+    } else if (status === 403) {
+      errorMessage.value = 'Your account is not allowed to login.'
+    } else {
+      errorMessage.value = 'Invalid email or password. Please try again.'
+    }
   } finally {
     loading.value = false
   }

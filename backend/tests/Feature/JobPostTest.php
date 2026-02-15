@@ -16,7 +16,7 @@ class JobPostTest extends TestCase
      */
     public function test_user_can_create_job_post(): void
     {
-        $user = User::factory()->create();
+        $user = $this->createUser();
 
         $response = $this->actingAs($user)
                          ->postJson('/api/job-posts', [
@@ -40,17 +40,17 @@ class JobPostTest extends TestCase
      */
     public function test_admin_can_approve_job_post(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = $this->createUser(['role' => 'admin']);
         $job = JobPost::factory()->create(['status' => 'pending']);
 
         $response = $this->actingAs($admin)
-                         ->postJson("/api/admin/jobs/{$job->id}/approve");
+                         ->postJson("/api/admin/jobs/{$job->job_id}/approve");
 
         $response->assertStatus(200)
                  ->assertJson(['success' => true]);
 
         $this->assertDatabaseHas('job_posts', [
-            'id' => $job->id,
+            'job_id' => $job->job_id,
             'status' => 'approved',
         ]);
     }
@@ -60,18 +60,18 @@ class JobPostTest extends TestCase
      */
     public function test_admin_can_reject_job_post(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $admin = $this->createUser(['role' => 'admin']);
         $job = JobPost::factory()->create(['status' => 'pending']);
 
         $response = $this->actingAs($admin)
-                         ->postJson("/api/admin/jobs/{$job->id}/reject", [
+                         ->postJson("/api/admin/jobs/{$job->job_id}/reject", [
                              'reason' => 'Inappropriate content'
                          ]);
 
         $response->assertStatus(200);
 
         $this->assertDatabaseHas('job_posts', [
-            'id' => $job->id,
+            'job_id' => $job->job_id,
             'status' => 'rejected',
         ]);
     }
@@ -81,11 +81,11 @@ class JobPostTest extends TestCase
      */
     public function test_non_admin_cannot_approve_job(): void
     {
-        $user = User::factory()->create(['role' => 'alumni']);
+        $user = $this->createUser(['role' => 'alumni']);
         $job = JobPost::factory()->create(['status' => 'pending']);
 
         $response = $this->actingAs($user)
-                         ->postJson("/api/admin/jobs/{$job->id}/approve");
+                         ->postJson("/api/admin/jobs/{$job->job_id}/approve");
 
         $response->assertStatus(403);
     }
@@ -101,5 +101,10 @@ class JobPostTest extends TestCase
         ]);
 
         $response->assertStatus(401);
+    }
+
+    private function createUser(array $overrides = []): User
+    {
+        return User::factory()->createOne($overrides);
     }
 }

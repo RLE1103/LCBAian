@@ -8,11 +8,11 @@
           <p class="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">Here's what's happening in your LCBAian network today</p>
         </div>
         <div class="flex items-center space-x-4">
-          <button @click="refreshData" class="bg-blue-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm md:text-base">
+          <button @click="refreshData" :disabled="loading" class="bg-blue-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm md:text-base disabled:opacity-60 disabled:cursor-not-allowed">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            <span class="hidden sm:inline">Refresh</span>
+            <span class="hidden sm:inline">{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
             </button>
           </div>
           </div>
@@ -97,7 +97,6 @@
         <div class="bg-white rounded-xl shadow-lg p-4 md:p-6">
           <div class="flex items-center justify-between mb-4 md:mb-6">
             <h2 class="text-lg md:text-xl font-bold text-gray-900">Recent Activity</h2>
-            <button class="text-blue-600 hover:text-blue-800 text-xs md:text-sm font-medium">View All</button>
           </div>
           <div class="space-y-3 md:space-y-4">
             <div v-for="activity in recentActivity" :key="activity.id" class="flex items-start space-x-3 md:space-x-4 p-3 md:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
@@ -362,6 +361,10 @@ const loading = ref(false)
 
 // Fetch dashboard data
 const fetchDashboardData = async () => {
+  if (!authStore.isAuthenticated) {
+    loading.value = false
+    return
+  }
   loading.value = true
   try {
     // Fetch messages count
@@ -537,7 +540,74 @@ const fetchDashboardData = async () => {
       }))
     }
 
+    const notificationsList = []
+    if (stats.value.unreadMessages > 0) {
+      const unreadLabel = stats.value.unreadMessages === 1 ? 'message' : 'messages'
+      notificationsList.push({
+        id: 'unread-messages',
+        title: 'Unread messages',
+        message: `You have ${stats.value.unreadMessages} unread ${unreadLabel}.`,
+        timestamp: messagesData[0]?.sent_at ? new Date(messagesData[0].sent_at) : new Date(),
+        read: false
+      })
+    }
+
+    if (messagesData.length > 0 && stats.value.unreadMessages > 0) {
+      const latestMessage = messagesData[0]
+      notificationsList.push({
+        id: `message-${latestMessage.id || 'latest'}`,
+        title: 'New message',
+        message: `Message from ${latestMessage.other_user?.first_name || 'someone'}`,
+        timestamp: latestMessage.sent_at ? new Date(latestMessage.sent_at) : new Date(),
+        read: false
+      })
+    }
+
+    if (eventsData.length > 0) {
+      const latestEvent = eventsData[0]
+      notificationsList.push({
+        id: `event-new-${latestEvent.id}`,
+        title: 'New event posted',
+        message: latestEvent.title,
+        timestamp: latestEvent.created_at ? new Date(latestEvent.created_at) : new Date(),
+        read: false
+      })
+    }
+
+    if (jobsData.length > 0) {
+      const latestJob = jobsData[0]
+      notificationsList.push({
+        id: `job-${latestJob.id}`,
+        title: 'New job posted',
+        message: `${latestJob.title} at ${latestJob.company_name}`,
+        timestamp: latestJob.created_at ? new Date(latestJob.created_at) : new Date(),
+        read: false
+      })
+    }
+
+    if (postsData.length > 0) {
+      const latestPost = postsData[0]
+      notificationsList.push({
+        id: `post-${latestPost.post_id || latestPost.id || 'latest'}`,
+        title: 'New post',
+        message: `${latestPost.user?.first_name || 'Someone'} shared a post`,
+        timestamp: latestPost.created_at ? new Date(latestPost.created_at) : new Date(),
+        read: false
+      })
+    }
+
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - 30)
+
+    notifications.value = notificationsList
+      .filter(notification => notification.timestamp instanceof Date && !Number.isNaN(notification.timestamp))
+      .filter(notification => notification.timestamp >= cutoffDate)
+      .sort((a, b) => b.timestamp - a.timestamp)
+
   } catch (error) {
+    if (error.response?.status === 401) {
+      return
+    }
     console.error('Error fetching dashboard data:', error)
   } finally {
     loading.value = false
@@ -546,18 +616,29 @@ const fetchDashboardData = async () => {
 
 // Methods
 const formatTime = (timestamp) => {
+  const date = timestamp instanceof Date ? timestamp : new Date(timestamp)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
   const now = new Date()
-  const diff = now - timestamp
+  const diff = now - date
+  if (!Number.isFinite(diff) || diff < 0) {
+    return ''
+  }
   const minutes = Math.floor(diff / (1000 * 60))
   const hours = Math.floor(diff / (1000 * 60 * 60))
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
   if (minutes < 60) {
-    return `${minutes}m ago`
+    const value = Math.max(1, minutes)
+    return `${value}m ago`
   } else if (hours < 24) {
-    return `${hours}h ago`
+    const value = Math.max(1, hours)
+    const label = value === 1 ? 'hr' : 'hrs'
+    return `${value}${label} ago`
   } else {
-    return `${days}d ago`
+    const value = Math.max(1, days)
+    return `${value}d ago`
   }
 }
 
@@ -579,15 +660,23 @@ const handleActivityAction = (activity) => {
   }
 }
 
-const refreshData = () => {
-  // Refresh dashboard data
-  fetchDashboardData()
+const refreshData = async () => {
+  if (loading.value) return
+  const isAuthenticated = await authStore.checkAuth()
+  if (!isAuthenticated) {
+    router.push('/login')
+    return
+  }
+  await fetchDashboardData()
 }
 
 // Load initial data
-onMounted(() => {
+onMounted(async () => {
+  const isAuthenticated = await authStore.checkAuth()
+  if (!isAuthenticated) {
+    router.push('/login')
+    return
+  }
   fetchDashboardData()
 })
 </script>
-
-

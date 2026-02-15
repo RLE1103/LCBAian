@@ -117,34 +117,6 @@ class AdminJobApprovalController extends Controller
     }
 
     /**
-     * Flag a job post as potentially problematic
-     */
-    public function flag($id): JsonResponse
-    {
-        if (!$this->authorizeAdmin()) {
-            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
-        }
-
-        try {
-            $job = JobPost::findOrFail($id);
-            
-            $job->update(['status' => 'flagged']);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Job post flagged for review',
-                'data' => $job
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to flag job',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
      * Get job approval statistics
      */
     public function getStatistics(): JsonResponse
@@ -158,7 +130,6 @@ class AdminJobApprovalController extends Controller
                 'pending' => JobPost::where('status', 'pending')->count(),
                 'approved' => JobPost::where('status', 'approved')->count(),
                 'rejected' => JobPost::where('status', 'rejected')->count(),
-                'flagged' => JobPost::where('status', 'flagged')->count(),
                 'pending_this_week' => JobPost::where('status', 'pending')
                     ->where('created_at', '>=', now()->subWeek())
                     ->count(),

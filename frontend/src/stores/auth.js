@@ -1,54 +1,46 @@
 import { defineStore } from 'pinia'
-import axios from '../config/api'
+import axios, { getCsrfCookie } from '../config/api'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null,
-    token: localStorage.getItem('auth_token'),
-    isAuthenticated: false,
-    loading: false
+    user: JSON.parse(sessionStorage.getItem('user_data')) || null,
+    isAuthenticated: !!sessionStorage.getItem('user_data'),
+    loading: false,
+    pendingWarning: null,
+    skipAuthCheckUntil: 0
   }),
 
   getters: {
     isAdmin: (state) => state.user?.role === 'admin',
-    isMentor: (state) => state.user?.role === 'mentor',
     isAlumni: (state) => state.user?.role === 'alumni',
     userRole: (state) => state.user?.role,
     fullName: (state) => state.user ? `${state.user.first_name} ${state.user.last_name}` : ''
   },
 
   actions: {
-    // Set up axios defaults
-    setupAxios() {
-      if (this.token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
-      }
-    },
-
     // Login user
     async login(email, password) {
       this.loading = true
       try {
-        const response = await axios.post('/api/login', {
+        // Get CSRF cookie before login for Sanctum
+        await getCsrfCookie()
+
+        const response = await axios.post('/login', {
           email,
           password
         })
 
-        const { token, user } = response.data
-        
-        // Store token and user data
-        this.token = token
+        const { user, warning } = response.data
+
+        // Store user data
         this.user = user
         this.isAuthenticated = true
-        
-        // Save to localStorage
-        localStorage.setItem('auth_token', token)
-        localStorage.setItem('user_data', JSON.stringify(user))
-        
-        // Set up axios headers
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-        
-        return { token, user }
+        this.pendingWarning = warning || null
+
+        // Save user data to localStorage for persistence
+        sessionStorage.setItem('user_data', JSON.stringify(user))
+
+        return { user, warning }
       } catch (error) {
         this.logout()
         throw error
@@ -61,6 +53,9 @@ export const useAuthStore = defineStore('auth', {
     async register(userData) {
       this.loading = true
       try {
+        // Get CSRF cookie before register for Sanctum
+        await getCsrfCookie()
+
         const response = await axios.post('/api/register', userData)
         return response.data
       } catch (error) {
@@ -71,59 +66,57 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // Logout user
-    logout() {
-      this.user = null
-      this.token = null
-      this.isAuthenticated = false
-      
-      // Clear localStorage
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('user_data')
-      
-      // Remove axios headers
-      delete axios.defaults.headers.common['Authorization']
-    },
-
-    // Check if user is authenticated
-    async checkAuth() {
-      if (!this.token) {
-        this.logout()
-        return false
+    async logout() {
+      try {
+        await axios.post('/logout')
+      } catch (error) {
+        if (![401, 419].includes(error.response?.status)) {
+          console.error('Logout API call failed:', error)
+        }
       }
 
+      this.user = null
+      this.isAuthenticated = false
+      this.pendingWarning = null
+      this.skipAuthCheckUntil = Date.now() + 5000
+
+      // Clear localStorage
+      sessionStorage.removeItem('user_data')
+      sessionStorage.removeItem('auth_token')
+    },
+
+    // Check if user is authenticated via session
+    async checkAuth() {
+      if (Date.now() < this.skipAuthCheckUntil) {
+        return false
+      }
       try {
-        // Set up axios headers
-        axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
-        
-        // Fetch user data
+        // Fetch user data from backend to verify session
         const response = await axios.get('/api/user')
         this.user = response.data
         this.isAuthenticated = true
-        
+        sessionStorage.setItem('user_data', JSON.stringify(this.user))
         return true
       } catch (error) {
-        console.error('Auth check failed:', error)
-        this.logout()
+        const status = error.response?.status
+        // If 401 Unauthorized or 419 CSRF mismatch, we are strictly not logged in
+        if (status === 401 || status === 419) {
+          this.user = null
+          this.isAuthenticated = false
+          sessionStorage.removeItem('user_data')
+        }
         return false
       }
     },
 
-    // Initialize auth from localStorage
+    // Initialize auth
     async initAuth() {
-      const token = localStorage.getItem('auth_token')
-      const userData = localStorage.getItem('user_data')
-      
-      if (token && userData) {
-        this.token = token
-        this.user = JSON.parse(userData)
-        this.isAuthenticated = true
-        this.setupAxios()
-        
-        // Verify token is still valid
-        return await this.checkAuth()
+      if (!this.user) {
+        this.isAuthenticated = false
+        return false
       }
-      
-      return false
+
+      return await this.checkAuth()
     },
 
     // Update user profile
@@ -131,10 +124,10 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await axios.put('/api/user/profile', userData)
         this.user = { ...this.user, ...response.data }
-        
+
         // Update localStorage
-        localStorage.setItem('user_data', JSON.stringify(this.user))
-        
+        sessionStorage.setItem('user_data', JSON.stringify(this.user))
+
         return response.data
       } catch (error) {
         throw error
@@ -153,6 +146,23 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         throw error
       }
+    },
+
+    async fetchPendingWarning() {
+      try {
+        const response = await axios.get('/api/user/warnings/pending')
+        this.pendingWarning = response.data?.warning || null
+        return this.pendingWarning
+      } catch (error) {
+        this.pendingWarning = null
+        return null
+      }
+    },
+
+    async acknowledgeWarning(warningId) {
+      const response = await axios.post(`/api/user/warnings/${warningId}/acknowledge`)
+      this.pendingWarning = null
+      return response.data
     }
   }
 })

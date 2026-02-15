@@ -23,7 +23,7 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
           </svg>
-          {{ viewMode === 'list' ? 'View Calendar' : 'View List' }}
+          {{ viewMode === 'list' ? 'View Calendar' : 'View Events' }}
             </button>
           </div>
     </div>
@@ -116,18 +116,53 @@
                 'p-2 text-center text-sm cursor-pointer rounded-lg hover:bg-gray-100',
                 day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400',
                 day.isToday ? 'bg-blue-100 text-blue-600' : '',
-                day.hasEvents ? 'font-semibold' : ''
+                day.hasEvents ? 'font-semibold' : '',
+                day.isSelected ? 'bg-blue-600 text-white hover:bg-blue-600' : ''
               ]"
             >
               {{ day.day }}
               <div v-if="day.hasEvents" class="w-2 h-2 bg-blue-500 rounded-full mx-auto mt-1"></div>
                 </div>
               </div>
+              <div class="mt-6">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="text-sm font-semibold text-gray-900">Events on {{ selectedDateLabel }}</h3>
+                  <span class="text-xs text-gray-500">{{ selectedDateEvents.length }} total</span>
+                </div>
+                <div v-if="selectedDateEvents.length === 0" class="text-sm text-gray-500">
+                  No events scheduled
+                </div>
+                <div v-else class="space-y-3">
+                  <div
+                    v-for="event in selectedDateEvents"
+                    :key="event.id"
+                    class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer"
+                    @click="viewEvent(event)"
+                  >
+                    <div class="flex items-start justify-between">
+                      <div>
+                        <h4 class="text-sm font-medium text-gray-900">{{ event.title }}</h4>
+                        <p class="text-xs text-gray-600">{{ formatTime(event.start_date) }} - {{ formatTime(event.end_date) }}</p>
+                      </div>
+                  <span class="text-xs text-gray-500 flex items-center gap-2">
+                    <span>{{ event.location }}</span>
+                    <span v-if="event.user_rsvp === 'going'" class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded-full">
+                      Going
+                    </span>
+                  </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
         <!-- List View -->
         <div v-else class="space-y-4">
-          <div v-if="filteredEvents.length === 0" class="text-center py-12 text-gray-500">
+          <div v-if="loading" class="text-center py-12 text-gray-500">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p>Loading events...</p>
+          </div>
+          <div v-else-if="filteredEvents.length === 0" class="text-center py-12 text-gray-500">
             <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
@@ -148,12 +183,28 @@
                 </div>
               
                 <div class="flex-1">
-                  <div class="flex items-start justify-between mb-2">
+                <div class="flex items-start justify-between mb-2">
                     <div>
                     <h3 class="text-lg font-semibold text-gray-900">{{ event.title }}</h3>
                     <p class="text-sm text-gray-600">Hosted by {{ event.creator.full_name }}</p>
                     </div>
-                  <span class="text-sm text-gray-500">{{ formatTime(event.created_at) }}</span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm text-gray-500">{{ formatTime(event.created_at) }}</span>
+                    <button
+                      v-if="isAdmin"
+                      @click.stop="toggleFeatured(event)"
+                      class="text-yellow-500 hover:text-yellow-600"
+                      :aria-label="event.is_featured ? 'Unfeature event' : 'Feature event'"
+                      title="Toggle featured"
+                    >
+                      <svg v-if="event.is_featured" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+                      </svg>
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l2.072 6.39a1 1 0 00.95.69h6.714c.969 0 1.371 1.24.588 1.81l-5.43 3.95a1 1 0 00-.364 1.118l2.072 6.39c.3.921-.755 1.688-1.54 1.118l-5.43-3.95a1 1 0 00-1.176 0l-5.43 3.95c-.784.57-1.838-.197-1.539-1.118l2.072-6.39a1 1 0 00-.364-1.118l-5.43-3.95c-.783-.57-.38-1.81.588-1.81h6.714a1 1 0 00.95-.69l2.072-6.39z"></path>
+                      </svg>
+                    </button>
+                  </div>
                   </div>
 
                   <div class="flex flex-wrap gap-2 mb-3">
@@ -186,8 +237,9 @@
                   <div class="flex space-x-2">
                     <button 
                       @click.stop="rsvpEvent(event, 'going')"
+                      :disabled="rsvpSubmitting[event.id]"
                       :class="[
-                        'px-4 py-2 rounded-lg text-sm font-medium',
+                        'px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed',
                         event.user_rsvp === 'going' 
                           ? 'bg-green-600 text-white' 
                           : 'bg-green-100 text-green-800 hover:bg-green-200'
@@ -197,25 +249,15 @@
                     </button>
                     <button 
                       @click.stop="rsvpEvent(event, 'interested')"
+                      :disabled="rsvpSubmitting[event.id]"
                       :class="[
-                        'px-4 py-2 rounded-lg text-sm font-medium',
+                        'px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed',
                         event.user_rsvp === 'interested' 
                           ? 'bg-blue-600 text-white' 
                           : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                       ]"
                     >
                       Interested
-                    </button>
-                    <button 
-                      @click.stop="rsvpEvent(event, 'not_going')"
-                      :class="[
-                        'px-4 py-2 rounded-lg text-sm font-medium',
-                        event.user_rsvp === 'not_going' 
-                          ? 'bg-red-600 text-white' 
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      ]"
-                    >
-                      Not Going
                     </button>
                   </div>
                 </div>
@@ -256,23 +298,16 @@
             </button>
           </div>
         </div>
-
-          <!-- Pagination -->
-        <div class="mt-6 flex justify-center">
-          <button class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-            Load More Events
-          </button>
-                </div>
-                    </div>
+      </div>
 
       <!-- Right Column - Quick Panels -->
       <div class="space-y-6">
-        <!-- Your RSVP'd Events -->
+        <!-- Saved Events -->
         <div class="bg-white rounded-lg shadow-md p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Your RSVP'd Events</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Saved Events</h3>
           <div class="space-y-3">
             <div 
-              v-for="event in userRsvpEvents" 
+              v-for="event in savedEvents" 
               :key="event.id"
               class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer"
               @click="viewEvent(event)"
@@ -285,11 +320,11 @@
                 event.user_rsvp === 'interested' ? 'bg-blue-100 text-blue-800' :
                 'bg-red-100 text-red-800'
               ]">
-                {{ event.user_rsvp }}
+                Status: {{ event.user_rsvp === 'going' ? 'Going' : event.user_rsvp === 'interested' ? 'Interested' : 'Not Going' }}
                     </span>
                   </div>
-            <div v-if="userRsvpEvents.length === 0" class="text-center text-gray-500 text-sm py-4">
-              No RSVP'd events
+            <div v-if="savedEvents.length === 0" class="text-center text-gray-500 text-sm py-4">
+              No saved events
             </div>
           </div>
         </div>
@@ -314,33 +349,14 @@
                 </div>
               </div>
             </div>
+      </div>
+    </div>
 
-        <!-- Past Events -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Past Events</h3>
-          <div class="space-y-3">
-            <div 
-              v-for="event in pastEvents" 
-              :key="event.id"
-              class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 cursor-pointer"
-              @click="viewEvent(event)"
-            >
-              <h4 class="font-medium text-gray-900 text-sm">{{ event.title }}</h4>
-              <p class="text-xs text-gray-600">{{ formatDate(event.start_date) }}</p>
-              <div class="mt-2">
-                <span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
-                  Completed
-                    </span>
-                  </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        
 
     <!-- Event Detail Modal -->
-    <div v-if="showEventModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto border-4 border-gray-300 shadow-2xl">
+    <div v-if="showEventModal" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showEventModal = false">
+      <div class="bg-white rounded-lg w-full max-w-4xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto border-2 border-black shadow-2xl">
         <div class="p-6">
           <!-- Modal Header -->
           <div class="flex items-center justify-between mb-6">
@@ -400,8 +416,9 @@
             <div class="flex space-x-4">
               <button 
                 @click="rsvpEvent(selectedEvent, 'going')"
+                :disabled="selectedEvent && rsvpSubmitting[selectedEvent.id]"
                 :class="[
-                  'px-6 py-3 rounded-lg font-medium',
+                  'px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed',
                   selectedEvent?.user_rsvp === 'going' 
                     ? 'bg-green-600 text-white' 
                     : 'bg-green-100 text-green-800 hover:bg-green-200'
@@ -411,25 +428,15 @@
               </button>
               <button 
                 @click="rsvpEvent(selectedEvent, 'interested')"
+                :disabled="selectedEvent && rsvpSubmitting[selectedEvent.id]"
                 :class="[
-                  'px-6 py-3 rounded-lg font-medium',
+                  'px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed',
                   selectedEvent?.user_rsvp === 'interested' 
                     ? 'bg-blue-600 text-white' 
                     : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                 ]"
               >
                 Interested
-              </button>
-              <button 
-                @click="rsvpEvent(selectedEvent, 'not_going')"
-                :class="[
-                  'px-6 py-3 rounded-lg font-medium',
-                  selectedEvent?.user_rsvp === 'not_going' 
-                    ? 'bg-red-600 text-white' 
-                    : 'bg-red-100 text-red-800 hover:bg-red-200'
-                ]"
-              >
-                Not Going
               </button>
             </div>
           </div>
@@ -456,11 +463,8 @@
             <button @click="showEventModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
               Close
             </button>
-            <button @click="addToCalendar(selectedEvent)" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              Add to Calendar
-            </button>
-            <button @click="shareEvent(selectedEvent)" class="px-6 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
-              Share Event
+            <button @click="openReportModal(selectedEvent)" class="px-6 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50">
+              Report Event
             </button>
               </div>
             </div>
@@ -468,8 +472,8 @@
         </div>
 
     <!-- Create Event Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 flex items-center justify-center z-50 p-4" @click.self="showCreateModal = false">
-      <div class="bg-white rounded-lg p-6 w-full max-w-2xl border-4 border-gray-300 shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+    <div v-if="showCreateModal" class="fixed inset-0 bg-transparent flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showCreateModal = false">
+      <div class="bg-white rounded-lg p-6 w-full max-w-2xl border-2 border-black shadow-2xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto" @click.stop>
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-900">Create New Event</h3>
           <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600">
@@ -554,14 +558,124 @@
           </div>
         </div>
       </div>
+    <div v-if="showReportModal" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[90] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showReportModal = false">
+      <div class="bg-white rounded-lg p-6 w-full max-w-lg border-2 border-black shadow-2xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto" @click.stop>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">Report Event</h3>
+          <button @click="showReportModal = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Reason</label>
+            <select v-model="reportReason" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <option value="spam">Spam</option>
+              <option value="inappropriate_content">Inappropriate Content</option>
+              <option value="scam_fraud">Scam or Fraud</option>
+              <option value="harassment">Harassment</option>
+              <option value="false_information">False Information</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <textarea
+              v-model="reportDescription"
+              rows="3"
+              placeholder="Provide additional details..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            ></textarea>
+          </div>
+        </div>
+        <div class="flex justify-end space-x-2 mt-6">
+          <button @click="showReportModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+            Cancel
+          </button>
+          <button @click="submitReport" :disabled="reporting" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+            Submit Report
+          </button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useAuthStore } from '../stores/auth'
 import axios from '../config/api'
 import { useToast } from '../composables/useToast'
 
 const toast = useToast()
+const authStore = useAuthStore()
+
+const formatLocalDate = (dateObj) => {
+  if (!dateObj) return ''
+  const year = dateObj.getFullYear()
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+  const day = String(dateObj.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const parseLocalDate = (dateString) => {
+  if (!dateString) return null
+  const [year, month, day] = dateString.split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
+}
+
+const parseEventDate = (value) => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  const stringValue = String(value)
+  if (stringValue.endsWith('Z') || stringValue.includes('+')) return new Date(stringValue)
+  if (stringValue.includes('T')) {
+    const [datePart, timePart] = stringValue.split('T')
+    return buildLocalDateTime(datePart, timePart)
+  }
+  if (stringValue.includes(' ')) {
+    const [datePart, timePart] = stringValue.split(' ')
+    return buildLocalDateTime(datePart, timePart)
+  }
+  return new Date(stringValue)
+}
+
+const buildLocalDateTime = (datePart, timePart = '00:00:00') => {
+  const [year, month, day] = (datePart || '').split('-').map(Number)
+  if (!year || !month || !day) return new Date(datePart)
+  const [hour, minute, second] = (timePart || '').split(':').map(Number)
+  return new Date(year, month - 1, day, hour || 0, minute || 0, second || 0)
+}
+
+const formatTaipeiDateTime = (value) => {
+  if (!value) return value
+  const stringValue = String(value)
+  if (/[zZ]|[+-]\d{2}:\d{2}$/.test(stringValue)) return stringValue
+  const [datePart, timePartRaw] = stringValue.includes('T')
+    ? stringValue.split('T')
+    : stringValue.split(' ')
+  if (!datePart || !timePartRaw) return stringValue
+  const timePart = timePartRaw.length === 5 ? `${timePartRaw}:00` : timePartRaw
+  return `${datePart}T${timePart}+08:00`
+}
+
+const toUtcFromTaipei = (value) => {
+  if (!value) return value
+  const stringValue = String(value)
+  if (/[zZ]|[+-]\d{2}:\d{2}$/.test(stringValue)) return stringValue
+  const [datePart, timePartRaw] = stringValue.includes('T')
+    ? stringValue.split('T')
+    : stringValue.split(' ')
+  if (!datePart || !timePartRaw) return stringValue
+  const [year, month, day] = datePart.split('-').map(Number)
+  const timePart = timePartRaw.length === 5 ? `${timePartRaw}:00` : timePartRaw
+  const [hour, minute, second] = timePart.split(':').map(Number)
+  if (!year || !month || !day) return stringValue
+  const utcMs = Date.UTC(year, month - 1, day, (hour || 0) - 8, minute || 0, second || 0)
+  return new Date(utcMs).toISOString()
+}
 
 // Reactive data
 const searchQuery = ref('')
@@ -571,9 +685,16 @@ const selectedDateRange = ref('')
 const viewMode = ref('list')
 const showEventModal = ref(false)
 const showCreateModal = ref(false)
+const showReportModal = ref(false)
 const selectedEvent = ref(null)
 const currentDate = ref(new Date())
+const selectedDate = ref(formatLocalDate(new Date()))
 const loading = ref(false)
+const reportEvent = ref(null)
+const reportReason = ref('spam')
+const reportDescription = ref('')
+const reporting = ref(false)
+const rsvpSubmitting = ref({})
 
 // Pagination
 const currentPage = ref(1)
@@ -590,6 +711,7 @@ const newEvent = ref({
 
 // Fetch events from API
 const events = ref([])
+const isAdmin = computed(() => authStore.user?.role === 'admin')
 
 const fetchEvents = async () => {
   loading.value = true
@@ -604,12 +726,15 @@ const fetchEvents = async () => {
       // Parse and format event dates
       events.value = response.data.data.map(event => ({
         ...event,
-        start_date: new Date(event.start_date),
-        end_date: new Date(event.end_date),
+        start_date: parseEventDate(event.start_date),
+        end_date: parseEventDate(event.end_date),
+        created_at: parseEventDate(event.created_at),
         attendees_count: event.attendees_count || 0,
         interested_count: event.interested_count || 0,
         attendees: event.attendees || [],
-        interested: event.interested || []
+        interested: event.interested || [],
+        user_rsvp: event.user_rsvp && event.user_rsvp !== 'not_going' ? event.user_rsvp : null,
+        is_featured: !!event.is_featured
       }))
     } else {
       events.value = []
@@ -649,7 +774,12 @@ const createEvent = async () => {
   }
 
   try {
-    const response = await axios.post('/api/events', newEvent.value)
+    const payload = {
+      ...newEvent.value,
+      start_date: toUtcFromTaipei(newEvent.value.start_date),
+      end_date: toUtcFromTaipei(newEvent.value.end_date)
+    }
+    const response = await axios.post('/api/events', payload)
     
     if (response.data.success) {
       // Show success message
@@ -679,33 +809,74 @@ const createEvent = async () => {
   }
 }
 
-const userRsvpEvents = ref([])
-const featuredEvents = ref([])
-const pastEvents = ref([])
+const openReportModal = (event) => {
+  if (!event) return
+  reportEvent.value = event
+  reportReason.value = 'spam'
+  reportDescription.value = ''
+  showReportModal.value = true
+}
+
+const submitReport = async () => {
+  if (!reportEvent.value) return
+  reporting.value = true
+  try {
+    const response = await axios.post('/api/reports', {
+      reported_entity_type: 'event',
+      reported_entity_id: reportEvent.value.id,
+      reason: reportReason.value,
+      description: reportDescription.value || null
+    })
+    if (response?.data?.success) {
+      toast.success('Report submitted successfully', 'Success')
+      showReportModal.value = false
+    } else {
+      toast.error(response.data?.message || 'Failed to submit report', 'Error')
+    }
+  } catch (error) {
+    console.error('Error submitting report:', error)
+    toast.error('Failed to submit report', 'Error')
+  } finally {
+    reporting.value = false
+  }
+}
+
+const savedEvents = computed(() =>
+  events.value.filter(event => ['going', 'interested'].includes(event.user_rsvp))
+)
+
+const featuredEvents = computed(() =>
+  events.value.filter(event => event.is_featured)
+)
+
+const normalizeText = (value) => (value ?? '').toString().toLowerCase()
 
 // Computed properties
 const filteredEvents = computed(() => {
   let filtered = events.value
 
   // Apply search filter
-  if (searchQuery.value) {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (query) {
     filtered = filtered.filter(event => 
-      event.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      event.type.toLowerCase().includes(searchQuery.value.toLowerCase())
+      normalizeText(event.title).includes(query) ||
+      normalizeText(event.description).includes(query) ||
+      normalizeText(event.type).includes(query) ||
+      normalizeText(event.location).includes(query) ||
+      `${formatDate(event.start_date)} ${formatDate(event.end_date)}`.toLowerCase().includes(query)
     )
   }
 
   // Apply event type filter
   if (selectedEventType.value) {
-    filtered = filtered.filter(event => event.type === selectedEventType.value)
+    const selectedType = selectedEventType.value.toLowerCase()
+    filtered = filtered.filter(event => normalizeText(event.type) === selectedType)
   }
 
   // Apply location filter
   if (selectedLocation.value) {
-    filtered = filtered.filter(event => 
-      event.location.toLowerCase().includes(selectedLocation.value.toLowerCase())
-    )
+    const selectedLocationValue = selectedLocation.value.toLowerCase()
+    filtered = filtered.filter(event => normalizeText(event.location).includes(selectedLocationValue))
   }
 
   // Apply date range filter
@@ -765,17 +936,29 @@ const calendarDays = computed(() => {
     date.setDate(startDate.getDate() + i)
     
     days.push({
-      date: date.toISOString().split('T')[0],
+      date: formatLocalDate(date),
       day: date.getDate(),
       isCurrentMonth: date.getMonth() === month,
       isToday: date.toDateString() === today.toDateString(),
-      hasEvents: events.value.some(event => 
+      hasEvents: filteredEvents.value.some(event => 
         event.start_date.toDateString() === date.toDateString()
-      )
+      ),
+      isSelected: selectedDate.value === formatLocalDate(date)
     })
   }
   
   return days
+})
+
+const selectedDateEvents = computed(() => {
+  if (!selectedDate.value) return []
+  return filteredEvents.value.filter(event => formatLocalDate(event.start_date) === selectedDate.value)
+})
+
+const selectedDateLabel = computed(() => {
+  if (!selectedDate.value) return ''
+  const parsed = parseLocalDate(selectedDate.value)
+  return parsed ? formatDate(parsed) : ''
 })
 
 // Methods
@@ -792,20 +975,24 @@ const getEventIcon = (type) => {
 }
 
 const formatDate = (date) => {
-  if (!date) return ''
-  return new Date(date).toLocaleDateString('en-US', {
+  const parsed = parseEventDate(date)
+  if (!parsed) return ''
+  return parsed.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
+    timeZone: 'Asia/Taipei'
   })
 }
 
 const formatTime = (date) => {
-  if (!date) return ''
-  return new Date(date).toLocaleTimeString('en-US', {
+  const parsed = parseEventDate(date)
+  if (!parsed) return ''
+  return parsed.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
-    hour12: true
+    hour12: true,
+    timeZone: 'Asia/Taipei'
   })
 }
 
@@ -816,68 +1003,50 @@ const viewEvent = (event) => {
 
 const rsvpEvent = async (event, rsvp) => {
   if (!event) return
+  if (rsvpSubmitting.value[event.id]) return
+  const requestedStatus = event.user_rsvp === rsvp ? 'not_going' : rsvp
+  rsvpSubmitting.value[event.id] = true
   try {
-    await axios.post(`/api/events/${event.id}/rsvp`, { status: rsvp })
-    event.user_rsvp = rsvp
-    if (rsvp === 'going') {
-      event.attendees_count += 1
-    } else if (rsvp === 'interested') {
-      event.interested_count += 1
+    const response = await axios.post(`/api/events/${event.id}/rsvp`, { status: requestedStatus })
+    if (response?.data?.success) {
+      const returnedStatus = response.data.data?.user_rsvp ?? requestedStatus
+      event.user_rsvp = returnedStatus === 'not_going' ? null : returnedStatus
+      event.attendees_count = response.data.data?.attendees_count ?? event.attendees_count
+      event.interested_count = response.data.data?.interested_count ?? event.interested_count
+      toast.success('RSVP updated successfully', 'Success')
+    } else {
+      toast.error(response.data?.message || 'Failed to update RSVP', 'Error')
     }
   } catch (error) {
+    if (error.response?.status === 409) {
+      toast.warning('RSVP already recorded for this event', 'Notice')
+      return
+    }
     console.error('Error RSVP:', error)
+    toast.error(error.response?.data?.message || 'Failed to update RSVP', 'Error')
+  } finally {
+    rsvpSubmitting.value[event.id] = false
   }
 }
 
-const addToCalendar = (event) => {
-  if (!event) return
-  
-  // Format dates for calendar (yyyyMMddTHHmmss format)
-  const formatCalendarDate = (date) => {
-    if (!date) return ''
-    const d = new Date(date)
-    return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-  }
-  
-  const startDate = formatCalendarDate(event.start_date)
-  const endDate = formatCalendarDate(event.end_date)
-  const title = encodeURIComponent(event.title)
-  const description = encodeURIComponent(event.description || '')
-  const location = encodeURIComponent(event.location || '')
-  
-  // Create Google Calendar URL
-  const googleCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${description}&location=${location}`
-  
-  // Open in new tab
-  window.open(googleCalUrl, '_blank')
-}
-
-const shareEvent = (event) => {
-  if (!event) return
-  
-  const eventUrl = `${window.location.origin}/events?id=${event.id}`
-  const shareText = `Check out this event: ${event.title} on ${formatDate(event.start_date)}`
-  
-  // Check if Web Share API is available (mobile devices)
-  if (navigator.share) {
-    navigator.share({
-      title: event.title,
-      text: shareText,
-      url: eventUrl
-    }).catch(err => console.log('Error sharing:', err))
-  } else {
-    // Fallback: Copy to clipboard
-    navigator.clipboard.writeText(`${shareText}\n${eventUrl}`).then(() => {
-      toast.success('Event link copied to clipboard!', 'Success')
-    }).catch(err => {
-      console.error('Failed to copy:', err)
-      toast.error('Failed to copy link', 'Error')
-    })
+const toggleFeatured = async (event) => {
+  if (!event || !isAdmin.value) return
+  try {
+    const response = await axios.post(`/api/events/${event.id}/feature`)
+    if (response?.data?.success) {
+      event.is_featured = !!response.data.data?.is_featured
+      toast.success(event.is_featured ? 'Event featured' : 'Event unfeatured', 'Success')
+    } else {
+      toast.error(response.data?.message || 'Failed to update featured status', 'Error')
+    }
+  } catch (error) {
+    console.error('Error toggling featured:', error)
+    toast.error(error.response?.data?.message || 'Failed to update featured status', 'Error')
   }
 }
 
 const selectDate = (day) => {
-  console.log('Selected date:', day.date)
+  selectedDate.value = day.date
 }
 
 const previousMonth = () => {

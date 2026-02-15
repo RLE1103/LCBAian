@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import Sidebar from './components/Sidebar.vue'
@@ -13,6 +13,10 @@ const authStore = useAuthStore()
 const isInitialized = ref(false)
 const isMobileMenuOpen = ref(false)
 const isSidebarCollapsed = ref(false)
+const toast = useToast()
+const isAcknowledgingWarning = ref(false)
+const warningMessage = computed(() => authStore.pendingWarning?.message || 'You have received a formal warning regarding your recent post. Further violations may lead to permanent account suspension.')
+const hasPendingWarning = computed(() => !!authStore.pendingWarning)
 
 // Global error handler for Vue
 import { getCurrentInstance } from 'vue'
@@ -44,6 +48,28 @@ onMounted(async () => {
   }
 })
 
+watch(
+  () => authStore.isAuthenticated,
+  async (isAuthenticated) => {
+    if (isAuthenticated) {
+      await authStore.fetchPendingWarning()
+    }
+  }
+)
+
+const acknowledgeWarning = async () => {
+  if (!authStore.pendingWarning || isAcknowledgingWarning.value) return
+  isAcknowledgingWarning.value = true
+  try {
+    await authStore.acknowledgeWarning(authStore.pendingWarning.id)
+    toast.success('Warning acknowledged.', 'Success')
+  } catch (error) {
+    toast.error('Failed to acknowledge warning: ' + (error.response?.data?.message || error.message), 'Error')
+  } finally {
+    isAcknowledgingWarning.value = false
+  }
+}
+
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
 }
@@ -57,7 +83,7 @@ const toggleSidebar = () => {
 }
 
 // Toast notifications
-const { toasts, remove } = useToast()
+const { toasts, remove } = toast
 </script>
 
 <template>
@@ -76,7 +102,12 @@ const { toasts, remove } = useToast()
   <div v-else-if="authStore.isAuthenticated && !route.meta.hideNavigation" class="flex flex-col h-screen">
     <!-- Topbar -->
     <header role="banner">
-      <Topbar />
+      <Topbar 
+        :isMobileMenuOpen="isMobileMenuOpen"
+        :isSidebarCollapsed="isSidebarCollapsed"
+        @toggle-mobile-menu="toggleMobileMenu"
+        @toggle-sidebar="toggleSidebar"
+      />
     </header>
     
     <!-- Main Layout: Sidebar + Content -->
@@ -87,40 +118,6 @@ const { toasts, remove } = useToast()
         @click="closeMobileMenu"
         class="md:hidden fixed inset-0 bg-transparent z-40"
       ></div>
-
-      <!-- Mobile Menu Button (visible on small screens) -->
-      <button 
-        @click="toggleMobileMenu"
-        class="md:hidden fixed top-4 left-4 z-[60] bg-blue-900 text-white p-3 rounded-lg shadow-lg transition-colors"
-        :class="{ 'bg-red-600': isMobileMenuOpen }"
-        :aria-label="isMobileMenuOpen ? 'Close menu' : 'Open menu'"
-        :aria-expanded="isMobileMenuOpen"
-        aria-controls="mobile-sidebar"
-      >
-        <svg v-if="!isMobileMenuOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
-        <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-      </button>
-
-      <!-- Desktop Sidebar Toggle Button (visible on medium+ screens) -->
-      <button 
-        @click="toggleSidebar"
-        class="hidden md:block fixed top-20 left-4 z-[60] bg-blue-900 text-white p-2 rounded-lg shadow-lg transition-all hover:bg-blue-800"
-        :class="{ 'left-4': isSidebarCollapsed, 'left-[260px]': !isSidebarCollapsed }"
-        :aria-label="isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
-        :aria-expanded="!isSidebarCollapsed"
-        aria-controls="desktop-sidebar"
-      >
-        <svg v-if="!isSidebarCollapsed" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
-        </svg>
-        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
-        </svg>
-      </button>
 
       <!-- Sidebar (Desktop + Mobile Slide-in) -->
       <Sidebar 
@@ -149,6 +146,24 @@ const { toasts, remove } = useToast()
     v-bind="toast"
     @close="remove"
   />
+
+  <div v-if="authStore.isAuthenticated && hasPendingWarning" class="fixed inset-0 z-[90] flex items-start md:items-center justify-center bg-black/40 backdrop-blur-[1px] px-4 pb-4 pt-20 md:pt-24 md:pl-64">
+    <div class="bg-white rounded-lg shadow-xl border-2 border-black w-full max-w-md p-6 max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold text-gray-900">Mandatory Warning</h2>
+      </div>
+      <p class="text-gray-700 mb-6">{{ warningMessage }}</p>
+      <div class="flex justify-end">
+        <button
+          @click="acknowledgeWarning"
+          :disabled="isAcknowledgingWarning"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {{ isAcknowledgingWarning ? 'Processing...' : 'I Understand' }}
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style>

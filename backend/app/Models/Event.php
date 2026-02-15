@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Event extends Model
 {
@@ -18,6 +19,8 @@ class Event extends Model
         'location',
         'type',
         'created_by',
+        'is_featured',
+        'status',
     ];
 
     protected function casts(): array
@@ -25,11 +28,17 @@ class Event extends Model
         return [
             'start_date' => 'datetime',
             'end_date' => 'datetime',
+            'is_featured' => 'boolean',
         ];
     }
 
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function rsvps(): HasMany
+    {
+        return $this->hasMany(EventRsvp::class);
     }
 }

@@ -27,8 +27,8 @@ class JobPostFactory extends Factory
             'location' => fake()->city(),
             'work_type' => fake()->randomElement(['full_time', 'part_time', 'contract', 'internship']),
             'status' => 'pending',
-            'required_skills' => json_encode(['PHP', 'Laravel', 'MySQL']),
-            'preferred_skills' => json_encode(['Vue.js', 'Docker']),
+            'required_skills' => ['PHP', 'Laravel', 'MySQL'],
+            'preferred_skills' => ['Vue.js', 'Docker'],
             'posted_by_admin' => false,
         ];
     }

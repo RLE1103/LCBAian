@@ -11,10 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('posts', function (Blueprint $table) {
-            $table->string('image_path')->nullable()->after('content');
-            $table->enum('visibility', ['public', 'alumni_only', 'admin_only'])->default('alumni_only')->after('image_path');
-        });
+        if (Schema::hasTable('posts')) {
+            Schema::table('posts', function (Blueprint $table) {
+                if (!Schema::hasColumn('posts', 'image_path')) {
+                    $table->string('image_path')->nullable()->after('content');
+                }
+                if (!Schema::hasColumn('posts', 'visibility')) {
+                    $table->enum('visibility', ['public', 'alumni_only', 'admin_only'])->default('alumni_only')->after('image_path');
+                }
+            });
+        }
     }
 
     /**
@@ -22,8 +28,19 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('posts', function (Blueprint $table) {
-            $table->dropColumn(['image_path', 'visibility']);
-        });
+        if (Schema::hasTable('posts')) {
+            Schema::table('posts', function (Blueprint $table) {
+                $columns = [];
+                if (Schema::hasColumn('posts', 'image_path')) {
+                    $columns[] = 'image_path';
+                }
+                if (Schema::hasColumn('posts', 'visibility')) {
+                    $columns[] = 'visibility';
+                }
+                if ($columns) {
+                    $table->dropColumn($columns);
+                }
+            });
+        }
     }
 };

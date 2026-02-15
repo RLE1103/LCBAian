@@ -1,7 +1,7 @@
 <template>
   <!-- Modal Overlay -->
-  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="closeModal">
-    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+  <div v-if="isOpen" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="closeModal">
+    <div class="bg-white rounded-lg shadow-xl border-2 border-black p-6 w-full max-w-md max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-900">

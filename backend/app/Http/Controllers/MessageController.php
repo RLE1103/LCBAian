@@ -21,7 +21,7 @@ class MessageController extends Controller
             // Get conversations list
             $conversations = Message::where('sender_id', $userId)
                 ->orWhere('receiver_id', $userId)
-                ->with(['sender:id,first_name,last_name,email', 'receiver:id,first_name,last_name,email'])
+                ->with(['sender:id,first_name,last_name,email,profile_picture', 'receiver:id,first_name,last_name,email,profile_picture'])
                 ->orderBy('sent_at', 'desc')
                 ->get()
                 ->groupBy(function($message) use ($userId) {
@@ -43,6 +43,7 @@ class MessageController extends Controller
                             'first_name' => $otherUser->first_name,
                             'last_name' => $otherUser->last_name,
                             'email' => $otherUser->email,
+                            'profile_picture' => $otherUser->profile_picture,
                         ],
                         'last_message' => [
                             'content' => $lastMessage->content,
@@ -81,7 +82,7 @@ class MessageController extends Controller
                 $query->where('sender_id', $otherUserId)
                       ->where('receiver_id', $userId);
             })
-            ->with(['sender:id,first_name,last_name,email', 'receiver:id,first_name,last_name,email'])
+            ->with(['sender:id,first_name,last_name,email,profile_picture', 'receiver:id,first_name,last_name,email,profile_picture'])
             ->orderBy('sent_at', 'asc')
             ->orderBy('id', 'asc') // Secondary sort by ID for tie-breaking
             ->get();
@@ -246,4 +247,3 @@ class MessageController extends Controller
         }
     }
 }
-

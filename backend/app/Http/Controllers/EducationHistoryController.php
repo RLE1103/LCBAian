@@ -51,6 +51,8 @@ class EducationHistoryController extends Controller
                 ...$validated
             ]);
 
+            $this->updateHighestAttainmentIfHigher($validated['level']);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Education entry added successfully',
@@ -83,6 +85,10 @@ class EducationHistoryController extends Controller
             ]);
 
             $educationHistory->update($validated);
+
+            if (isset($validated['level'])) {
+                $this->updateHighestAttainmentIfHigher($validated['level']);
+            }
 
             return response()->json([
                 'success' => true,
@@ -119,6 +125,51 @@ class EducationHistoryController extends Controller
                 'message' => 'Failed to delete education entry',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    private function updateHighestAttainmentIfHigher(string $level): void
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return;
+        }
+
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            return;
+        }
+
+        $levelToAttainment = [
+            'elementary' => 'elementary',
+            'high_school' => 'high_school',
+            'senior_high' => 'senior_high',
+            'college' => 'bachelors',
+            'masters' => 'masters',
+            'doctorate' => 'doctorate'
+        ];
+
+        $rankMap = [
+            'elementary' => 1,
+            'high_school' => 2,
+            'senior_high' => 3,
+            'bachelors' => 4,
+            'masters' => 5,
+            'doctorate' => 6
+        ];
+
+        $incomingAttainment = $levelToAttainment[$level] ?? null;
+        if (!$incomingAttainment) {
+            return;
+        }
+
+        $currentAttainment = $user->highest_educational_attainment;
+        $currentRank = $rankMap[$currentAttainment] ?? 0;
+        $incomingRank = $rankMap[$incomingAttainment] ?? 0;
+
+        if ($incomingRank > $currentRank) {
+            $user->highest_educational_attainment = $incomingAttainment;
+            $user->save();
         }
     }
 }

@@ -1,12 +1,44 @@
 <template>
   <header class="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 text-white shadow-lg sticky top-0 z-50">
     <div class="px-3 md:px-6 py-2 md:py-3 flex justify-between items-center">
-      <!-- Left: Logo and Site Name -->
-      <div class="flex items-center gap-2 md:gap-3">
-        <img src="/src/assets/images/LCBAlogo.png" alt="LCBA Logo" class="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border-2 border-white shadow-md" />
-        <div>
-          <span class="text-base md:text-xl font-bold tracking-wide">LCBAConnect+</span>
-          <p class="text-xs text-blue-200 hidden sm:block">Alumni Network Platform</p>
+      <div class="flex items-center gap-3 md:gap-4">
+        <button 
+          @click="handleToggleMobileMenu"
+          class="md:hidden bg-blue-900 text-white p-2 rounded-lg shadow-lg transition-colors"
+          :class="{ 'bg-red-600': isMobileMenuOpen }"
+          :aria-label="isMobileMenuOpen ? 'Close menu' : 'Open menu'"
+          :aria-expanded="isMobileMenuOpen"
+          aria-controls="mobile-sidebar"
+        >
+          <svg v-if="!isMobileMenuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+
+        <button 
+          @click="handleToggleSidebar"
+          class="hidden md:flex bg-blue-900 text-white p-2 rounded-lg shadow-lg transition-all hover:bg-blue-800"
+          :aria-label="isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+          :aria-expanded="!isSidebarCollapsed"
+          aria-controls="desktop-sidebar"
+        >
+          <svg v-if="!isSidebarCollapsed" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+          </svg>
+          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+          </svg>
+        </button>
+
+        <div class="flex items-center gap-2 md:gap-3">
+          <img src="/src/assets/images/LCBAlogo.png" alt="LCBA Logo" class="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border-2 border-white shadow-md" />
+          <div>
+            <span class="text-base md:text-xl font-bold tracking-wide">LCBAConnect+</span>
+            <p class="text-xs text-blue-200 hidden sm:block">Alumni Network Platform</p>
+          </div>
         </div>
       </div>
 
@@ -16,9 +48,9 @@
           @click="toggleDropdown"
           class="flex items-center gap-2 md:gap-3 hover:bg-blue-700 px-2 md:px-3 py-2 rounded-lg transition-colors touch-manipulation"
         >
-          <!-- User Avatar/Initials -->
-          <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center font-bold text-xs md:text-sm shadow-md">
-            {{ getUserInitials() }}
+          <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center font-bold text-xs md:text-sm shadow-md overflow-hidden">
+            <img v-if="profilePictureUrl" :src="profilePictureUrl" alt="Profile picture" class="w-full h-full object-cover" />
+            <span v-else>{{ getUserInitials() }}</span>
           </div>
           
           <!-- User Name and Role -->
@@ -86,23 +118,6 @@
 
             <div class="border-t border-gray-200 my-2"></div>
 
-            <!-- Dark Mode Toggle -->
-            <button
-              @click="toggleDarkMode"
-              class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 transition-colors w-full text-left"
-              :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-            >
-              <svg v-if="!isDark" class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-              </svg>
-              <svg v-else class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-              </svg>
-              <span class="text-sm">{{ isDark ? 'Light Mode' : 'Dark Mode' }}</span>
-            </button>
-
-            <div class="border-t border-gray-200 my-2"></div>
-
             <button
               @click="handleLogout"
               class="flex items-center gap-3 px-4 py-2 hover:bg-red-50 transition-colors w-full text-left"
@@ -120,21 +135,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useDarkMode } from '../composables/useDarkMode'
+import axios from '../config/api'
+
+const props = defineProps({
+  isMobileMenuOpen: {
+    type: Boolean,
+    default: false
+  },
+  isSidebarCollapsed: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['toggle-mobile-menu', 'toggle-sidebar'])
 
 const router = useRouter()
 const authStore = useAuthStore()
 const showDropdown = ref(false)
 const dropdownRef = ref(null)
-const { isDark, toggle: toggleDarkMode, initTheme } = useDarkMode()
-
-// Initialize dark mode on mount
-onMounted(() => {
-  initTheme()
-})
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
@@ -150,6 +172,16 @@ const getUserInitials = () => {
   return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'U'
 }
 
+const profilePictureUrl = computed(() => {
+  const picture = authStore.user?.profile_picture
+  if (!picture) return ''
+  if (picture.startsWith('http://') || picture.startsWith('https://')) return picture
+  const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
+  if (picture.startsWith('/uploads/')) return baseUrl + picture
+  if (picture.startsWith('uploads/')) return `${baseUrl}/${picture}`
+  return `${baseUrl}/uploads/profile_pictures/${picture}`
+})
+
 const formatRole = (role) => {
   if (!role) return ''
   return role.charAt(0).toUpperCase() + role.slice(1)
@@ -162,6 +194,14 @@ const handleLogout = async () => {
   } catch (error) {
     console.error('Logout error:', error)
   }
+}
+
+const handleToggleMobileMenu = () => {
+  emit('toggle-mobile-menu')
+}
+
+const handleToggleSidebar = () => {
+  emit('toggle-sidebar')
 }
 
 // Close dropdown when clicking outside

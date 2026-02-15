@@ -19,8 +19,11 @@ class User extends Authenticatable
         'last_name',
         'suffix',
         'email',
+        'phone_number',
         'password',
         'role',
+        'status',
+        'is_active',
         'profile_picture',
         'headline',
         'bio',
@@ -55,6 +58,10 @@ class User extends Authenticatable
         'is_lcba_employee_faculty',
         'lcba_employee_id',
         'lcba_verification_status',
+        'is_verified',
+        // First Login Tracking
+        'first_login_at',
+        'guidelines_accepted_at',
         // Privacy
         'privacy_settings',
     ];
@@ -69,12 +76,17 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'birthdate' => 'date',
+            'first_login_at' => 'datetime',
+            'guidelines_accepted_at' => 'datetime',
+            'years_of_experience' => 'integer',
             'skills' => 'array',
             'career_interests' => 'array',
             'work_setup_preferences' => 'array',
             'employment_type_preferences' => 'array',
             'industries_of_interest' => 'array',
             'privacy_settings' => 'array',
+            'is_verified' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -82,16 +94,6 @@ class User extends Authenticatable
     public function events(): HasMany
     {
         return $this->hasMany(Event::class, 'created_by');
-    }
-
-    public function mentorshipsAsMentor(): HasMany
-    {
-        return $this->hasMany(Mentorship::class, 'mentor_id');
-    }
-
-    public function mentorshipsAsMentee(): HasMany
-    {
-        return $this->hasMany(Mentorship::class, 'mentee_id');
     }
 
     public function communitiesCreated(): HasMany
@@ -116,7 +118,7 @@ class User extends Authenticatable
 
     public function badges(): BelongsToMany
     {
-        return $this->belongsToMany(Badge::class, 'alumni_badges')->withTimestamps();
+        return $this->belongsToMany(Badge::class, 'alumni_badges', 'user_id', 'badge_id')->withPivot('date_awarded');
     }
 
     public function posts(): HasMany
@@ -187,11 +189,6 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
-    public function isMentor(): bool
-    {
-        return $this->role === 'mentor';
-    }
-
     public function isAlumni(): bool
     {
         return $this->role === 'alumni';
@@ -208,7 +205,8 @@ class User extends Authenticatable
     public function getPrivacySetting(string $field): string
     {
         $settings = $this->privacy_settings ?? [];
-        return $settings[$field] ?? 'alumni_only'; // Default to alumni only
+        $value = $settings[$field] ?? 'public';
+        return $value === 'alumni_only' || $value === 'connections_only' ? 'public' : $value;
     }
 
     /**
@@ -231,11 +229,6 @@ class User extends Authenticatable
         switch ($privacy) {
             case 'public':
                 return true;
-            case 'alumni_only':
-                return $viewer && $viewer->isAlumni();
-            case 'connections_only':
-                // TODO: Implement connection checking when connections feature is ready
-                return false;
             case 'admin_only':
                 return false;
             default:

@@ -11,6 +11,7 @@ class Badge extends Model
     use HasFactory;
 
     protected $primaryKey = 'badge_id';
+    public $timestamps = false;
 
     protected $fillable = [
         'name',
@@ -21,6 +22,6 @@ class Badge extends Model
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'alumni_badges')->withTimestamps();
+        return $this->belongsToMany(User::class, 'alumni_badges', 'badge_id', 'user_id')->withPivot('date_awarded');
     }
 }

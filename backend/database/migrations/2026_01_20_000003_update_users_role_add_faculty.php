@@ -12,7 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Modify the role enum to include 'faculty'
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('alumni', 'mentor', 'admin', 'faculty') NOT NULL DEFAULT 'alumni'");
     }
 
@@ -21,7 +24,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Remove 'faculty' from role enum (if no faculty users exist)
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('alumni', 'mentor', 'admin') NOT NULL DEFAULT 'alumni'");
     }
 };

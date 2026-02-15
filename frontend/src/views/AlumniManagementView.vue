@@ -54,57 +54,160 @@
           </div>
         </div>
 
-        <!-- Search and Filters -->
+        <div class="grid grid-cols-1 gap-6">
+          <div class="border border-gray-200 rounded-lg p-4 md:p-6">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="flex-1">
+                <input 
+                  v-model="verificationSearch"
+                  type="text" 
+                  placeholder="Search by name, program, batch..."
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <select v-model="verificationProgram" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">All Programs</option>
+                <option value="BSCS">BSCS</option>
+                <option value="BSCpE">BSCpE</option>
+                <option value="BSIT">BSIT</option>
+              </select>
+              <select v-model="verificationStatus" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="denied">Denied</option>
+              </select>
+            </div>
+            
+            <div v-if="loadingVerifications" class="text-center py-8 text-gray-500">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p>Loading verification requests...</p>
+            </div>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program & Batch</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr 
+                    v-for="request in filteredVerificationRequests" 
+                    :key="request.id"
+                    class="hover:bg-gray-50"
+                  >
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <input 
+                        type="checkbox" 
+                        v-model="selectedRequests" 
+                        :value="request.id"
+                      />
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="flex items-center">
+                        <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
+                          {{ request.first_name[0] }}{{ request.last_name[0] }}
+                        </div>
+                        <div>
+                          <div class="text-sm font-medium text-gray-900">{{ request.full_name }}</div>
+                          <div class="text-sm text-gray-500">{{ request.email }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {{ request.program }} {{ request.batch }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span :class="[
+                        'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                        request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                      ]">
+                        {{ request.status }}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div class="flex space-x-2">
+                        <button 
+                          @click.stop="approveRequest(request)"
+                          class="text-green-600 hover:text-green-900"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          @click.stop="denyRequest(request)"
+                          class="text-red-600 hover:text-red-900"
+                        >
+                          Deny
+                        </button>
+                        <button 
+                          @click.stop="viewDetails(request)"
+                          class="text-blue-600 hover:text-blue-900"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+    </div>
+
+      <div v-if="activeTab === 'employee-verification'" class="p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-semibold text-gray-900">Employee/Faculty ID Verification Queue</h2>
+        </div>
+
         <div class="flex items-center gap-4 mb-6">
           <div class="flex-1">
             <input 
-              v-model="verificationSearch"
+              v-model="employeeVerificationSearch"
               type="text" 
               placeholder="Search by name, program, batch..."
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <select v-model="verificationProgram" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <option value="">All Programs</option>
-            <option value="BSCS">BSCS</option>
-            <option value="BSCpE">BSCpE</option>
-            <option value="BSIT">BSIT</option>
-          </select>
-          <select v-model="verificationStatus" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+          <select v-model="employeeVerificationStatus" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="">All Status</option>
             <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="denied">Denied</option>
+            <option value="verified">Verified</option>
+            <option value="unverified">Unverified</option>
           </select>
         </div>
-        
-        <!-- Verification Table -->
-        <div class="overflow-x-auto">
+
+        <div v-if="loadingVerifications" class="text-center py-8 text-gray-500">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading verification requests...</p>
+        </div>
+        <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
-                </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program & Batch</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID Number</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Photo</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <tr 
-                v-for="request in filteredVerificationRequests" 
+                v-for="request in filteredEmployeeVerificationRequests" 
                 :key="request.id"
                 class="hover:bg-gray-50"
               >
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <input 
-                    type="checkbox" 
-                    v-model="selectedRequests" 
-                    :value="request.id"
-                  />
-                </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
                     <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
@@ -119,43 +222,148 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {{ request.program }} {{ request.batch }}
                 </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ request.employee_id_number || 'N/A' }}
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span :class="[
                     'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
                     request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                    request.status === 'verified' ? 'bg-green-100 text-green-800' :
                     'bg-red-100 text-red-800'
                   ]">
-                    {{ request.status }}
+                    {{ request.status === 'verified' ? 'Verified' : request.status === 'unverified' ? 'Unverified' : 'Pending' }}
                   </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <span v-if="request.id_image_path" class="text-gray-700">On file</span>
+                  <span v-else class="text-gray-400">None</span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex space-x-2">
                     <button 
-                      @click.stop="approveRequest(request)"
-                      class="text-green-600 hover:text-green-900"
+                      @click.stop="approveEmployeeVerification(request)"
+                      :class="request.status === 'verified' ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'"
                     >
-                      Approve
-          </button>
+                      {{ request.status === 'verified' ? 'Unverified' : 'Verified' }}
+                    </button>
                     <button 
-                      @click.stop="denyRequest(request)"
-                      class="text-red-600 hover:text-red-900"
-                    >
-                      Deny
-          </button>
-                    <button 
-                      @click.stop="viewDetails(request)"
+                      @click.stop="openEmployeeIdModal(request)"
                       class="text-blue-600 hover:text-blue-900"
+                      :disabled="!request.id_image_path"
                     >
                       View
-          </button>
-        </div>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="filteredEmployeeVerificationRequests.length === 0">
+                <td colspan="5" class="px-6 py-6 text-center text-sm text-gray-500">
+                  No employee or faculty verification requests found.
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
       </div>
-    </div>
+
+      <!-- Job Approvals Tab -->
+      <div v-if="activeTab === 'job-approvals'" class="p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-semibold text-gray-900">Job Post Approvals</h2>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-600">{{ pendingJobs.length }} pending</span>
+            <button @click="loadPendingJobs" class="text-blue-600 hover:text-blue-800 text-sm">
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div v-if="loadingJobs" class="text-center py-8 text-gray-500">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading pending jobs...</p>
+        </div>
+
+        <div v-else-if="pendingJobs.length === 0" class="text-center py-12 text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p class="font-medium">No pending job posts</p>
+          <p class="text-sm">All job posts have been reviewed</p>
+        </div>
+
+        <div v-else class="space-y-4">
+          <div 
+            v-for="job in pendingJobs" 
+            :key="job.job_id"
+            class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow"
+          >
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1">
+                <h3 class="text-lg font-semibold text-gray-900">{{ job.title }}</h3>
+                <p class="text-sm text-gray-600">{{ job.company_name }}</p>
+              </div>
+              <span class="bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium">
+                Pending Review
+              </span>
+            </div>
+
+            <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+              <p class="text-sm font-medium text-gray-700">Posted by:</p>
+              <p class="text-sm text-gray-900">
+                {{ job.poster?.first_name }} {{ job.poster?.last_name }}
+                <span v-if="job.poster?.email" class="text-gray-600">({{ job.poster.email }})</span>
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+              <div>
+                <span class="text-gray-600">Location:</span>
+                <span class="text-gray-900 ml-2">{{ job.location || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-600">Work Type:</span>
+                <span class="text-gray-900 ml-2">{{ job.work_type || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-600">Industry:</span>
+                <span class="text-gray-900 ml-2">{{ job.industry || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-gray-600">Experience Level:</span>
+                <span class="text-gray-900 ml-2">{{ job.experience_level || 'N/A' }}</span>
+              </div>
+              <div class="col-span-2">
+                <span class="text-gray-600">Application Link:</span>
+                <a v-if="job.application_link" :href="job.application_link" target="_blank" class="text-blue-600 hover:underline ml-2">
+                  {{ job.application_link }}
+                </a>
+                <span v-else class="text-gray-900 ml-2">Not provided</span>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <p class="text-sm font-medium text-gray-700 mb-2">Description:</p>
+              <p class="text-sm text-gray-600 line-clamp-3">{{ job.description }}</p>
+            </div>
+
+            <div class="flex items-center gap-3 pt-4 border-t border-gray-200">
+              <button 
+                @click="requestJobAction('approve', job)"
+                class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium"
+              >
+                Approve
+              </button>
+              <button 
+                @click="requestJobAction('reject', job)"
+                class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- User Directory Tab -->
       <div v-if="activeTab === 'directory'" class="p-6">
@@ -165,10 +373,7 @@
             <button @click="exportDirectoryCsv" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50">
               Export CSV
             </button>
-            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-              Add User
-      </button>
-    </div>
+          </div>
         </div>
       
         <!-- Search and Filters -->
@@ -184,7 +389,6 @@
           <select v-model="directoryRole" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="">All Roles</option>
             <option value="alumni">Alumni</option>
-            <option value="mentor">Mentor</option>
             <option value="admin">Admin</option>
           </select>
           <select v-model="directoryStatus" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
@@ -196,7 +400,11 @@
       </div>
 
         <!-- Directory Table -->
-      <div class="overflow-x-auto">
+      <div v-if="loadingDirectory" class="text-center py-8 text-gray-500">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p>Loading users...</p>
+      </div>
+      <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -232,7 +440,6 @@
                   <span :class="[
                     'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
                     user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                    user.role === 'mentor' ? 'bg-blue-100 text-blue-800' :
                     'bg-green-100 text-green-800'
                   ]">
                     {{ user.role }}
@@ -252,7 +459,7 @@
                   </span>
               </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div class="flex space-x-2">
+                  <div class="flex items-center space-x-2">
                     <button 
                       @click="editUser(user)"
                       class="text-blue-600 hover:text-blue-900"
@@ -260,13 +467,13 @@
                       Edit
                     </button>
                     <button 
-                      @click="resetPassword(user)"
+                      @click="requestDirectoryAction('reset_password', user)"
                       class="text-yellow-600 hover:text-yellow-900"
                     >
                       Reset Password
                     </button>
                     <button 
-                      @click="toggleUserStatus(user)"
+                      @click="requestDirectoryAction(user.status === 'active' ? 'deactivate' : 'activate', user)"
                       :class="[
                         'hover:text-gray-900',
                         user.status === 'active' ? 'text-red-600' : 'text-green-600'
@@ -274,121 +481,40 @@
                     >
                       {{ user.status === 'active' ? 'Deactivate' : 'Activate' }}
                     </button>
+                    <div class="relative" @click.stop>
+                      <button
+                        @click.stop="toggleRoleMenu(user)"
+                        class="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center"
+                        aria-label="More actions"
+                      >
+                        ⋮
+                      </button>
+                      <div
+                        v-if="openRoleMenuId === user.id"
+                        class="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
+                        @click.stop
+                      >
+                        <button
+                          v-if="shouldShowMakeAdmin(user)"
+                          @click="openRoleChangeModal(user, 'admin')"
+                          class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          Make Admin?
+                        </button>
+                        <button
+                          v-if="shouldShowRemoveAdmin(user)"
+                          @click="openRoleChangeModal(user, 'alumni')"
+                          class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        >
+                          Remove Admin Privileges?
+                        </button>
+                      </div>
+                    </div>
                 </div>
               </td>
             </tr>
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <!-- Job Approvals Tab -->
-      <div v-if="activeTab === 'job-approvals'" class="p-6">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-lg font-semibold text-gray-900">Job Post Approvals</h2>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600">{{ pendingJobs.length }} pending</span>
-            <button @click="loadPendingJobs" class="text-blue-600 hover:text-blue-800 text-sm">
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        <!-- Pending Jobs List -->
-        <div v-if="loadingJobs" class="text-center py-8 text-gray-500">
-          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading pending jobs...</p>
-        </div>
-
-        <div v-else-if="pendingJobs.length === 0" class="text-center py-12 text-gray-500">
-          <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <p class="font-medium">No pending job posts</p>
-          <p class="text-sm">All job posts have been reviewed</p>
-        </div>
-
-        <div v-else class="space-y-4">
-          <div 
-            v-for="job in pendingJobs" 
-            :key="job.job_id"
-            class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow"
-          >
-            <!-- Job Header -->
-            <div class="flex items-start justify-between mb-4">
-              <div class="flex-1">
-                <h3 class="text-lg font-semibold text-gray-900">{{ job.title }}</h3>
-                <p class="text-sm text-gray-600">{{ job.company_name }}</p>
-              </div>
-              <span class="bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium">
-                Pending Review
-              </span>
-            </div>
-
-            <!-- Posted By Info -->
-            <div class="mb-4 p-3 bg-gray-50 rounded-lg">
-              <p class="text-sm font-medium text-gray-700">Posted by:</p>
-              <p class="text-sm text-gray-900">
-                {{ job.poster?.first_name }} {{ job.poster?.last_name }}
-                <span v-if="job.poster?.email" class="text-gray-600">({{ job.poster.email }})</span>
-              </p>
-            </div>
-
-            <!-- Job Details Grid -->
-            <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
-              <div>
-                <span class="text-gray-600">Location:</span>
-                <span class="text-gray-900 ml-2">{{ job.location || 'N/A' }}</span>
-              </div>
-              <div>
-                <span class="text-gray-600">Work Type:</span>
-                <span class="text-gray-900 ml-2">{{ job.work_type || 'N/A' }}</span>
-              </div>
-              <div>
-                <span class="text-gray-600">Industry:</span>
-                <span class="text-gray-900 ml-2">{{ job.industry || 'N/A' }}</span>
-              </div>
-              <div>
-                <span class="text-gray-600">Experience Level:</span>
-                <span class="text-gray-900 ml-2">{{ job.experience_level || 'N/A' }}</span>
-              </div>
-              <div class="col-span-2">
-                <span class="text-gray-600">Application Link:</span>
-                <a v-if="job.application_link" :href="job.application_link" target="_blank" class="text-blue-600 hover:underline ml-2">
-                  {{ job.application_link }}
-                </a>
-                <span v-else class="text-gray-900 ml-2">Not provided</span>
-              </div>
-            </div>
-
-            <!-- Description -->
-            <div class="mb-4">
-              <p class="text-sm font-medium text-gray-700 mb-2">Description:</p>
-              <p class="text-sm text-gray-600 line-clamp-3">{{ job.description }}</p>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex items-center gap-3 pt-4 border-t border-gray-200">
-              <button 
-                @click="approveJob(job.job_id)"
-                class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium"
-              >
-                Approve
-              </button>
-              <button 
-                @click="rejectJob(job.job_id)"
-                class="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium"
-              >
-                Reject
-              </button>
-              <button 
-                @click="flagJob(job.job_id)"
-                class="flex-1 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 font-medium"
-              >
-                Flag for Review
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -399,7 +525,11 @@
         </div>
 
         <!-- Reports Table -->
-        <div class="overflow-x-auto">
+        <div v-if="loadingReports" class="text-center py-8 text-gray-500">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading reports...</p>
+        </div>
+        <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -448,14 +578,14 @@
                       View
                     </button>
                     <button 
-                      @click.stop="resolveReport(report.id)"
-                      class="text-green-600 hover:text-green-900"
+                      @click.stop="openResolveModal(report)"
+                      class="text-orange-600 hover:text-orange-900"
                     >
                       Resolve
                     </button>
                     <button 
-                      @click.stop="dismissReport(report.id)"
-                      class="text-yellow-600 hover:text-yellow-900"
+                      @click.stop="requestReportAction('dismiss', report)"
+                      class="text-gray-600 hover:text-gray-900"
                     >
                       Dismiss
                     </button>
@@ -547,33 +677,12 @@
         </div>
       </div>
 
-      <!-- Data Tools Tab -->
-      <div v-if="activeTab === 'tools'" class="p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-6">Data Tools</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Import Alumni Data -->
-          <div class="border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Import Alumni Data</h3>
-            <p class="text-gray-600 mb-4">Upload a CSV file to bulk import alumni information.</p>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Upload CSV File</label>
-                <input type="file" accept=".csv" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-              </div>
-              <button class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">
-                Import Data
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
 <!-- Edit User Modal -->
-<div v-if="showEditModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-lg w-full max-w-xl border-4 border-gray-300 shadow-2xl">
+<div v-if="showEditModal" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showEditModal = false">
+  <div class="bg-white rounded-lg w-full max-w-xl border-2 border-black shadow-2xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
     <div class="p-6">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-gray-900">Edit User</h3>
@@ -626,8 +735,8 @@
 </div>
   
 <!-- Verification Request View Modal -->
-<div v-if="showVerificationModal" class="fixed inset-0 bg-transparent flex items-center justify-center z-[100] p-4" @click.self="showVerificationModal = false">
-  <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+<div v-if="showVerificationModal" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showVerificationModal = false">
+  <div class="bg-white rounded-lg border-2 border-black shadow-2xl max-w-2xl w-full max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
     <div class="p-6 border-b border-gray-200">
       <h3 class="text-xl font-semibold text-gray-900">Verification Request Details</h3>
     </div>
@@ -676,9 +785,101 @@
   </div>
 </div>
 
+<div v-if="showEmployeeIdModal" class="fixed inset-0 bg-black/40 flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="closeEmployeeIdModal">
+  <div class="bg-white rounded-lg border-2 border-black shadow-2xl max-w-3xl w-full max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
+    <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+      <h3 class="text-xl font-semibold text-gray-900">Employee/Faculty ID Photo</h3>
+      <button @click="closeEmployeeIdModal" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="p-6">
+      <div class="mb-4">
+        <p class="text-sm text-gray-600">{{ selectedEmployeeIdRequest?.full_name }}</p>
+        <p class="text-sm text-gray-500">{{ selectedEmployeeIdRequest?.email }}</p>
+      </div>
+      <div class="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[200px]">
+        <div v-if="employeeIdModalLoading" class="text-sm text-gray-500">Loading...</div>
+        <img v-else-if="employeeIdModalUrl" :src="employeeIdModalUrl" alt="Employee ID" class="max-h-[70vh] max-w-full object-contain" />
+        <p v-else class="text-sm text-gray-500">{{ employeeIdModalError || 'No ID image available.' }}</p>
+      </div>
+    </div>
+    <div class="p-6 border-t border-gray-200 flex justify-end">
+      <button @click="closeEmployeeIdModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div v-if="showActionModal" class="fixed inset-0 bg-black/40 flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="closeActionModal">
+  <div class="bg-white rounded-lg border-2 border-black shadow-2xl max-w-lg w-full max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
+    <div class="p-6 border-b border-gray-200">
+      <h3 class="text-xl font-semibold text-gray-900">{{ actionTitle }}</h3>
+    </div>
+    <div class="p-6 space-y-4">
+      <p class="text-gray-700">{{ actionMessage }}</p>
+      <div v-if="showActionReason" class="space-y-2">
+        <label class="block text-sm font-medium text-gray-700">Reason for Denying</label>
+        <textarea v-model="actionReason" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter reason"></textarea>
+      </div>
+    </div>
+    <div class="p-6 border-t border-gray-200 flex justify-end space-x-2">
+      <button @click="closeActionModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+      <button @click="confirmAction" :class="actionConfirmClass" class="px-4 py-2 text-white rounded-lg">Yes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div v-if="showResetPasswordModal" class="fixed inset-0 bg-black/40 flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="closeResetPasswordModal">
+  <div class="bg-white rounded-lg border-2 border-black shadow-2xl max-w-lg w-full max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
+    <div class="p-6 border-b border-gray-200">
+      <h3 class="text-xl font-semibold text-gray-900">Reset Password</h3>
+    </div>
+    <div class="p-6 space-y-4">
+      <p class="text-gray-700">
+        Choose how to reset the password for {{ resetPasswordUser?.full_name }}.
+      </p>
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-gray-700">Temporary Password</label>
+        <input v-model="resetPasswordValue" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter temporary password">
+      </div>
+    </div>
+    <div class="p-6 border-t border-gray-200 flex justify-end space-x-2">
+      <button @click="closeResetPasswordModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+      <button @click="submitResetPassword" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div v-if="showRoleChangeModal" class="fixed inset-0 bg-black/40 flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="closeRoleChangeModal">
+  <div class="bg-white rounded-lg border-2 border-black shadow-2xl max-w-lg w-full max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
+    <div class="p-6 border-b border-gray-200">
+      <h3 class="text-xl font-semibold text-gray-900">{{ roleChangeTitle }}</h3>
+    </div>
+    <div class="p-6 space-y-4">
+      <p class="text-gray-700" v-if="roleChangeStep === 1">
+        {{ roleChangeMessage }}
+      </p>
+      <div v-else class="space-y-2">
+        <label class="block text-sm font-medium text-gray-700">Confirm admin password</label>
+        <input v-model="roleChangePassword" type="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter your password">
+      </div>
+    </div>
+    <div class="p-6 border-t border-gray-200 flex justify-end space-x-2">
+      <button v-if="roleChangeStep === 1" @click="closeRoleChangeModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+      <button v-if="roleChangeStep === 1" @click="proceedRoleChangeVerification" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Continue</button>
+      <button v-if="roleChangeStep === 2" @click="closeRoleChangeModal" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Back</button>
+      <button v-if="roleChangeStep === 2" @click="submitRoleChange" :disabled="roleChangeSubmitting" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <!-- Report View Modal -->
-<div v-if="showReportModal" class="fixed inset-0 bg-transparent flex items-center justify-center z-[100] p-4" @click.self="showReportModal = false">
-  <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+<div v-if="showReportModal" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showReportModal = false">
+  <div class="bg-white rounded-lg border-2 border-black shadow-2xl max-w-2xl w-full max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
     <div class="p-6 border-b border-gray-200">
       <h3 class="text-xl font-semibold text-gray-900">Report Details</h3>
     </div>
@@ -708,15 +909,21 @@
           </span>
         </div>
       </div>
-      
-      <div>
-        <label class="text-sm font-medium text-gray-500">Reason</label>
-        <p class="text-gray-900 mt-1">{{ selectedReport.reason }}</p>
+
+      <div v-if="reportedEntityFields.length" class="space-y-2">
+        <label class="text-sm font-medium text-gray-500">Reported Content</label>
+        <div class="grid grid-cols-2 gap-4">
+          <div v-for="field in reportedEntityFields" :key="field.label">
+            <label class="text-sm font-medium text-gray-500">{{ field.label }}</label>
+            <p class="text-gray-900">{{ field.value }}</p>
+          </div>
+        </div>
       </div>
-      
-      <div v-if="selectedReport.description">
-        <label class="text-sm font-medium text-gray-500">Description</label>
-        <p class="text-gray-900 mt-1 whitespace-pre-wrap">{{ selectedReport.description }}</p>
+
+      <div>
+        <label class="text-sm font-medium text-gray-500">Reporter Notes</label>
+        <p class="text-gray-900 mt-1">{{ formatReportReason(selectedReport.reason) }}</p>
+        <p v-if="selectedReport.description" class="text-gray-900 mt-1 whitespace-pre-wrap">{{ selectedReport.description }}</p>
       </div>
       
       <div v-if="selectedReport.admin_notes">
@@ -726,46 +933,232 @@
     </div>
     <div class="p-6 border-t border-gray-200 flex justify-end space-x-2">
       <button @click="showReportModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Close</button>
-      <button v-if="selectedReport?.status === 'pending'" @click="dismissReport(selectedReport.id); showReportModal = false" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Dismiss</button>
-      <button v-if="selectedReport?.status === 'pending'" @click="resolveReport(selectedReport.id); showReportModal = false" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Resolve</button>
+      <button v-if="selectedReport?.status === 'pending'" @click="requestReportAction('dismiss', selectedReport)" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Dismiss</button>
+      <button v-if="selectedReport?.status === 'pending'" @click="openResolveModal(selectedReport)" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">Resolve</button>
+    </div>
+  </div>
+</div>
+
+<div v-if="showResolveModal" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="closeResolveModal">
+  <div class="bg-white rounded-lg border-2 border-black shadow-2xl max-w-lg w-full max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto">
+    <div class="p-6 border-b border-gray-200">
+      <h3 class="text-xl font-semibold text-gray-900">Resolve Report</h3>
+    </div>
+    <div class="p-6 space-y-3">
+      <p class="text-gray-700">Choose how you want to resolve this report.</p>
+      <div class="flex flex-col space-y-2">
+        <button @click="submitResolveAction('remove_content')" :disabled="resolveSubmitting" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">Remove Content</button>
+        <button @click="submitResolveAction('suspend_user')" :disabled="resolveSubmitting" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed">Suspend User</button>
+        <button @click="submitResolveAction('issue_warning')" :disabled="resolveSubmitting" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed">Issue Warning</button>
+      </div>
+    </div>
+    <div class="p-6 border-t border-gray-200 flex justify-end">
+      <button @click="closeResolveModal" :disabled="resolveSubmitting" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Cancel</button>
     </div>
   </div>
 </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import axios from '../config/api'
 import { useToast } from '../composables/useToast'
+import { useAuthStore } from '../stores/auth'
 
 const toast = useToast()
+const authStore = useAuthStore()
 
 // Reactive data
 const activeTab = ref('verification')
 const verificationSearch = ref('')
 const verificationProgram = ref('')
 const verificationStatus = ref('')
+const employeeVerificationSearch = ref('')
+const employeeVerificationStatus = ref('')
 const directorySearch = ref('')
 const directoryRole = ref('')
 const directoryStatus = ref('')
 const selectAll = ref(false)
 const selectedRequests = ref([])
 const verificationRequests = ref([])
+const employeeVerificationRequests = ref([])
 const loadingVerifications = ref(false)
 const showVerificationModal = ref(false)
 const selectedVerificationRequest = ref(null)
+const showEmployeeIdModal = ref(false)
+const selectedEmployeeIdRequest = ref(null)
+const employeeIdModalUrl = ref('')
+const employeeIdModalLoading = ref(false)
+const employeeIdModalError = ref('')
 const showReportModal = ref(false)
 const selectedReport = ref(null)
+const reportedEntity = ref(null)
+const showResolveModal = ref(false)
+const resolveTargetReport = ref(null)
+const resolveSubmitting = ref(false)
+const showActionModal = ref(false)
+const showResetPasswordModal = ref(false)
+const resetPasswordMode = ref('temporary')
+const resetPasswordValue = ref('')
+const resetPasswordUser = ref(null)
+const resetPasswordSubmitting = ref(false)
+const openRoleMenuId = ref(null)
+const showRoleChangeModal = ref(false)
+const roleChangeStep = ref(1)
+const roleChangeUser = ref(null)
+const roleChangeTargetRole = ref('')
+const roleChangePassword = ref('')
+const roleChangeSubmitting = ref(false)
+const actionType = ref('')
+const actionScope = ref('')
+const actionRequest = ref(null)
+const actionReason = ref('')
+
+const actionTitle = computed(() => {
+  if (!actionRequest.value) return ''
+  if (actionScope.value === 'verification') {
+    return actionType.value === 'approve' ? 'Approve Verification' : 'Deny Verification'
+  }
+  if (actionScope.value === 'employee') {
+    if (actionType.value === 'approve') return 'Mark Employee/Faculty as Verified'
+    if (actionType.value === 'remove') return 'Mark Employee/Faculty as Unverified'
+    return 'Employee/Faculty Submission'
+  }
+  if (actionScope.value === 'job') {
+    if (actionType.value === 'approve') return 'Approve Job Post'
+    if (actionType.value === 'reject') return 'Reject Job Post'
+    return ''
+  }
+  if (actionScope.value === 'directory') {
+    return actionType.value === 'deactivate' ? 'Deactivate User' : 'Activate User'
+  }
+  if (actionScope.value === 'report') {
+    return actionType.value === 'resolve' ? 'Resolve Report' : 'Dismiss Report'
+  }
+  return ''
+})
+
+const actionMessage = computed(() => {
+  if (!actionRequest.value) return ''
+  if (actionScope.value === 'verification') {
+    return actionType.value === 'approve'
+      ? `Approve verification for ${actionRequest.value.full_name}?`
+      : `Deny verification request for ${actionRequest.value.full_name}?`
+  }
+  if (actionScope.value === 'employee') {
+    if (actionType.value === 'approve') {
+      return `Mark ${actionRequest.value.full_name} as verified?`
+    }
+    if (actionType.value === 'remove') {
+      return `Mark ${actionRequest.value.full_name} as unverified?`
+    }
+    return `Update employee/faculty status for ${actionRequest.value.full_name}?`
+  }
+  if (actionScope.value === 'job') {
+    const title = actionRequest.value.title || 'this job post'
+    if (actionType.value === 'approve') return `Approve "${title}"?`
+    if (actionType.value === 'reject') return `Reject "${title}"?`
+    return ''
+  }
+  if (actionScope.value === 'directory') {
+    return actionType.value === 'deactivate'
+      ? 'Are you sure you want to deactivate this user? They will lose access to all LCBAConnect+ features.'
+      : `Activate ${actionRequest.value.full_name}?`
+  }
+  if (actionScope.value === 'report') {
+    return actionType.value === 'resolve'
+      ? `Resolve report #${actionRequest.value.id}?`
+      : `Dismiss report #${actionRequest.value.id}?`
+  }
+  return ''
+})
+
+const roleChangeTitle = computed(() => {
+  if (!roleChangeUser.value) return 'Role Change'
+  return roleChangeTargetRole.value === 'admin' ? 'Make Admin' : 'Remove Admin Privileges'
+})
+
+const roleChangeMessage = computed(() => {
+  if (!roleChangeUser.value) return ''
+  if (roleChangeTargetRole.value === 'admin') {
+    return `Grant admin privileges to ${roleChangeUser.value.full_name}?`
+  }
+  return `Remove admin privileges from ${roleChangeUser.value.full_name}?`
+})
+
+const showActionReason = computed(() => {
+  return actionType.value === 'deny' && actionScope.value === 'verification'
+})
+
+const actionConfirmClass = computed(() => {
+  if (actionType.value === 'dismiss') {
+    return 'bg-gray-600 hover:bg-gray-700'
+  }
+  if (['deny', 'reject', 'deactivate', 'remove'].includes(actionType.value)) {
+    return 'bg-red-600 hover:bg-red-700'
+  }
+  return 'bg-green-600 hover:bg-green-700'
+})
+
+const reportedEntityFields = computed(() => {
+  if (!selectedReport.value || !reportedEntity.value) return []
+  const type = selectedReport.value.reported_entity_type
+  const entity = reportedEntity.value
+  if (type === 'job_post') {
+    return [
+      { label: 'Title', value: entity.title || 'N/A' },
+      { label: 'Company', value: entity.company_name || 'N/A' },
+      { label: 'Location', value: entity.location || 'N/A' },
+      { label: 'Status', value: entity.status || 'N/A' }
+    ]
+  }
+  if (type === 'event') {
+    return [
+      { label: 'Title', value: entity.title || 'N/A' },
+      { label: 'Location', value: entity.location || 'N/A' },
+      { label: 'Start Date', value: entity.start_date ? new Date(entity.start_date).toLocaleString() : 'N/A' },
+      { label: 'End Date', value: entity.end_date ? new Date(entity.end_date).toLocaleString() : 'N/A' }
+    ]
+  }
+  if (type === 'user') {
+    const fullName = `${entity.first_name || ''} ${entity.last_name || ''}`.trim()
+    return [
+      { label: 'Name', value: fullName || 'N/A' },
+      { label: 'Email', value: entity.email || 'N/A' },
+      { label: 'Role', value: entity.role || 'N/A' }
+    ]
+  }
+  if (type === 'post') {
+    return [
+      { label: 'Post ID', value: entity.post_id || entity.id || 'N/A' },
+      { label: 'User ID', value: entity.user_id || 'N/A' },
+      { label: 'Content', value: entity.content || 'N/A' }
+    ]
+  }
+  if (type === 'comment') {
+    return [
+      { label: 'Comment ID', value: entity.comment_id || entity.id || 'N/A' },
+      { label: 'User ID', value: entity.user_id || 'N/A' },
+      { label: 'Content', value: entity.content || 'N/A' }
+    ]
+  }
+  return []
+})
 
 // Load verification requests from database
 const loadVerificationRequests = async () => {
   loadingVerifications.value = true
   try {
     const response = await axios.get('/api/users', {
-      params: { role: 'alumni' }
+      params: { role: 'alumni', refresh: Date.now() }
+    })
+    const employeeResponse = await axios.get('/api/users', {
+      params: { refresh: Date.now() }
     })
     if (response.data.success) {
-      verificationRequests.value = response.data.data.map(user => ({
+      const users = response.data.data || []
+      const employeeUsers = employeeResponse.data?.success ? (employeeResponse.data.data || []) : users
+      verificationRequests.value = users.map(user => ({
         id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
@@ -773,12 +1166,34 @@ const loadVerificationRequests = async () => {
         email: user.email,
         program: user.program || 'N/A',
         batch: user.batch || 'N/A',
-        status: user.lcba_verification_status || 'pending',
-        submitted_at: user.created_at
+        status: user.is_verified ? 'approved' : 'pending',
+        submitted_at: user.created_at,
+        is_verified: user.is_verified
       }))
+      employeeVerificationRequests.value = employeeUsers
+        .filter(user => user.lcba_employee_id)
+        .map(user => {
+          const rawStatus = user.lcba_verification_status || (user.is_lcba_employee_faculty ? 'verified' : 'pending')
+          const status = rawStatus === 'rejected' ? 'unverified' : rawStatus
+          return ({
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          full_name: `${user.first_name} ${user.last_name}`,
+          email: user.email,
+          program: user.program || 'N/A',
+          batch: user.batch || 'N/A',
+          status,
+          employee_id_number: user.id,
+          id_image_path: user.lcba_employee_id || '',
+          submitted_at: user.created_at
+          })
+        })
       // Update tab count
       const verTab = tabs.value.find(t => t.key === 'verification')
       if (verTab) verTab.count = verificationRequests.value.filter(r => r.status === 'pending').length
+      const employeeTab = tabs.value.find(t => t.key === 'employee-verification')
+      if (employeeTab) employeeTab.count = employeeVerificationRequests.value.filter(r => r.status === 'pending').length
     }
   } catch (error) {
     console.error('Error loading verification requests:', error)
@@ -791,17 +1206,18 @@ const pendingJobs = ref([])
 const loadingJobs = ref(false)
 
 const directoryUsers = ref([])
+const loadingDirectory = ref(false)
 
 const reports = ref([])
 const loadingReports = ref(false)
 
 const tabs = ref([
   { key: 'verification', label: 'Verification Queue', count: 0 },
+  { key: 'employee-verification', label: 'Employee/Faculty ID Queue', count: 0 },
   { key: 'job-approvals', label: 'Job Approvals', count: 0 },
   { key: 'directory', label: 'User Directory', count: 0 },
   { key: 'reports', label: 'Reports & Moderation', count: 0 },
   // { key: 'analytics', label: 'Analytics', count: null }, // Temporarily hidden
-  { key: 'tools', label: 'Data Tools', count: null }
 ])
 
 // Computed properties
@@ -822,6 +1238,25 @@ const filteredVerificationRequests = computed(() => {
 
   if (verificationStatus.value) {
     filtered = filtered.filter(request => request.status === verificationStatus.value)
+  }
+
+  return filtered
+})
+
+const filteredEmployeeVerificationRequests = computed(() => {
+  let filtered = employeeVerificationRequests.value
+
+  if (employeeVerificationSearch.value) {
+    const search = employeeVerificationSearch.value.toLowerCase()
+    filtered = filtered.filter(request => 
+      request.full_name.toLowerCase().includes(search) ||
+      request.program.toLowerCase().includes(search) ||
+      request.batch.toString().includes(employeeVerificationSearch.value)
+    )
+  }
+
+  if (employeeVerificationStatus.value) {
+    filtered = filtered.filter(request => request.status === employeeVerificationStatus.value)
   }
 
   return filtered
@@ -889,40 +1324,216 @@ const bulkDeny = () => {
   }
 }
 
-const approveRequest = async (request) => {
-  if (!confirm(`Approve verification request for ${request.full_name}?`)) return
-  
+const openActionModal = (type, request, scope) => {
+  if (!request) return
+  if (scope === 'verification') {
+    if (request.status !== 'pending' || request.is_verified) {
+      toast.info(`${request.full_name} has already been approved.`, 'Info')
+      return
+    }
+  } else if (scope === 'employee') {
+    if (type === 'approve' && request.status === 'verified') {
+      toast.info(`${request.full_name} is already verified.`, 'Info')
+      return
+    }
+    if (type === 'remove' && request.status !== 'verified') {
+      toast.info(`${request.full_name} is already unverified.`, 'Info')
+      return
+    }
+  }
+  actionType.value = type
+  actionScope.value = scope
+  actionRequest.value = request
+  actionReason.value = ''
+  showActionModal.value = true
+}
+
+const requestJobAction = (type, job) => {
+  openActionModal(type, job, 'job')
+}
+
+const requestDirectoryAction = (type, user) => {
+  if (type === 'reset_password') {
+    openResetPasswordModal(user)
+    return
+  }
+  openActionModal(type, user, 'directory')
+}
+
+const requestReportAction = (type, report) => {
+  if (type === 'resolve') {
+    openResolveModal(report)
+    return
+  }
+  openActionModal(type, report, 'report')
+}
+
+const closeActionModal = () => {
+  showActionModal.value = false
+  actionType.value = ''
+  actionScope.value = ''
+  actionRequest.value = null
+  actionReason.value = ''
+}
+
+const confirmAction = async () => {
+  if (!actionRequest.value) return
+  if (actionScope.value === 'verification') {
+    if (actionRequest.value.status !== 'pending' || actionRequest.value.is_verified) {
+      toast.info(`${actionRequest.value.full_name} has already been approved.`, 'Info')
+      closeActionModal()
+      return
+    }
+  } else if (actionScope.value === 'employee') {
+    if (actionType.value === 'approve' && actionRequest.value.status === 'verified') {
+      toast.info(`${actionRequest.value.full_name} is already verified.`, 'Info')
+      closeActionModal()
+      return
+    }
+    if (actionType.value === 'remove' && actionRequest.value.status !== 'verified') {
+      toast.info(`${actionRequest.value.full_name} is already unverified.`, 'Info')
+      closeActionModal()
+      return
+    }
+  } else if (actionScope.value === 'directory') {
+    if (actionType.value === 'activate' && actionRequest.value.status === 'active') {
+      toast.info(`${actionRequest.value.full_name} is already active.`, 'Info')
+      closeActionModal()
+      return
+    }
+    if (actionType.value === 'deactivate' && actionRequest.value.status !== 'active') {
+      toast.info(`${actionRequest.value.full_name} is already inactive.`, 'Info')
+      closeActionModal()
+      return
+    }
+  } else if (actionScope.value === 'report') {
+    if (actionRequest.value.status !== 'pending') {
+      toast.info('Report is already processed.', 'Info')
+      closeActionModal()
+      return
+    }
+  }
+  if (actionType.value === 'deny' && actionScope.value === 'verification' && !actionReason.value.trim()) {
+    toast.error('Please provide a reason for denial.', 'Validation Error')
+    return
+  }
+
   try {
-    const response = await axios.post(`/api/admin/users/${request.id}/approve`)
-    if (response.data.success) {
-      toast.success(`${request.full_name} has been approved and can now access the platform!`, 'Success')
-      request.status = 'approved'
-      request.is_verified = true
-      // Reload verification requests
+    if (actionScope.value === 'verification') {
+      if (actionType.value === 'approve') {
+        const response = await axios.post(`/api/admin/users/${actionRequest.value.id}/approve`)
+        if (response.data.success) {
+          toast.success(`${actionRequest.value.full_name} has been approved and can now access the platform!`, 'Success')
+          actionRequest.value.status = 'approved'
+          actionRequest.value.is_verified = true
+        }
+      } else {
+        const response = await axios.post(`/api/admin/users/${actionRequest.value.id}/reject`, { reason: actionReason.value })
+        if (response.data.success) {
+          toast.success(`${actionRequest.value.full_name}'s registration has been rejected and removed.`, 'Success')
+        }
+      }
+    } else if (actionScope.value === 'employee') {
+      if (actionType.value === 'approve') {
+        const response = await axios.post(`/api/admin/users/${actionRequest.value.id}/employee-verify`)
+        if (response.data.success) {
+          toast.success(`${actionRequest.value.full_name} is now marked as verified.`, 'Success')
+          actionRequest.value.status = 'verified'
+        }
+      } else if (actionType.value === 'remove') {
+        const response = await axios.post(`/api/admin/users/${actionRequest.value.id}/employee-verify`, { action: 'remove' })
+        if (response.data.success) {
+          toast.success(`${actionRequest.value.full_name} is now marked as unverified.`, 'Success')
+          actionRequest.value.status = 'unverified'
+        }
+      }
+    } else if (actionScope.value === 'job') {
+      if (actionType.value === 'approve') {
+        await approveJob(actionRequest.value.job_id)
+      } else if (actionType.value === 'reject') {
+        await rejectJob(actionRequest.value.job_id)
+      }
+    } else if (actionScope.value === 'directory') {
+      toggleUserStatus(actionRequest.value, actionType.value)
+    } else if (actionScope.value === 'report') {
+      if (actionType.value === 'resolve') {
+        await resolveReport(actionRequest.value.id)
+      } else {
+        await dismissReport(actionRequest.value.id)
+      }
+      if (selectedReport.value?.id === actionRequest.value.id) {
+        showReportModal.value = false
+      }
+    }
+    if (actionScope.value === 'verification' || actionScope.value === 'employee') {
       await loadVerificationRequests()
     }
+    closeActionModal()
   } catch (error) {
-    console.error('Error approving user:', error)
-    toast.error('Failed to approve user: ' + (error.response?.data?.message || error.message), 'Error')
+    const status = error.response?.status
+    if (status === 403) {
+      toast.error('Admin access required to approve this user.', 'Unauthorized')
+      return
+    }
+    if (status === 404) {
+      toast.info('User no longer exists or was already removed.', 'Info')
+      await loadVerificationRequests()
+      closeActionModal()
+      return
+    }
+    toast.error('Failed to process request: ' + (error.response?.data?.message || error.message), 'Error')
   }
 }
 
-const denyRequest = async (request) => {
-  const reason = prompt('Please provide a reason for denial (optional):')
-  if (reason === null) return // User cancelled
-  
-  if (!confirm(`Deny and remove verification request for ${request.full_name}?`)) return
-  
+const approveRequest = (request) => {
+  openActionModal('approve', request, 'verification')
+}
+
+const denyRequest = (request) => {
+  openActionModal('deny', request, 'verification')
+}
+
+const approveEmployeeVerification = (request) => {
+  if (request.status === 'verified') {
+    openActionModal('remove', request, 'employee')
+    return
+  }
+  openActionModal('approve', request, 'employee')
+}
+
+const openEmployeeIdModal = async (request) => {
+  if (!request?.id_image_path) {
+    toast.info('No ID image available for this user.', 'Info')
+    return
+  }
+  selectedEmployeeIdRequest.value = request
+  showEmployeeIdModal.value = true
+  employeeIdModalError.value = ''
+  employeeIdModalLoading.value = true
+  if (employeeIdModalUrl.value) {
+    URL.revokeObjectURL(employeeIdModalUrl.value)
+    employeeIdModalUrl.value = ''
+  }
   try {
-    const response = await axios.post(`/api/admin/users/${request.id}/reject`, { reason })
-    if (response.data.success) {
-      toast.success(`${request.full_name}'s registration has been rejected and removed.`, 'Success')
-      // Reload verification requests
-      await loadVerificationRequests()
-    }
+    const response = await axios.get(`/api/admin/users/${request.id}/employee-id-image`, {
+      responseType: 'blob'
+    })
+    employeeIdModalUrl.value = URL.createObjectURL(response.data)
   } catch (error) {
-    console.error('Error rejecting user:', error)
-    toast.error('Failed to reject user: ' + (error.response?.data?.message || error.message), 'Error')
+    employeeIdModalError.value = error.response?.data?.message || 'Unable to load ID image.'
+  } finally {
+    employeeIdModalLoading.value = false
+  }
+}
+
+const closeEmployeeIdModal = () => {
+  showEmployeeIdModal.value = false
+  selectedEmployeeIdRequest.value = null
+  employeeIdModalError.value = ''
+  employeeIdModalLoading.value = false
+  if (employeeIdModalUrl.value) {
+    URL.revokeObjectURL(employeeIdModalUrl.value)
+    employeeIdModalUrl.value = ''
   }
 }
 
@@ -966,22 +1577,177 @@ const saveUserEdits = async () => {
   }
 }
 
-const resetPassword = (user) => {
-  if (confirm(`Reset password for ${user.full_name}?`)) {
-    console.log('Reset password for:', user.full_name)
+const openResetPasswordModal = (user) => {
+  resetPasswordUser.value = user
+  resetPasswordMode.value = 'temporary'
+  resetPasswordValue.value = ''
+  showResetPasswordModal.value = true
+}
+
+const closeResetPasswordModal = () => {
+  showResetPasswordModal.value = false
+  resetPasswordMode.value = 'temporary'
+  resetPasswordValue.value = ''
+  resetPasswordUser.value = null
+}
+
+const submitResetPassword = async () => {
+  if (!resetPasswordUser.value || resetPasswordSubmitting.value) return
+  if (resetPasswordMode.value === 'temporary' && !resetPasswordValue.value.trim()) {
+    toast.error('Temporary password is required.', 'Validation Error')
+    return
+  }
+  resetPasswordSubmitting.value = true
+  try {
+    const payload = {
+      mode: resetPasswordMode.value,
+      temp_password: resetPasswordMode.value === 'temporary' ? resetPasswordValue.value.trim() : undefined
+    }
+    const response = await axios.post(`/api/admin/users/${resetPasswordUser.value.id}/reset-password`, payload)
+    if (response.data.success) {
+      toast.success('Password reset completed.', 'Success')
+      closeResetPasswordModal()
+    }
+  } catch (error) {
+    toast.error('Failed to reset password: ' + (error.response?.data?.message || error.message), 'Error')
+  } finally {
+    resetPasswordSubmitting.value = false
   }
 }
 
-const toggleUserStatus = (user) => {
-  const action = user.status === 'active' ? 'deactivate' : 'activate'
-  if (confirm(`${action} ${user.full_name}?`)) {
-    user.status = user.status === 'active' ? 'inactive' : 'active'
+const shouldShowMakeAdmin = (user) => {
+  return user?.role === 'alumni' || user?.role === 'staff'
+}
+
+const shouldShowRemoveAdmin = (user) => {
+  return user?.role === 'admin' && user?.id !== authStore.user?.id
+}
+
+const toggleRoleMenu = (user) => {
+  if (!user?.id) return
+  openRoleMenuId.value = openRoleMenuId.value === user.id ? null : user.id
+}
+
+const closeRoleMenu = () => {
+  openRoleMenuId.value = null
+}
+
+const openRoleChangeModal = (user, targetRole) => {
+  if (!user || !targetRole) return
+  roleChangeUser.value = user
+  roleChangeTargetRole.value = targetRole
+  roleChangePassword.value = ''
+  roleChangeStep.value = 1
+  showRoleChangeModal.value = true
+  closeRoleMenu()
+}
+
+const proceedRoleChangeVerification = () => {
+  roleChangeStep.value = 2
+}
+
+const closeRoleChangeModal = () => {
+  showRoleChangeModal.value = false
+  roleChangeStep.value = 1
+  roleChangeUser.value = null
+  roleChangeTargetRole.value = ''
+  roleChangePassword.value = ''
+  roleChangeSubmitting.value = false
+}
+
+const submitRoleChange = async () => {
+  if (!roleChangeUser.value || roleChangeSubmitting.value) return
+  if (!roleChangePassword.value.trim()) {
+    toast.error('Admin password is required.', 'Validation Error')
+    return
+  }
+  roleChangeSubmitting.value = true
+  try {
+    const response = await axios.post(`/api/admin/users/${roleChangeUser.value.id}/role`, {
+      role: roleChangeTargetRole.value,
+      admin_password: roleChangePassword.value
+    })
+    if (response.data.success) {
+      const updatedUser = response.data.data
+      const idx = directoryUsers.value.findIndex(u => u.id === updatedUser.id)
+      if (idx !== -1) {
+        directoryUsers.value[idx] = { ...directoryUsers.value[idx], role: updatedUser.role }
+      }
+      toast.success('User role updated.', 'Success')
+      closeRoleChangeModal()
+    }
+  } catch (error) {
+    toast.error('Failed to update role: ' + (error.response?.data?.message || error.message), 'Error')
+  } finally {
+    roleChangeSubmitting.value = false
   }
 }
 
-const viewReport = (report) => {
+const toggleUserStatus = async (user, action = null) => {
+  const nextAction = action || (user.status === 'active' ? 'deactivate' : 'activate')
+  const targetActive = nextAction === 'activate'
+  try {
+    const response = await axios.post(`/api/admin/users/${user.id}/status`, { is_active: targetActive })
+    if (response.data.success) {
+      const updatedUser = response.data.data
+      user.status = updatedUser.status
+      user.is_active = updatedUser.is_active
+      const statusLabel = nextAction === 'activate' ? 'active' : (user.status === 'suspended' ? 'suspended' : 'inactive')
+      toast.success(`${user.full_name} is now ${statusLabel}.`, 'Success')
+    }
+  } catch (error) {
+    toast.error('Failed to update status: ' + (error.response?.data?.message || error.message), 'Error')
+  }
+}
+
+const viewReport = async (report) => {
   selectedReport.value = report
+  reportedEntity.value = null
   showReportModal.value = true
+  try {
+    const response = await axios.get(`/api/reports/${report.id}`)
+    if (response.data.success) {
+      selectedReport.value = response.data.data.report || report
+      reportedEntity.value = response.data.data.reported_entity || null
+    }
+  } catch (error) {
+    console.error('Error loading report details:', error)
+  }
+}
+
+const openResolveModal = (report) => {
+  if (!report || report.status !== 'pending') {
+    toast.info('Report is already processed.', 'Info')
+    return
+  }
+  resolveTargetReport.value = report
+  showResolveModal.value = true
+}
+
+const closeResolveModal = () => {
+  showResolveModal.value = false
+  resolveTargetReport.value = null
+}
+
+const submitResolveAction = async (action) => {
+  if (!resolveTargetReport.value) return
+  resolveSubmitting.value = true
+  try {
+    const response = await axios.post(`/api/reports/${resolveTargetReport.value.id}/resolve`, { action })
+    if (response.data.success) {
+      toast.success('Report resolved successfully', 'Success')
+      await loadReports()
+      if (selectedReport.value?.id === resolveTargetReport.value.id) {
+        showReportModal.value = false
+      }
+      closeResolveModal()
+    }
+  } catch (error) {
+    console.error('Error resolving report:', error)
+    toast.error('Failed to resolve report: ' + (error.response?.data?.message || error.message), 'Error')
+  } finally {
+    resolveSubmitting.value = false
+  }
 }
 
 const warnUser = (report) => {
@@ -990,6 +1756,12 @@ const warnUser = (report) => {
 
 // Fetch users from backend
 const fetchUsers = async () => {
+  if (!authStore.isAuthenticated) {
+    directoryUsers.value = []
+    loadingDirectory.value = false
+    return
+  }
+  loadingDirectory.value = true
   try {
     const params = {
       role: directoryRole.value || undefined,
@@ -1009,27 +1781,41 @@ const fetchUsers = async () => {
         headline: u.headline,
         industry: u.industry,
         experience_level: u.experience_level,
-        status: 'active'
+        is_active: u.is_active !== undefined ? u.is_active : true,
+        status: u.status === 'suspended'
+          ? 'suspended'
+          : (u.is_active === false ? 'inactive' : 'active')
       }))
       // update tab counts
       tabs.value = [
         { key: 'verification', label: 'Verification Queue', count: verificationRequests.value.filter(r => r.status === 'pending').length },
+        { key: 'employee-verification', label: 'Employee/Faculty ID Queue', count: employeeVerificationRequests.value.filter(r => r.status === 'pending').length },
+        { key: 'job-approvals', label: 'Job Approvals', count: pendingJobs.value.length },
         { key: 'directory', label: 'User Directory', count: directoryUsers.value.length },
         { key: 'reports', label: 'Reports & Moderation', count: reports.value.filter(r => r.status === 'pending').length },
         // { key: 'analytics', label: 'Analytics', count: null }, // Temporarily hidden
-        { key: 'tools', label: 'Data Tools', count: null }
       ]
     } else {
       directoryUsers.value = []
     }
   } catch (e) {
+    if (e.response?.status === 401) {
+      directoryUsers.value = []
+      return
+    }
     console.error('Error fetching users:', e)
     directoryUsers.value = []
+  } finally {
+    loadingDirectory.value = false
   }
 }
 
 // Reports & Moderation Methods
 const loadReports = async () => {
+  if (!authStore.isAuthenticated) {
+    reports.value = []
+    return
+  }
   loadingReports.value = true
   try {
     const response = await axios.get('/api/reports')
@@ -1040,17 +1826,19 @@ const loadReports = async () => {
       if (reportTab) reportTab.count = reports.value.filter(r => r.status === 'pending').length
     }
   } catch (error) {
+    if (error.response?.status === 401) {
+      reports.value = []
+      return
+    }
     console.error('Error loading reports:', error)
   } finally {
     loadingReports.value = false
   }
 }
 
-const resolveReport = async (reportId) => {
-  if (!confirm('Are you sure you want to resolve this report?')) return
-  
+const resolveReport = async (reportId, action = 'issue_warning') => {
   try {
-    const response = await axios.post(`/api/reports/${reportId}/resolve`)
+    const response = await axios.post(`/api/reports/${reportId}/resolve`, { action })
     if (response.data.success) {
       toast.success('Report resolved successfully', 'Success')
       await loadReports()
@@ -1062,8 +1850,6 @@ const resolveReport = async (reportId) => {
 }
 
 const dismissReport = async (reportId) => {
-  if (!confirm('Are you sure you want to dismiss this report?')) return
-  
   try {
     const response = await axios.put(`/api/reports/${reportId}`, { 
       status: 'dismissed',
@@ -1102,14 +1888,32 @@ const formatReportType = (type) => {
     'job_post': 'Job Post',
     'user': 'User',
     'post': 'Post',
-    'comment': 'Comment'
+    'comment': 'Comment',
+    'event': 'Event'
   }
   
   return typeMap[type] || type
 }
 
+const formatReportReason = (reason) => {
+  if (!reason) return 'N/A'
+  const reasonMap = {
+    spam: 'Spam',
+    inappropriate_content: 'Inappropriate content',
+    scam_fraud: 'Scam or fraud',
+    harassment: 'Harassment',
+    false_information: 'False information',
+    other: 'Other'
+  }
+  return reasonMap[reason] || reason
+}
+
 // Job Approvals Methods
 const loadPendingJobs = async () => {
+  if (!authStore.isAuthenticated) {
+    pendingJobs.value = []
+    return
+  }
   loadingJobs.value = true
   try {
     const response = await axios.get('/api/admin/jobs/pending')
@@ -1120,6 +1924,10 @@ const loadPendingJobs = async () => {
       if (jobTab) jobTab.count = pendingJobs.value.length
     }
   } catch (error) {
+    if (error.response?.status === 401) {
+      pendingJobs.value = []
+      return
+    }
     console.error('Error loading pending jobs:', error)
     toast.error('Failed to load pending jobs', 'Error')
   } finally {
@@ -1128,8 +1936,6 @@ const loadPendingJobs = async () => {
 }
 
 const approveJob = async (jobId) => {
-  if (!confirm('Are you sure you want to approve this job post?')) return
-  
   try {
     const response = await axios.post(`/api/admin/jobs/${jobId}/approve`)
     if (response.data.success) {
@@ -1143,9 +1949,7 @@ const approveJob = async (jobId) => {
 }
 
 const rejectJob = async (jobId) => {
-  const reason = prompt('Please provide a reason for rejection (optional):')
-  if (reason === null) return // User cancelled
-  
+  const reason = ''
   try {
     const response = await axios.post(`/api/admin/jobs/${jobId}/reject`, { reason })
     if (response.data.success) {
@@ -1155,21 +1959,6 @@ const rejectJob = async (jobId) => {
   } catch (error) {
     console.error('Error rejecting job:', error)
     toast.error('Failed to reject job: ' + (error.response?.data?.message || error.message), 'Error')
-  }
-}
-
-const flagJob = async (jobId) => {
-  if (!confirm('Flag this job post for further review?')) return
-  
-  try {
-    const response = await axios.post(`/api/admin/jobs/${jobId}/flag`)
-    if (response.data.success) {
-      toast.success('Job post flagged for review', 'Success')
-      await loadPendingJobs()
-    }
-  } catch (error) {
-    console.error('Error flagging job:', error)
-    toast.error('Failed to flag job: ' + (error.response?.data?.message || error.message), 'Error')
   }
 }
 
@@ -1195,17 +1984,34 @@ const exportDirectoryCsv = () => {
   URL.revokeObjectURL(url)
 }
 
-onMounted(() => {
+const handleDocumentClick = () => {
+  openRoleMenuId.value = null
+}
+
+onMounted(async () => {
+  const isAuthenticated = await authStore.checkAuth()
+  if (!isAuthenticated) {
+    window.location.href = '/login'
+    return
+  }
   fetchUsers()
   loadPendingJobs()
   loadVerificationRequests()
   loadReports()
+  document.addEventListener('click', handleDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
 })
 
 watch(activeTab, (newTab) => {
+  if (!authStore.isAuthenticated) {
+    return
+  }
   if (newTab === 'job-approvals') {
     loadPendingJobs()
-  } else if (newTab === 'verification') {
+  } else if (newTab === 'verification' || newTab === 'employee-verification') {
     loadVerificationRequests()
   } else if (newTab === 'reports') {
     loadReports()
@@ -1213,6 +2019,9 @@ watch(activeTab, (newTab) => {
 })
 
 watch([directoryRole, directorySearch], () => {
+  if (!authStore.isAuthenticated) {
+    return
+  }
   fetchUsers()
 })
 </script>

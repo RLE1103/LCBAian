@@ -87,11 +87,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import axios from '../config/api'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const activeTab = ref('today')
 const loading = ref(false)
@@ -113,6 +115,12 @@ const currentBirthdays = computed(() => {
 })
 
 const fetchBirthdays = async () => {
+  if (!authStore.isAuthenticated) {
+    birthdaysToday.value = []
+    birthdaysThisWeek.value = []
+    birthdaysUpcoming.value = []
+    return
+  }
   loading.value = true
   try {
     const [todayRes, weekRes, upcomingRes] = await Promise.all([
@@ -131,6 +139,12 @@ const fetchBirthdays = async () => {
       birthdaysUpcoming.value = upcomingRes.data.data
     }
   } catch (error) {
+    if (error.response?.status === 401) {
+      birthdaysToday.value = []
+      birthdaysThisWeek.value = []
+      birthdaysUpcoming.value = []
+      return
+    }
     console.error('Error fetching birthdays:', error)
   } finally {
     loading.value = false
@@ -138,6 +152,9 @@ const fetchBirthdays = async () => {
 }
 
 const refreshBirthdays = () => {
+  if (!authStore.isAuthenticated) {
+    return
+  }
   fetchBirthdays()
 }
 
@@ -151,7 +168,12 @@ const getFullName = (person) => {
 
 const getAvatar = (person) => {
   if (person.profile_picture) {
-    return person.profile_picture
+    const picture = person.profile_picture
+    if (picture.startsWith('http://') || picture.startsWith('https://')) return picture
+    const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
+    if (picture.startsWith('/uploads/')) return baseUrl + picture
+    if (picture.startsWith('uploads/')) return `${baseUrl}/${picture}`
+    return `${baseUrl}/uploads/profile_pictures/${picture}`
   }
   const name = getFullName(person)
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3b82f6&color=fff&size=128`
@@ -189,7 +211,11 @@ const sendWishes = (person) => {
   router.push({ path: '/messages', query: { user: person.id } })
 }
 
-onMounted(() => {
+onMounted(async () => {
+  const isAuthenticated = await authStore.checkAuth()
+  if (!isAuthenticated) {
+    return
+  }
   fetchBirthdays()
 })
 </script>

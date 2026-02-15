@@ -4,9 +4,11 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
+use App\Models\Alumni;
 use App\Models\JobPost;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class UpdateAlumniAndJobsSeeder extends Seeder
 {
@@ -15,6 +17,96 @@ class UpdateAlumniAndJobsSeeder extends Seeder
      */
     public function run(): void
     {
+        $migratedLegacy = 0;
+        $updatedLegacy = 0;
+
+        if (Schema::hasTable('alumni')) {
+            $legacyAlumni = Alumni::all();
+
+            $hasName = Schema::hasColumn('users', 'name');
+            $hasIsVerified = Schema::hasColumn('users', 'is_verified');
+            $hasProfilePicture = Schema::hasColumn('users', 'profile_picture');
+            $hasProgram = Schema::hasColumn('users', 'program');
+            $hasBatch = Schema::hasColumn('users', 'batch');
+            $hasCurrentJobTitle = Schema::hasColumn('users', 'current_job_title');
+            $hasIndustry = Schema::hasColumn('users', 'industry');
+            $hasBio = Schema::hasColumn('users', 'bio');
+
+            foreach ($legacyAlumni as $legacy) {
+                $existing = User::where('email', $legacy->email)->first();
+
+                if ($existing) {
+                    $updates = [];
+
+                    if ($hasProgram && !$existing->program && $legacy->course) {
+                        $updates['program'] = $legacy->course;
+                    }
+                    if ($hasBatch && !$existing->batch && $legacy->graduation_year) {
+                        $updates['batch'] = (string) $legacy->graduation_year;
+                    }
+                    if ($hasCurrentJobTitle && !$existing->current_job_title && $legacy->current_job) {
+                        $updates['current_job_title'] = $legacy->current_job;
+                    }
+                    if ($hasIndustry && !$existing->industry && $legacy->industry) {
+                        $updates['industry'] = $legacy->industry;
+                    }
+                    if ($hasBio && !$existing->bio && $legacy->bio) {
+                        $updates['bio'] = $legacy->bio;
+                    }
+                    if ($hasProfilePicture && !$existing->profile_picture && $legacy->profile_photo) {
+                        $updates['profile_picture'] = $legacy->profile_photo;
+                    }
+                    if ($hasIsVerified && $existing->is_verified === null) {
+                        $updates['is_verified'] = true;
+                    }
+
+                    if (!empty($updates)) {
+                        $existing->update($updates);
+                        $updatedLegacy++;
+                    }
+                    continue;
+                }
+
+                $data = [
+                    'first_name' => $legacy->first_name,
+                    'last_name' => $legacy->last_name,
+                    'email' => $legacy->email,
+                    'password' => Hash::needsRehash($legacy->password) ? Hash::make($legacy->password) : $legacy->password,
+                    'role' => 'alumni',
+                ];
+
+                if ($hasProgram) {
+                    $data['program'] = $legacy->course;
+                }
+                if ($hasBatch) {
+                    $data['batch'] = $legacy->graduation_year ? (string) $legacy->graduation_year : null;
+                }
+                if ($hasCurrentJobTitle) {
+                    $data['current_job_title'] = $legacy->current_job;
+                }
+                if ($hasIndustry) {
+                    $data['industry'] = $legacy->industry;
+                }
+                if ($hasBio) {
+                    $data['bio'] = $legacy->bio;
+                }
+                if ($hasProfilePicture) {
+                    $data['profile_picture'] = $legacy->profile_photo;
+                }
+                if ($hasIsVerified) {
+                    $data['is_verified'] = true;
+                }
+
+                $user = new User();
+                $user->fill($data);
+                if ($hasName) {
+                    $user->name = trim($legacy->first_name . ' ' . $legacy->last_name);
+                }
+                $user->save();
+                $migratedLegacy++;
+            }
+        }
+
         // Update existing alumni with proper skills and profile data
         $alumniUsers = User::where('role', 'alumni')->get();
         
@@ -26,7 +118,7 @@ class UpdateAlumniAndJobsSeeder extends Seeder
                 'current_job_title' => 'Full Stack Developer',
                 'experience_level' => 'mid',
                 'employment_status' => 'employed_full_time',
-                'years_of_experience' => '3-5',
+                'years_of_experience' => 4,
                 'city' => 'Manila',
                 'country' => 'Philippines',
                 'salary_range' => '60000-79999'
@@ -37,7 +129,7 @@ class UpdateAlumniAndJobsSeeder extends Seeder
                 'current_job_title' => 'Frontend Developer',
                 'experience_level' => 'mid',
                 'employment_status' => 'employed_full_time',
-                'years_of_experience' => '3-5',
+                'years_of_experience' => 4,
                 'city' => 'Makati',
                 'country' => 'Philippines',
                 'salary_range' => '60000-79999'
@@ -48,7 +140,7 @@ class UpdateAlumniAndJobsSeeder extends Seeder
                 'current_job_title' => 'Backend Developer',
                 'experience_level' => 'mid',
                 'employment_status' => 'employed_full_time',
-                'years_of_experience' => '3-5',
+                'years_of_experience' => 4,
                 'city' => 'BGC',
                 'country' => 'Philippines',
                 'salary_range' => '80000-99999'
@@ -59,7 +151,7 @@ class UpdateAlumniAndJobsSeeder extends Seeder
                 'current_job_title' => 'Python Developer',
                 'experience_level' => 'entry',
                 'employment_status' => 'employed_full_time',
-                'years_of_experience' => '0-2',
+                'years_of_experience' => 1,
                 'city' => 'Quezon City',
                 'country' => 'Philippines',
                 'salary_range' => '40000-59999'
@@ -70,7 +162,7 @@ class UpdateAlumniAndJobsSeeder extends Seeder
                 'current_job_title' => 'Junior Developer',
                 'experience_level' => 'entry',
                 'employment_status' => 'employed_full_time',
-                'years_of_experience' => '0-2',
+                'years_of_experience' => 1,
                 'city' => 'Manila',
                 'country' => 'Philippines',
                 'salary_range' => '40000-59999'
@@ -81,7 +173,7 @@ class UpdateAlumniAndJobsSeeder extends Seeder
                 'current_job_title' => 'Senior Developer',
                 'experience_level' => 'senior',
                 'employment_status' => 'employed_full_time',
-                'years_of_experience' => '6-10',
+                'years_of_experience' => 8,
                 'city' => 'Makati',
                 'country' => 'Philippines',
                 'salary_range' => '100000+'
@@ -92,7 +184,7 @@ class UpdateAlumniAndJobsSeeder extends Seeder
                 'current_job_title' => 'Software Engineer',
                 'experience_level' => 'mid',
                 'employment_status' => 'employed_full_time',
-                'years_of_experience' => '3-5',
+                'years_of_experience' => 4,
                 'city' => 'BGC',
                 'country' => 'Philippines',
                 'salary_range' => '80000-99999'
@@ -103,7 +195,7 @@ class UpdateAlumniAndJobsSeeder extends Seeder
                 'current_job_title' => 'Data Analyst',
                 'experience_level' => 'mid',
                 'employment_status' => 'employed_full_time',
-                'years_of_experience' => '3-5',
+                'years_of_experience' => 4,
                 'city' => 'Manila',
                 'country' => 'Philippines',
                 'salary_range' => '60000-79999'
@@ -195,6 +287,7 @@ class UpdateAlumniAndJobsSeeder extends Seeder
             JobPost::create($jobData);
         }
 
+        $this->command->info('Migrated ' . $migratedLegacy . ' legacy alumni and updated ' . $updatedLegacy . ' existing users.');
         $this->command->info('Updated ' . $alumniUsers->count() . ' alumni profiles and created 4 new job posts!');
     }
 }

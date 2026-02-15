@@ -91,6 +91,7 @@ class AuthTest extends TestCase
         $response = $this->postJson('/api/login', [
             'email' => 'test@example.com',
             'password' => 'password123',
+            'device_name' => 'tests',
         ]);
 
         $response->assertStatus(200)
@@ -100,6 +101,49 @@ class AuthTest extends TestCase
                      'user',
                      'role'
                  ]);
+    }
+
+    /**
+     * Test user can login with session-based auth
+     */
+    public function test_user_can_login_with_session(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'session@example.com',
+            'password' => Hash::make('password123'),
+            'is_verified' => true,
+        ]);
+
+        $csrfResponse = $this->withHeader('Origin', 'http://127.0.0.1:5173')
+            ->get('/sanctum/csrf-cookie');
+
+        $xsrfCookie = $csrfResponse->getCookie('XSRF-TOKEN');
+        $sessionCookie = $csrfResponse->getCookie(config('session.cookie'));
+
+        $cookies = [
+            $xsrfCookie->getName() => $xsrfCookie->getValue(),
+            $sessionCookie->getName() => $sessionCookie->getValue(),
+        ];
+
+        $response = $this->withHeader('Origin', 'http://127.0.0.1:5173')
+            ->withHeader('X-XSRF-TOKEN', urldecode($xsrfCookie->getValue()))
+            ->withCookies($cookies)
+            ->postJson('/login', [
+                'email' => 'session@example.com',
+                'password' => 'password123',
+            ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonMissing(['token']);
+
+        $this->withHeader('Origin', 'http://127.0.0.1:5173')
+            ->withCookies($cookies)
+            ->getJson('/api/user')
+            ->assertStatus(200)
+            ->assertJson([
+                'id' => $user->id,
+                'email' => $user->email,
+            ]);
     }
 
     /**

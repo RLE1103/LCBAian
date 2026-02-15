@@ -12,23 +12,29 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Add skills as JSON array for content-based filtering
-            $table->json('skills')->nullable()->after('bio');
-            
-            // Add cluster group for K-means clustering results
-            $table->integer('cluster_group')->nullable()->after('skills');
-            
-            // Add career interests for better matching
-            $table->json('career_interests')->nullable()->after('cluster_group');
-            
-            // Add current job title for clustering
-            $table->string('current_job_title')->nullable()->after('career_interests');
-            
-            // Add industry for clustering
-            $table->string('industry')->nullable()->after('current_job_title');
-            
-            // Add experience level
-            $table->string('experience_level')->nullable()->after('industry');
+            if (!Schema::hasColumn('users', 'skills')) {
+                $table->json('skills')->nullable()->after('bio');
+            }
+
+            if (!Schema::hasColumn('users', 'cluster_group')) {
+                $table->integer('cluster_group')->nullable()->after('skills');
+            }
+
+            if (!Schema::hasColumn('users', 'career_interests')) {
+                $table->json('career_interests')->nullable()->after('cluster_group');
+            }
+
+            if (!Schema::hasColumn('users', 'current_job_title')) {
+                $table->string('current_job_title')->nullable()->after('career_interests');
+            }
+
+            if (!Schema::hasColumn('users', 'industry')) {
+                $table->string('industry')->nullable()->after('current_job_title');
+            }
+
+            if (!Schema::hasColumn('users', 'experience_level')) {
+                $table->string('experience_level')->nullable()->after('industry');
+            }
         });
     }
 
@@ -38,14 +44,28 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn([
-                'skills',
-                'cluster_group', 
-                'career_interests',
-                'current_job_title',
-                'industry',
-                'experience_level'
-            ]);
+            $columns = [];
+            if (Schema::hasColumn('users', 'skills')) {
+                $columns[] = 'skills';
+            }
+            if (Schema::hasColumn('users', 'cluster_group')) {
+                $columns[] = 'cluster_group';
+            }
+            if (Schema::hasColumn('users', 'career_interests')) {
+                $columns[] = 'career_interests';
+            }
+            if (Schema::hasColumn('users', 'current_job_title')) {
+                $columns[] = 'current_job_title';
+            }
+            if (Schema::hasColumn('users', 'industry')) {
+                $columns[] = 'industry';
+            }
+            if (Schema::hasColumn('users', 'experience_level')) {
+                $columns[] = 'experience_level';
+            }
+            if (!empty($columns)) {
+                $table->dropColumn($columns);
+            }
         });
     }
 };

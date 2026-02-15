@@ -7,12 +7,34 @@
         <p class="text-sm md:text-base text-gray-600 mt-1">Share updates with the LCBA community</p>
       </div>
 
+      <!-- Search Bar -->
+      <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+        <div class="relative">
+          <input 
+            v-model="searchQuery"
+            type="text" 
+            placeholder="Search announcements by content or author..."
+            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
       <!-- Post Composer (Facebook-style) - Admin Only -->
       <div v-if="isAdmin" class="bg-white rounded-lg shadow-md p-4 md:p-6 mb-4 md:mb-6">
         <div class="flex items-start gap-3 mb-4">
           <!-- User Avatar -->
-          <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0 text-sm md:text-base">
-            {{ getUserInitials() }}
+          <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0 text-sm md:text-base overflow-hidden">
+            <img
+              v-if="authStore.user?.profile_picture"
+              :src="getProfilePictureUrl(authStore.user.profile_picture)"
+              class="w-full h-full object-cover"
+            />
+            <span v-else>{{ getUserInitials() }}</span>
           </div>
           
           <!-- Post Input -->
@@ -21,7 +43,7 @@
               v-model="newPost.content"
               @focus="isComposerExpanded = true"
               :rows="isComposerExpanded ? 4 : 1"
-              placeholder="What's on your mind?"
+              placeholder="What's New?"
               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all"
             ></textarea>
             
@@ -86,11 +108,22 @@
         </div>
         
         <!-- Post Cards -->
-        <div v-else v-for="post in posts" :key="post.post_id" class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div
+          v-else
+          v-for="post in filteredPosts"
+          :key="post.post_id"
+          class="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+          @click="openPost(post)"
+        >
           <!-- Post Header -->
           <div class="p-4 flex items-center gap-3">
-            <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-              {{ getPostUserInitials(post.user) }}
+            <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden">
+              <img
+                v-if="post.user?.profile_picture"
+                :src="getProfilePictureUrl(post.user.profile_picture)"
+                class="w-full h-full object-cover"
+              />
+              <span v-else>{{ getPostUserInitials(post.user) }}</span>
             </div>
             <div class="flex-1">
               <p class="font-semibold text-gray-900">{{ post.user?.first_name }} {{ post.user?.last_name }}</p>
@@ -108,20 +141,44 @@
             <img :src="getImageUrl(post.image_path)" class="w-full object-cover max-h-96" />
           </div>
 
-          <!-- Post Actions (Optional for future) -->
-          <div class="px-4 py-3 border-t border-gray-100 flex items-center gap-4 text-sm text-gray-600">
-            <button class="flex items-center gap-2 hover:text-blue-600 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
-              </svg>
-              <span>Like</span>
-            </button>
-            <button class="flex items-center gap-2 hover:text-blue-600 transition-colors">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-              </svg>
-              <span>Comment</span>
-            </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="showPostModal" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showPostModal = false">
+    <div class="bg-white rounded-lg w-full max-w-3xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto border-2 border-black shadow-2xl">
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">Announcement</h2>
+          </div>
+          <button @click="showPostModal = false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden">
+            <img
+              v-if="selectedPost?.user?.profile_picture"
+              :src="getProfilePictureUrl(selectedPost.user.profile_picture)"
+              class="w-full h-full object-cover"
+            />
+            <span v-else>{{ getPostUserInitials(selectedPost?.user) }}</span>
+          </div>
+          <div>
+            <p class="font-semibold text-gray-900">{{ selectedPost?.user?.first_name }} {{ selectedPost?.user?.last_name }}</p>
+            <p class="text-sm text-gray-600">Posted {{ formatDate(selectedPost?.created_at) }}</p>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <p class="text-gray-800 whitespace-pre-wrap">{{ selectedPost?.content }}</p>
+          <div v-if="selectedPost?.image_path" class="w-full">
+            <img :src="getImageUrl(selectedPost.image_path)" class="w-full h-auto object-contain max-h-[80vh] rounded-lg border border-gray-200 bg-gray-50" />
           </div>
         </div>
       </div>
@@ -144,9 +201,26 @@ const isComposerExpanded = ref(false)
 const imageInput = ref(null)
 const imagePreview = ref(null)
 const selectedImage = ref(null)
+const searchQuery = ref('')
+const selectedPost = ref(null)
+const showPostModal = ref(false)
 
 // Check if user is admin
 const isAdmin = computed(() => authStore.user?.role === 'admin')
+
+// Filter posts based on search query
+const filteredPosts = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return posts.value
+  }
+  
+  const query = searchQuery.value.toLowerCase()
+  return posts.value.filter(post => {
+    const content = post.content?.toLowerCase() || ''
+    const authorName = `${post.user?.first_name || ''} ${post.user?.last_name || ''}`.toLowerCase()
+    return content.includes(query) || authorName.includes(query)
+  })
+})
 
 const newPost = ref({
   content: '',
@@ -188,6 +262,11 @@ const removeImage = () => {
   if (imageInput.value) {
     imageInput.value.value = ''
   }
+}
+
+const openPost = (post) => {
+  selectedPost.value = post
+  showPostModal.value = true
 }
 
 const submitPost = async () => {
@@ -259,6 +338,12 @@ const getPostUserInitials = (user) => {
   return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'U'
 }
 
+const getProfilePictureUrl = (profilePicture) => {
+  if (!profilePicture) return ''
+  const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
+  return `${baseUrl}/uploads/profile_pictures/${profilePicture}`
+}
+
 const getImageUrl = (path) => {
   if (!path) return ''
   // Path is stored as 'posts/filename.jpg', serve via storage link
@@ -283,5 +368,12 @@ const formatDate = (d) => {
   return date.toLocaleDateString()
 }
 
-onMounted(() => loadPosts())
+onMounted(async () => {
+  const isAuthenticated = await authStore.checkAuth()
+  if (!isAuthenticated) {
+    window.location.href = '/login'
+    return
+  }
+  await loadPosts()
+})
 </script>

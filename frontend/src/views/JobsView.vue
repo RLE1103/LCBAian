@@ -18,7 +18,7 @@
     <div class="bg-white rounded-lg shadow-md p-4 md:p-6 mb-4 md:mb-6">
       <div class="flex flex-col lg:flex-row gap-4">
         <!-- Search Bar -->
-        <div class="flex-1">
+        <div class="w-full lg:w-80 xl:w-96">
           <div class="relative">
             <input 
               v-model="searchQuery"
@@ -59,10 +59,11 @@
 
           <select v-model="selectedExperience" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
             <option value="">All Experience Levels</option>
-            <option value="entry">Entry Level</option>
-            <option value="mid">Mid Level</option>
-            <option value="senior">Senior Level</option>
-            <option value="executive">Executive</option>
+            <option value="0-1">0-1 years (Entry Level)</option>
+            <option value="1-3">1-3 years (Junior)</option>
+            <option value="3-5">3-5 years (Mid Level)</option>
+            <option value="5-10">5-10 years (Senior)</option>
+            <option value="10+">10+ years (Expert/Lead)</option>
           </select>
         </div>
       </div>
@@ -72,7 +73,11 @@
       <!-- Left Column - Job Listings -->
       <div class="lg:col-span-2">
         <div class="space-y-4">
-          <div v-if="filteredJobs.length === 0" class="text-center py-12 text-gray-500">
+          <div v-if="loading" class="text-center py-12 text-gray-500">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p>Loading jobs...</p>
+          </div>
+          <div v-else-if="filteredJobs.length === 0" class="text-center py-12 text-gray-500">
             <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6"></path>
             </svg>
@@ -134,11 +139,6 @@
                     <button @click.stop="openReportModal(job)" title="Report" class="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path>
-                      </svg>
-                    </button>
-                    <button class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
                       </svg>
                     </button>
                 </div>
@@ -232,7 +232,7 @@
               v-for="match in careerMatches" 
               :key="match.job?.job_id || match.job_id"
               class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors cursor-pointer"
-              @click="selectJob(match.job || match)"
+              @click="selectJob(match)"
             >
               <!-- Job Header -->
               <div class="flex items-start justify-between mb-3">
@@ -252,11 +252,16 @@
                 <!-- Match Score -->
                 <div class="text-right">
                   <div class="flex items-center gap-2">
-                    <div class="w-12 h-12 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                      {{ getMatchPercentage(match) }}%
+                    <div
+                      class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                      :style="{ backgroundColor: getMatchStrength(match).bgColor }"
+                    >
+                      <span class="sr-only">{{ getMatchStrength(match).label }}</span>
                     </div>
                   </div>
-                  <p class="text-xs text-gray-500 mt-1">Match Score</p>
+                  <p class="text-xs font-semibold mt-1" :style="{ color: getMatchStrength(match).textColor }">
+                    {{ getMatchStrength(match).label }}
+                  </p>
                 </div>
               </div>
 
@@ -319,7 +324,7 @@
               <!-- Action Buttons -->
               <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
                 <button 
-                  @click.stop="selectJob(match.job || match)"
+                  @click.stop="selectJob(match)"
                   class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
                 >
                   View Details
@@ -387,8 +392,8 @@
       </div>
 
     <!-- Job Detail Modal -->
-    <div v-if="showJobModal" class="fixed inset-0 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto border-4 border-gray-300 shadow-2xl">
+    <div v-if="showJobModal" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[90] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showJobModal = false">
+      <div class="bg-white rounded-lg w-full max-w-4xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto border-2 border-black shadow-2xl">
         <div class="p-6">
           <!-- Modal Header -->
           <div class="flex items-center justify-between mb-6">
@@ -404,6 +409,12 @@
                   Posted by: {{ selectedJob.poster.first_name }} {{ selectedJob.poster.last_name }}
                 </p>
               </div>
+              <div v-if="selectedMatch || selectedJob?.similarity_score !== undefined || selectedJob?.match_percentage !== undefined" class="mt-3 flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full" :style="{ backgroundColor: getMatchStrength(selectedMatch || selectedJob).bgColor }"></span>
+                <span class="text-sm font-medium" :style="{ color: getMatchStrength(selectedMatch || selectedJob).textColor }">
+                  {{ getMatchStrength(selectedMatch || selectedJob).label }}
+                </span>
+              </div>
               
               <!-- Apply Button -->
               <a 
@@ -415,7 +426,7 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
                 </svg>
-                Apply Now
+                Visit Site
               </a>
             </div>
             <button @click="showJobModal = false" class="text-gray-400 hover:text-gray-600">
@@ -495,7 +506,7 @@
                   </div>
                   <div v-if="selectedJob?.experience_level">
                     <span class="font-medium text-gray-900">Experience Level:</span>
-                    <span class="text-gray-700 ml-2">{{ selectedJob.experience_level }}</span>
+                    <span class="text-gray-700 ml-2">{{ formatExperienceLevel(selectedJob.experience_level) }}</span>
                   </div>
                   <div v-if="selectedJob?.salary_range">
                     <span class="font-medium text-gray-900">Salary Range:</span>
@@ -524,8 +535,8 @@
   </div>
   
   <!-- Create Job Modal -->
-  <div v-if="showCreateJobModal" class="fixed inset-0 flex items-center justify-center z-50 p-4" @click.self="showCreateJobModal = false">
-    <div class="bg-white rounded-lg p-6 w-full max-w-2xl border-4 border-gray-300 shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+  <div v-if="showCreateJobModal" class="fixed inset-0 bg-transparent flex items-start md:items-center justify-center z-[80] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="showCreateJobModal = false">
+    <div class="bg-white rounded-lg p-6 w-full max-w-2xl border-2 border-black shadow-2xl max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-8rem)] overflow-y-auto" @click.stop>
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-gray-900">Post a Job</h3>
         <button @click="showCreateJobModal = false" class="text-gray-400 hover:text-gray-600">
@@ -563,14 +574,8 @@
           <input v-model="newJob.industry" type="text" placeholder="Industry" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Experience Level</label>
-          <select v-model="newJob.experience_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="">Select...</option>
-            <option value="entry">Entry</option>
-            <option value="mid">Mid</option>
-            <option value="senior">Senior</option>
-            <option value="executive">Executive</option>
-          </select>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Experience Level (Years)</label>
+          <input v-model.number="newJob.experience_level" type="number" min="0" step="1" placeholder="e.g. 3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Salary Range</label>
@@ -586,7 +591,11 @@
           <input v-model="requiredSkillsInput" type="text" placeholder="e.g. Vue, Laravel, MySQL" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
         </div>
         <div class="md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Skills (comma-separated, optional)</label>
+          <input v-model="preferredSkillsInput" type="text" placeholder="e.g. Docker, AWS" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Description (contact information required)</label>
           <textarea v-model="newJob.description" rows="4" placeholder="Job description..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
         </div>
       </div>
@@ -595,7 +604,7 @@
         <button @click="showCreateJobModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
           Cancel
         </button>
-        <button @click="createJob" :disabled="!newJob.title || !newJob.description" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+        <button @click="createJob" :disabled="isPostJobDisabled" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
           Post Job
         </button>
       </div>
@@ -604,6 +613,7 @@
 
   <!-- Report Modal -->
   <ReportModal 
+    v-if="reportingJobId !== null"
     :isOpen="showReportModal" 
     :entityType="'job_post'" 
     :entityId="reportingJobId" 
@@ -614,11 +624,15 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from '../config/api'
 import { useAuthStore } from '../stores/auth'
+import { useToast } from '../composables/useToast'
 import ReportModal from '../components/ReportModal.vue'
 
 const authStore = useAuthStore()
+const router = useRouter()
+const toast = useToast()
 
 // Reactive data
 const searchQuery = ref('')
@@ -627,6 +641,7 @@ const selectedWorkType = ref('')
 const selectedIndustry = ref('')
 const selectedExperience = ref('')
 const selectedJob = ref(null)
+const selectedMatch = ref(null)
 const showJobModal = ref(false)
 const showCreateJobModal = ref(false)
 const activeTab = ref('overview')
@@ -675,7 +690,12 @@ const fetchFilterOptions = async () => {
   try {
     const response = await axios.get('/api/job-posts/filter-options')
     if (response?.data?.success) {
-      filterOptions.value = response.data.data
+      const data = response.data.data || {}
+      filterOptions.value = {
+        locations: data.locations || [],
+        industries: data.industries || [],
+        workTypes: data.work_types || []
+      }
     }
   } catch (error) {
     console.error('Error fetching filter options:', error)
@@ -698,12 +718,14 @@ const newJob = ref({
   location: '',
   work_type: '',
   required_skills: [],
+  preferred_skills: [],
   industry: '',
-  experience_level: '',
+  experience_level: null,
   salary_range: '',
   application_link: ''
 })
 const requiredSkillsInput = ref('')
+const preferredSkillsInput = ref('')
 
 const jobDetailTabs = [
   { key: 'overview', label: 'Overview' },
@@ -716,8 +738,7 @@ const itemsPerPage = 10
 
 // Computed properties
 const filteredJobs = computed(() => {
-  // Since we're filtering on the backend, just return the jobs
-  return jobs.value
+  return jobs.value.filter((job) => job?.status === 'approved')
 })
 
 const totalPages = computed(() => Math.ceil(filteredJobs.value.length / itemsPerPage))
@@ -728,6 +749,19 @@ const paginatedJobs = computed(() => {
   return filteredJobs.value.slice(start, end)
 })
 
+const isPostJobDisabled = computed(() => {
+  if (!newJob.value.title) return true
+  if (!newJob.value.company_name) return true
+  if (!newJob.value.location) return true
+  if (!newJob.value.work_type) return true
+  if (!newJob.value.industry) return true
+  if (newJob.value.experience_level === null || newJob.value.experience_level === '' || Number.isNaN(Number(newJob.value.experience_level))) return true
+  if (!newJob.value.salary_range) return true
+  if (!requiredSkillsInput.value) return true
+  if (!newJob.value.description) return true
+  return false
+})
+
 const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page
@@ -736,41 +770,70 @@ const goToPage = (page) => {
 }
 
 // Methods
-const selectJob = (job) => {
-  selectedJob.value = job
+const selectJob = (jobOrMatch) => {
+  selectedJob.value = jobOrMatch?.job ? jobOrMatch.job : jobOrMatch
+  selectedMatch.value = jobOrMatch?.job ? jobOrMatch : null
   showJobModal.value = true
   activeTab.value = 'overview'
 }
 
 // removed apply flow methods
 
-// Save/Unsave jobs via localStorage
-const STORAGE_KEY = 'saved_jobs'
-const loadSavedJobs = () => {
+// Save/Unsave jobs via backend (per user)
+const loadSavedJobs = async () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    savedJobs.value = raw ? JSON.parse(raw) : []
-  } catch {
+    const response = await axios.get('/api/saved-jobs')
+    if (response?.data?.success) {
+      savedJobs.value = response.data.data || []
+    } else {
+      savedJobs.value = []
+    }
+  } catch (error) {
+    console.error('Error loading saved jobs:', error)
     savedJobs.value = []
   }
 }
-const persistSavedJobs = () => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(savedJobs.value))
-}
 const isJobSaved = (job) => savedJobs.value.some(j => j.job_id === job.job_id)
-const toggleSaveJob = (job) => {
-  if (isJobSaved(job)) {
-    savedJobs.value = savedJobs.value.filter(j => j.job_id !== job.job_id)
-  } else {
-    savedJobs.value.unshift({ job_id: job.job_id, title: job.title, company_name: job.company_name })
+const toggleSaveJob = async (job) => {
+  if (!job?.job_id) return
+  try {
+    if (isJobSaved(job)) {
+      await axios.delete(`/api/saved-jobs/${job.job_id}`)
+      savedJobs.value = savedJobs.value.filter(j => j.job_id !== job.job_id)
+    } else {
+      const response = await axios.post('/api/saved-jobs', { job_id: job.job_id })
+      if (response?.data?.success) {
+        const payload = response.data.data || {
+          job_id: job.job_id,
+          title: job.title,
+          company_name: job.company_name
+        }
+        savedJobs.value = [
+          payload,
+          ...savedJobs.value.filter(j => j.job_id !== job.job_id)
+        ]
+      }
+    }
+  } catch (error) {
+    console.error('Error toggling saved job:', error)
   }
-  persistSavedJobs()
 }
 
 // Create job via backend
 const createJob = async () => {
-  if (!newJob.value.title || !newJob.value.description) {
-    alert('Please fill in the required fields (Title and Description)')
+  const missingFields = []
+  if (!newJob.value.title) missingFields.push('Title')
+  if (!newJob.value.company_name) missingFields.push('Company')
+  if (!newJob.value.location) missingFields.push('Location')
+  if (!newJob.value.work_type) missingFields.push('Work Type')
+  if (!newJob.value.industry) missingFields.push('Industry')
+  if (newJob.value.experience_level === null || newJob.value.experience_level === '' || Number.isNaN(Number(newJob.value.experience_level))) missingFields.push('Experience Level')
+  if (!newJob.value.salary_range) missingFields.push('Salary Range')
+  if (!requiredSkillsInput.value) missingFields.push('Required Skills')
+  if (!newJob.value.description) missingFields.push('Description')
+
+  if (missingFields.length > 0) {
+    toast.error(`Please fill in the required fields: ${missingFields.join(', ')}`, 'Validation Error')
     return
   }
 
@@ -779,12 +842,18 @@ const createJob = async () => {
     newJob.value.required_skills = requiredSkillsInput.value
       ? requiredSkillsInput.value.split(',').map(s => s.trim()).filter(Boolean)
       : []
+    if (newJob.value.experience_level === '' || Number.isNaN(Number(newJob.value.experience_level))) {
+      newJob.value.experience_level = null
+    }
+    newJob.value.preferred_skills = preferredSkillsInput.value
+      ? preferredSkillsInput.value.split(',').map(s => s.trim()).filter(Boolean)
+      : []
 
     const response = await axios.post('/api/job-posts', newJob.value)
     
     if (response?.data?.success) {
       // Show success message
-      alert('Job posted successfully!')
+      toast.success('Job posted successfully!', 'Success')
       
       // Reset form
       newJob.value = { 
@@ -794,12 +863,14 @@ const createJob = async () => {
         location: '', 
         work_type: '', 
         required_skills: [], 
+        preferred_skills: [],
         industry: '', 
-        experience_level: '', 
+        experience_level: null, 
         salary_range: '',
         application_link: ''
       }
       requiredSkillsInput.value = ''
+      preferredSkillsInput.value = ''
       
       // Close modal
       showCreateJobModal.value = false
@@ -807,11 +878,11 @@ const createJob = async () => {
       // Refresh jobs list
       await fetchJobs()
     } else {
-      alert('Failed to create job: ' + (response?.data?.message || 'Unknown error'))
+      toast.error('Failed to create job: ' + (response?.data?.message || 'Unknown error'), 'Error')
     }
   } catch (error) {
     console.error('Error creating job:', error)
-    alert('Error creating job: ' + (error.response?.data?.message || error.message || 'Unknown error'))
+    toast.error('Error creating job: ' + (error.response?.data?.message || error.message || 'Unknown error'), 'Error')
   }
 }
 
@@ -831,18 +902,58 @@ const formatTime = (date) => {
   return new Date(date).toLocaleDateString()
 }
 
+const formatExperienceLevel = (value) => {
+  if (value === null || value === undefined || value === '') return ''
+  const numericValue = Number(value)
+  if (Number.isNaN(numericValue)) return value
+  if (numericValue >= 10) return '10+ years (Expert/Lead)'
+  if (numericValue >= 5) return '5-10 years (Senior)'
+  if (numericValue >= 3) return '3-5 years (Mid Level)'
+  if (numericValue >= 1) return '1-3 years (Junior)'
+  return '0-1 years (Entry Level)'
+}
+
+const dedupeCareerMatches = (matches) => {
+  const seen = new Set()
+  return matches.filter((match) => {
+    const jobId = match?.job?.job_id || match?.job_id
+    if (!jobId || seen.has(jobId)) {
+      return false
+    }
+    seen.add(jobId)
+    return true
+  })
+}
+
 // Career Matching
-const getMatchPercentage = (match) => {
-  if (match.match_percentage !== undefined) {
-    return match.match_percentage
+const getMatchPercentValue = (match) => {
+  if (match?.match_percentage !== undefined) {
+    return Number(match.match_percentage)
   }
-  if (match.similarity_score !== undefined) {
+  if (match?.similarity_score !== undefined) {
     return Math.round(match.similarity_score * 100)
   }
-  if (match.job?.similarity_score !== undefined) {
+  if (match?.job?.similarity_score !== undefined) {
     return Math.round(match.job.similarity_score * 100)
   }
-  return 'N/A'
+  return 0
+}
+
+const getMatchStrength = (match) => {
+  const percentage = getMatchPercentValue(match)
+  if (percentage >= 80) {
+    return { label: 'Excellent Match', textColor: '#166534', bgColor: '#22c55e' }
+  }
+  if (percentage >= 60) {
+    return { label: 'Strong Match', textColor: '#166534', bgColor: '#4ade80' }
+  }
+  if (percentage >= 40) {
+    return { label: 'Good Match', textColor: '#556b2f', bgColor: '#b5e157' }
+  }
+  if (percentage >= 20) {
+    return { label: 'Fair Match', textColor: '#7a6f2b', bgColor: '#edeb5f' }
+  }
+  return { label: 'Potential Match', textColor: '#6b7280', bgColor: '#9ca3af' }
 }
 
 const loadCareerMatching = async () => {
@@ -855,7 +966,7 @@ const loadCareerMatching = async () => {
     
     if (response.data.success) {
       // Detailed recommendations already have all the match information
-      careerMatches.value = response.data.data || []
+      careerMatches.value = dedupeCareerMatches(response.data.data || [])
     } else {
       // Fallback to quick recommendations if detailed fails
       const quickResponse = await axios.get('/api/jobs/quick-recommendations', {
@@ -865,7 +976,7 @@ const loadCareerMatching = async () => {
       if (quickResponse.data.success) {
         // Transform quick format to match structure
         const matches = quickResponse.data.data || []
-        careerMatches.value = matches.map(match => {
+        const normalizedMatches = matches.map(match => {
           if (match.job) {
             return match
           } else {
@@ -885,6 +996,7 @@ const loadCareerMatching = async () => {
             }
           }
         })
+        careerMatches.value = dedupeCareerMatches(normalizedMatches)
       }
     }
   } catch (error) {
@@ -895,22 +1007,8 @@ const loadCareerMatching = async () => {
   }
 }
 
-const viewAllCareerMatches = async () => {
-  matchingLoading.value = true
-  try {
-    const response = await axios.get('/api/jobs/recommended', {
-      params: { limit: 20 }
-    })
-    
-    if (response.data.success) {
-      // Detailed recommendations with match details
-      careerMatches.value = response.data.data || []
-    }
-  } catch (error) {
-    console.error('Error loading all career matches:', error)
-  } finally {
-    matchingLoading.value = false
-  }
+const viewAllCareerMatches = () => {
+  router.push('/career-matching')
 }
 
 const openReportModal = (job) => {

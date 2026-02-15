@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Support\Facades\Log;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,28 +16,33 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
+
+        $middleware->alias([
+            'auth' => \App\Http\Middleware\Authenticate::class,
+        ]);
         
         // Add security headers to all requests
         $middleware->append(\App\Http\Middleware\SecurityHeadersMiddleware::class);
         
         // Add audit logging for API routes
+        $middleware->appendToGroup('api', \App\Http\Middleware\RateLimitMiddleware::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\AuditLogMiddleware::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\WarningAcknowledgmentMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Custom exception handling for API routes
         $exceptions->renderable(function (\Throwable $e, \Illuminate\Http\Request $request) {
             if ($request->is('api/*')) {
                 // Log all errors
-                \Log::error('API Error: ' . $e->getMessage(), [
+                Log::error('API Error: ' . $e->getMessage(), [
                     'exception' => get_class($e),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
                 ]);
 
-                // Helper to get user-friendly message
                 $getUserFriendlyMessage = function(\Throwable $e): string {
                     if ($e instanceof \Illuminate\Validation\ValidationException) {
-                        return 'Validation error. Please check your input.';
+                        return 'Validation failed';
                     }
                     if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
                         return 'The requested resource was not found.';
@@ -50,7 +56,6 @@ return Application::configure(basePath: dirname(__DIR__))
                     return 'An error occurred. Please try again later.';
                 };
 
-                // Helper to get status code
                 $getStatusCode = function(\Throwable $e): int {
                     if ($e instanceof \Illuminate\Validation\ValidationException) return 422;
                     if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) return 404;
@@ -61,12 +66,17 @@ return Application::configure(basePath: dirname(__DIR__))
                     return 500;
                 };
 
-                // Return user-friendly JSON response
-                return response()->json([
+                $payload = [
                     'success' => false,
                     'message' => $getUserFriendlyMessage($e),
                     'error' => config('app.debug') ? $e->getMessage() : null,
-                ], $getStatusCode($e));
+                ];
+
+                if ($e instanceof \Illuminate\Validation\ValidationException) {
+                    $payload['errors'] = $e->errors();
+                }
+
+                return response()->json($payload, $getStatusCode($e));
             }
         });
     })->create();

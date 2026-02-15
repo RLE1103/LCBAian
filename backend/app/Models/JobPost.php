@@ -39,6 +39,7 @@ class JobPost extends Model
             'updated_at' => 'datetime',
             'required_skills' => 'array',
             'preferred_skills' => 'array',
+            'experience_level' => 'integer',
             'is_active' => 'boolean',
         ];
     }

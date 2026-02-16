@@ -15,21 +15,19 @@ axios.defaults.withXSRFToken = true
 
 // Enable credentials (cookies) for CSRF protection
 axios.defaults.withCredentials = true
-const authToken = sessionStorage.getItem('auth_token')
-if (authToken) {
-  axios.defaults.headers.common.Authorization = `Bearer ${authToken}`
+const storedCsrfToken = sessionStorage.getItem('csrf_token')
+if (storedCsrfToken) {
+  axios.defaults.headers.common['X-XSRF-TOKEN'] = storedCsrfToken
 }
 
 // Helper function to get CSRF cookie
 export const getCsrfCookie = async () => {
   try {
-    await axios.get('/sanctum/csrf-cookie')
-    const token = document.cookie
-      .split('; ')
-      .find((row) => row.startsWith('XSRF-TOKEN='))
-      ?.split('=')[1]
+    const response = await axios.get('/csrf-token')
+    const token = response.data?.csrf_token
     if (token) {
-      axios.defaults.headers.common['X-XSRF-TOKEN'] = decodeURIComponent(token)
+      sessionStorage.setItem('csrf_token', token)
+      axios.defaults.headers.common['X-XSRF-TOKEN'] = token
     }
   } catch (error) {
     console.error('Failed to get CSRF cookie:', error)
@@ -39,18 +37,10 @@ export const getCsrfCookie = async () => {
 // Request interceptor
 axios.interceptors.request.use(
   (config) => {
-    const storedToken = sessionStorage.getItem('auth_token')
-    if (storedToken) {
-      config.headers = config.headers || {}
-      config.headers.Authorization = `Bearer ${storedToken}`
-    }
-    const token = document.cookie
-      .split('; ')
-      .find((row) => row.startsWith('XSRF-TOKEN='))
-      ?.split('=')[1]
+    const token = sessionStorage.getItem('csrf_token')
     if (token) {
       config.headers = config.headers || {}
-      config.headers['X-XSRF-TOKEN'] = decodeURIComponent(token)
+      config.headers['X-XSRF-TOKEN'] = token
     }
     return config
   },
@@ -69,7 +59,6 @@ axios.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear auth data
       sessionStorage.removeItem('user_data')
-      sessionStorage.removeItem('auth_token')
 
       // Only redirect if not already on login page
       if (!window.location.pathname.includes('/login')) {

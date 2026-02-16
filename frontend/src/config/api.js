@@ -1,10 +1,7 @@
 // API Configuration
 const SPA_ORIGIN = `${window.location.protocol}//${window.location.hostname}`
 const ENV_API_URL = import.meta.env.VITE_API_URL
-const API_BASE_URL =
-  ENV_API_URL?.includes(window.location.hostname)
-    ? ENV_API_URL
-    : `${SPA_ORIGIN}:8000`
+const API_BASE_URL = ENV_API_URL || `${SPA_ORIGIN}:8000`
 
 // Configure axios defaults
 import axios from 'axios'

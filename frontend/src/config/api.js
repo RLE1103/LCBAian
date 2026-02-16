@@ -9,38 +9,18 @@ import axios from 'axios'
 axios.defaults.baseURL = API_BASE_URL
 axios.defaults.headers.common['Content-Type'] = 'application/json'
 axios.defaults.headers.common['Accept'] = 'application/json'
-axios.defaults.xsrfCookieName = 'XSRF-TOKEN'
-axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN'
-axios.defaults.withXSRFToken = true
-
-// Enable credentials (cookies) for CSRF protection
-axios.defaults.withCredentials = true
-const storedCsrfToken = sessionStorage.getItem('csrf_token')
-if (storedCsrfToken) {
-  axios.defaults.headers.common['X-XSRF-TOKEN'] = storedCsrfToken
-}
-
-// Helper function to get CSRF cookie
-export const getCsrfCookie = async () => {
-  try {
-    const response = await axios.get('/csrf-token')
-    const token = response.data?.csrf_token
-    if (token) {
-      sessionStorage.setItem('csrf_token', token)
-      axios.defaults.headers.common['X-XSRF-TOKEN'] = token
-    }
-  } catch (error) {
-    console.error('Failed to get CSRF cookie:', error)
-  }
+const storedToken = sessionStorage.getItem('auth_token')
+if (storedToken) {
+  axios.defaults.headers.common.Authorization = `Bearer ${storedToken}`
 }
 
 // Request interceptor
 axios.interceptors.request.use(
   (config) => {
-    const token = sessionStorage.getItem('csrf_token')
+    const token = sessionStorage.getItem('auth_token')
     if (token) {
       config.headers = config.headers || {}
-      config.headers['X-XSRF-TOKEN'] = token
+      config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
@@ -64,13 +44,6 @@ axios.interceptors.response.use(
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login'
       }
-    }
-
-    // Handle 419 errors (CSRF token mismatch)
-    if (error.response?.status === 419 && error.config && !error.config._retry) {
-      error.config._retry = true
-      await getCsrfCookie()
-      return axios(error.config)
     }
 
     return Promise.reject(error)

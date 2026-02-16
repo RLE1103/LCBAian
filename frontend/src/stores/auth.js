@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import axios, { getCsrfCookie } from '../config/api'
+import axios from '../config/api'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -22,13 +22,12 @@ export const useAuthStore = defineStore('auth', {
     async login(email, password) {
       this.loading = true
       try {
-        await getCsrfCookie()
         const response = await axios.post('/api/login', {
           email,
           password
         })
 
-        const { user, warning } = response.data
+        const { user, warning, token } = response.data
 
         // Store user data
         this.user = user
@@ -37,6 +36,10 @@ export const useAuthStore = defineStore('auth', {
 
         // Save user data to localStorage for persistence
         sessionStorage.setItem('user_data', JSON.stringify(user))
+        if (token) {
+          sessionStorage.setItem('auth_token', token)
+          axios.defaults.headers.common.Authorization = `Bearer ${token}`
+        }
 
         return { user, warning }
       } catch (error) {
@@ -51,7 +54,6 @@ export const useAuthStore = defineStore('auth', {
     async register(userData) {
       this.loading = true
       try {
-        await getCsrfCookie()
         const response = await axios.post('/api/register', userData)
         return response.data
       } catch (error) {
@@ -66,7 +68,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         await axios.post('/api/logout')
       } catch (error) {
-        if (![401, 419].includes(error.response?.status)) {
+        if (error.response?.status !== 401) {
           console.error('Logout API call failed:', error)
         }
       }
@@ -78,6 +80,8 @@ export const useAuthStore = defineStore('auth', {
 
       // Clear localStorage
       sessionStorage.removeItem('user_data')
+      sessionStorage.removeItem('auth_token')
+      delete axios.defaults.headers.common.Authorization
     },
 
     // Check if user is authenticated via session
@@ -95,10 +99,12 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         const status = error.response?.status
         // If 401 Unauthorized or 419 CSRF mismatch, we are strictly not logged in
-        if (status === 401 || status === 419) {
+        if (status === 401) {
           this.user = null
           this.isAuthenticated = false
           sessionStorage.removeItem('user_data')
+          sessionStorage.removeItem('auth_token')
+          delete axios.defaults.headers.common.Authorization
         }
         return false
       }

@@ -15,6 +15,10 @@ axios.defaults.withXSRFToken = true
 
 // Enable credentials (cookies) for CSRF protection
 axios.defaults.withCredentials = true
+const authToken = sessionStorage.getItem('auth_token')
+if (authToken) {
+  axios.defaults.headers.common.Authorization = `Bearer ${authToken}`
+}
 
 // Helper function to get CSRF cookie
 export const getCsrfCookie = async () => {
@@ -35,6 +39,11 @@ export const getCsrfCookie = async () => {
 // Request interceptor
 axios.interceptors.request.use(
   (config) => {
+    const storedToken = sessionStorage.getItem('auth_token')
+    if (storedToken) {
+      config.headers = config.headers || {}
+      config.headers.Authorization = `Bearer ${storedToken}`
+    }
     const token = document.cookie
       .split('; ')
       .find((row) => row.startsWith('XSRF-TOKEN='))

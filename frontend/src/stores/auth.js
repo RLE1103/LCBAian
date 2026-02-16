@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import axios, { getCsrfCookie } from '../config/api'
+import axios from '../config/api'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -22,15 +22,13 @@ export const useAuthStore = defineStore('auth', {
     async login(email, password) {
       this.loading = true
       try {
-        // Get CSRF cookie before login for Sanctum
-        await getCsrfCookie()
-
-        const response = await axios.post('/login', {
+        const response = await axios.post('/api/login', {
           email,
-          password
+          password,
+          device_name: 'web'
         })
 
-        const { user, warning } = response.data
+        const { user, warning, token } = response.data
 
         // Store user data
         this.user = user
@@ -39,6 +37,10 @@ export const useAuthStore = defineStore('auth', {
 
         // Save user data to localStorage for persistence
         sessionStorage.setItem('user_data', JSON.stringify(user))
+        if (token) {
+          sessionStorage.setItem('auth_token', token)
+          axios.defaults.headers.common.Authorization = `Bearer ${token}`
+        }
 
         return { user, warning }
       } catch (error) {
@@ -53,9 +55,6 @@ export const useAuthStore = defineStore('auth', {
     async register(userData) {
       this.loading = true
       try {
-        // Get CSRF cookie before register for Sanctum
-        await getCsrfCookie()
-
         const response = await axios.post('/api/register', userData)
         return response.data
       } catch (error) {
@@ -68,7 +67,7 @@ export const useAuthStore = defineStore('auth', {
     // Logout user
     async logout() {
       try {
-        await axios.post('/logout')
+        await axios.post('/api/logout')
       } catch (error) {
         if (![401, 419].includes(error.response?.status)) {
           console.error('Logout API call failed:', error)
@@ -83,11 +82,18 @@ export const useAuthStore = defineStore('auth', {
       // Clear localStorage
       sessionStorage.removeItem('user_data')
       sessionStorage.removeItem('auth_token')
+      delete axios.defaults.headers.common.Authorization
     },
 
     // Check if user is authenticated via session
     async checkAuth() {
       if (Date.now() < this.skipAuthCheckUntil) {
+        return false
+      }
+      const token = sessionStorage.getItem('auth_token')
+      if (token) {
+        axios.defaults.headers.common.Authorization = `Bearer ${token}`
+      } else {
         return false
       }
       try {

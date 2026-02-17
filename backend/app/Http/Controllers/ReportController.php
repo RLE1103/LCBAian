@@ -219,9 +219,6 @@ class ReportController extends Controller
                     if (Schema::hasColumn('users', 'is_active') || Schema::hasColumn('users', 'status')) {
                         $targetUser->save();
                     }
-                    if (Schema::hasTable('personal_access_tokens')) {
-                        $targetUser->tokens()->delete();
-                    }
                 }
             }
 
@@ -235,9 +232,6 @@ class ReportController extends Controller
                     }
                     if (Schema::hasColumn('users', 'is_active') || Schema::hasColumn('users', 'status')) {
                         $targetUser->save();
-                    }
-                    if (Schema::hasTable('personal_access_tokens')) {
-                        $targetUser->tokens()->delete();
                     }
                 }
             }

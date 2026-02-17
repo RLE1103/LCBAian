@@ -13,14 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
-
         $middleware->alias([
             'auth' => \App\Http\Middleware\Authenticate::class,
         ]);
         
+        $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+
         // Add security headers to all requests
         $middleware->append(\App\Http\Middleware\SecurityHeadersMiddleware::class);
         

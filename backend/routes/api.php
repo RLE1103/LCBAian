@@ -24,17 +24,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user/warnings/pending', [AuthController::class , 'pendingWarning']);
     Route::post('/user/warnings/{id}/acknowledge', [AuthController::class , 'acknowledgeWarning']);
 
-    // Admin-only routes
-    Route::post('/admin/create', [AuthController::class , 'createAdmin']);
+        // Admin-only routes
+        Route::post('/admin/create', [AuthController::class , 'createAdmin']);
 
-    // ML Analytics routes (Admin only)
-    Route::prefix('admin')->group(function () {
+        // ML Analytics routes (Admin only)
+        Route::prefix('admin')->group(function () {
             Route::get('/analytics/cluster-report', [App\Http\Controllers\AdminAnalyticsController::class , 'getClusterReport']);
             Route::post('/analytics/run-clustering', [App\Http\Controllers\AdminAnalyticsController::class , 'runClustering']);
             Route::get('/analytics/cluster-details', [App\Http\Controllers\AdminAnalyticsController::class , 'getClusterDetails']);
             Route::get('/analytics/dashboard', [App\Http\Controllers\AdminAnalyticsController::class , 'getAnalyticsDashboard']);
-        }
-        );
+        });
 
         // Job Recommendation routes
         Route::prefix('jobs')->group(function () {
@@ -45,8 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/trending-skills', [App\Http\Controllers\JobRecommendationController::class , 'getTrendingSkills']);
             Route::post('/update-recommendations', [App\Http\Controllers\JobRecommendationController::class , 'updateRecommendations']);
             Route::get('/match-score/{jobId}', [App\Http\Controllers\JobRecommendationController::class , 'getJobMatchScore']);
-        }
-        );
+        });
 
         // User routes
         Route::get('/users', [App\Http\Controllers\UserController::class , 'index']);
@@ -133,4 +131,5 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/communities/{id}', [App\Http\Controllers\CommunityController::class , 'show']);
         Route::post('/communities', [App\Http\Controllers\CommunityController::class , 'store']);
         Route::post('/communities/{id}/join', [App\Http\Controllers\CommunityController::class , 'join']);
-        Route::post('/communities/{id}/leave', [App\Http\Controllers\CommunityController::class , 'leave']);    });
+        Route::post('/communities/{id}/leave', [App\Http\Controllers\CommunityController::class , 'leave']);
+});

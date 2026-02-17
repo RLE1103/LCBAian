@@ -9,7 +9,6 @@ use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -109,20 +108,14 @@ class AuthController extends Controller
             ], 403);
         }
 
-        $token = null;
-        if ($request->filled('device_name')) {
-            $token = $user->createToken(
-                $request->string('device_name'),
-                $this->tokenAbilitiesFor($user)
-            )->plainTextToken;
-        } elseif ($request->hasSession()) {
-            Auth::login($user);
-            $request->session()->regenerate();
-        } else {
+        if (!Schema::hasTable('personal_access_tokens')) {
             return response()->json([
-                'message' => 'device_name is required for token authentication.'
-            ], 422);
+                'message' => 'Token storage not initialized.'
+            ], 500);
         }
+
+        $tokenName = $request->string('device_name')->toString() ?: 'web';
+        $token = $user->createToken($tokenName, $this->tokenAbilitiesFor($user))->plainTextToken;
         $warning = null;
         if (Schema::hasTable('user_warnings')) {
             $query = DB::table('user_warnings')->where('user_id', $user->id);
@@ -143,10 +136,7 @@ class AuthController extends Controller
                 'message' => $warning->warning_message ?? $warning->message ?? null
             ] : null
         ];
-
-        if ($token) {
-            $responsePayload['token'] = $token;
-        }
+        $responsePayload['token'] = $token;
 
         $this->logAuthEvent($user, 'login');
 
@@ -247,15 +237,8 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $user = $request->user();
-
         if ($user && $user->currentAccessToken()) {
             $user->currentAccessToken()->delete();
-        }
-
-        if (Auth::guard('web')->check()) {
-            Auth::guard('web')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
         }
 
         if ($user) {
@@ -265,6 +248,11 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Logged out successfully'
         ]);
+    }
+
+    private function tokenAbilitiesFor(User $user): array
+    {
+        return $user->role === 'admin' ? ['admin'] : ['user'];
     }
 
     /**
@@ -440,11 +428,6 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Password changed successfully'
         ]);
-    }
-
-    private function tokenAbilitiesFor(User $user): array
-    {
-        return $user->role === 'admin' ? ['admin'] : ['user'];
     }
 
     private function logAuthEvent(User $user, string $action): void

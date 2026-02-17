@@ -7,6 +7,10 @@ use App\Http\Controllers\AuthController;
 /* |-------------------------------------------------------------------------- | API Routes |-------------------------------------------------------------------------- | | Here is where you can register API routes for your application. These | routes are loaded by the RouteServiceProvider and all of them will | be assigned to the "api" middleware group. Make something great! | */
 
 // Public routes
+Route::options('/{any}', function () {
+    return response('', 204);
+})->where('any', '.*');
+
 Route::post('/register', [AuthController::class , 'register'])->middleware('throttle:10,1');
 Route::post('/login', [AuthController::class , 'login'])->middleware('throttle:10,1');
 Route::get('/health', [App\Http\Controllers\HealthController::class , 'check']); // Public health check

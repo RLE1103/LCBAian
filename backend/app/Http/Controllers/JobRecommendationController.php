@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\RecommendationService;
+use App\Models\JobPost;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -25,12 +26,15 @@ class JobRecommendationController extends Controller
             $user = Auth::user();
             $limit = $request->input('limit', 10);
 
-            // Validate limit
             if ($limit < 1 || $limit > 50) {
                 $limit = 10;
             }
 
-            $recommendations = $this->recommendationService->getDetailedRecommendations($user, $limit);
+            if (!$user) {
+                $recommendations = JobPost::approved()->orderBy('created_at', 'desc')->limit($limit)->get();
+            } else {
+                $recommendations = $this->recommendationService->getDetailedRecommendations($user, $limit);
+            }
 
             return response()->json([
                 'success' => true,

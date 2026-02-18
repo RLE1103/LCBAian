@@ -182,17 +182,6 @@ class RecommendationService
 
         $careerProfileScoreRaw = self::calculateCareerProfileScore($user, $job);
 
-        Log::info('recommendation_score_components', [
-            'user_id' => $user->id,
-            'job_id' => $job->job_id ?? $job->id,
-            'required_skill_raw' => $requiredSimilarityRaw,
-            'preferred_skill_raw' => $preferredSimilarityRaw,
-            'education_raw' => $educationScoreRaw,
-            'cluster_raw' => $clusterScoreRaw,
-            'preferences_raw' => $preferencesScoreRaw,
-            'career_profile_raw' => $careerProfileScoreRaw,
-            'user_cluster_group' => $user->cluster_group,
-        ]);
 
         $requiredSimilarity = $requiredSimilarityRaw * 0.4;
         $preferredSimilarity = $preferredSimilarityRaw * 0.05;
@@ -217,8 +206,12 @@ class RecommendationService
 
     private static function getTopClusterForJob(JobPost $job): ?int
     {
-        $service = new ClusteringService();
-        $profiles = $service->getClusterProfiles();
+        static $cachedProfiles = null;
+        if ($cachedProfiles === null) {
+            $service = new ClusteringService();
+            $cachedProfiles = $service->getClusterProfiles();
+        }
+        $profiles = $cachedProfiles;
         if (empty($profiles)) {
             return null;
         }
@@ -647,8 +640,9 @@ class RecommendationService
                 ->get();
         }
 
-        // Get all jobs
-        $allJobs = JobPost::approved()->get();
+        $poolLimit = max(((int) $limit) * 50, 200);
+        $poolLimit = min($poolLimit, 500);
+        $allJobs = JobPost::approved()->orderBy('created_at', 'desc')->limit($poolLimit)->get();
         
         if ($allJobs->isEmpty()) {
             return collect([]);

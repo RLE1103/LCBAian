@@ -11,15 +11,6 @@ Route::post('/register', [AuthController::class , 'register'])->middleware('thro
 Route::post('/login', [AuthController::class , 'login'])->middleware('throttle:10,1');
 Route::get('/health', [App\Http\Controllers\HealthController::class , 'check']); // Public health check
 Route::get('/posts', [App\Http\Controllers\PostController::class , 'index']);
-Route::prefix('jobs')->group(function () {
-    Route::get('/recommended', [App\Http\Controllers\JobRecommendationController::class , 'getRecommendedJobs']);
-    Route::get('/quick-recommendations', [App\Http\Controllers\JobRecommendationController::class , 'getQuickRecommendations']);
-    Route::get('/similar-users', [App\Http\Controllers\JobRecommendationController::class , 'getSimilarUsers']);
-    Route::get('/skill-gap-analysis', [App\Http\Controllers\JobRecommendationController::class , 'getSkillGapAnalysis']);
-    Route::get('/trending-skills', [App\Http\Controllers\JobRecommendationController::class , 'getTrendingSkills']);
-    Route::post('/update-recommendations', [App\Http\Controllers\JobRecommendationController::class , 'updateRecommendations']);
-    Route::get('/match-score/{jobId}', [App\Http\Controllers\JobRecommendationController::class , 'getJobMatchScore']);
-});
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -44,6 +35,16 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/analytics/dashboard', [App\Http\Controllers\AdminAnalyticsController::class , 'getAnalyticsDashboard']);
         });
 
+        // Job Recommendation routes
+        Route::prefix('jobs')->group(function () {
+            Route::get('/recommended', [App\Http\Controllers\JobRecommendationController::class , 'getRecommendedJobs']);
+            Route::get('/quick-recommendations', [App\Http\Controllers\JobRecommendationController::class , 'getQuickRecommendations']);
+            Route::get('/similar-users', [App\Http\Controllers\JobRecommendationController::class , 'getSimilarUsers']);
+            Route::get('/skill-gap-analysis', [App\Http\Controllers\JobRecommendationController::class , 'getSkillGapAnalysis']);
+            Route::get('/trending-skills', [App\Http\Controllers\JobRecommendationController::class , 'getTrendingSkills']);
+            Route::post('/update-recommendations', [App\Http\Controllers\JobRecommendationController::class , 'updateRecommendations']);
+            Route::get('/match-score/{jobId}', [App\Http\Controllers\JobRecommendationController::class , 'getJobMatchScore']);
+        });
 
         // User routes
         Route::get('/users', [App\Http\Controllers\UserController::class , 'index']);

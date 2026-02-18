@@ -1862,6 +1862,7 @@ const fetchUsers = async () => {
         { key: 'employee-verification', label: 'Employee/Faculty ID Queue', count: employeeVerificationRequests.value.filter(r => r.status === 'pending').length },
         { key: 'job-approvals', label: 'Job Approvals', count: pendingJobs.value.length },
         { key: 'directory', label: 'User Directory', count: directoryUsers.value.length },
+        { key: 'data-tools', label: 'Data Tools', count: null },
         { key: 'reports', label: 'Reports & Moderation', count: reports.value.filter(r => r.status === 'pending').length },
         // { key: 'analytics', label: 'Analytics', count: null }, // Temporarily hidden
       ]

@@ -1101,9 +1101,15 @@ const actionConfirmClass = computed(() => {
 })
 
 const reportedEntityFields = computed(() => {
-  if (!selectedReport.value || !reportedEntity.value) return []
+  if (!selectedReport.value) return []
   const type = selectedReport.value.reported_entity_type
   const entity = reportedEntity.value
+  if (!entity) {
+    return [
+      { label: 'Entity ID', value: selectedReport.value.reported_entity_id || 'N/A' },
+      { label: 'Details', value: 'Reported content is no longer available.' }
+    ]
+  }
   if (type === 'job_post') {
     return [
       { label: 'Title', value: entity.title || 'N/A' },
@@ -1720,6 +1726,10 @@ const openResolveModal = (report) => {
     toast.info('Report is already processed.', 'Info')
     return
   }
+  if (!report.id) {
+    toast.error('Unable to resolve report: missing report ID.', 'Error')
+    return
+  }
   resolveTargetReport.value = report
   showResolveModal.value = true
 }
@@ -1730,14 +1740,18 @@ const closeResolveModal = () => {
 }
 
 const submitResolveAction = async (action) => {
-  if (!resolveTargetReport.value) return
+  const reportId = resolveTargetReport.value?.id || selectedReport.value?.id
+  if (!reportId) {
+    toast.error('Unable to resolve report: missing report ID.', 'Error')
+    return
+  }
   resolveSubmitting.value = true
   try {
-    const response = await axios.post(`/api/reports/${resolveTargetReport.value.id}/resolve`, { action })
+    const response = await axios.post(`/api/reports/${reportId}/resolve`, { action })
     if (response.data.success) {
       toast.success('Report resolved successfully', 'Success')
       await loadReports()
-      if (selectedReport.value?.id === resolveTargetReport.value.id) {
+      if (selectedReport.value?.id === reportId) {
         showReportModal.value = false
       }
       closeResolveModal()

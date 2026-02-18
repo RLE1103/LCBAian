@@ -131,6 +131,24 @@
                   </div>
 
                   <div class="flex items-center space-x-2">
+                    <div v-if="isAdmin" class="relative">
+                      <button @click.stop="toggleJobMenu(job)" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" title="Moderate">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 7a2 2 0 110-4 2 2 0 010 4zm0 7a2 2 0 110-4 2 2 0 010 4zm0 7a2 2 0 110-4 2 2 0 010 4z"></path>
+                        </svg>
+                      </button>
+                      <div v-if="activeJobMenuId === job.job_id" class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                        <button @click.stop="openModerationConfirm('remove_content', job)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Remove Content
+                        </button>
+                        <button @click.stop="openModerationConfirm('suspend_user', job)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Suspend User
+                        </button>
+                        <button @click.stop="openModerationConfirm('issue_warning', job)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Issue Warning
+                        </button>
+                      </div>
+                    </div>
                     <button @click.stop="toggleSaveJob(job)" :title="isJobSaved(job) ? 'Unsave' : 'Save'" class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
@@ -620,6 +638,28 @@
     @close="showReportModal = false"
     @submitted="handleReportSubmitted"
   />
+
+  <div v-if="showModerationConfirm" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[100] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="closeModerationConfirm">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md border-2 border-black shadow-2xl" @click.stop>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold text-gray-900">{{ moderationConfirmTitle }}</h3>
+        <button @click="closeModerationConfirm" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <p class="text-sm text-gray-600 mb-6">{{ moderationConfirmMessage }}</p>
+      <div class="flex justify-end space-x-2">
+        <button @click="closeModerationConfirm" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Cancel
+        </button>
+        <button @click="confirmModerationAction" :disabled="moderationSubmitting" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -650,6 +690,10 @@ const loading = ref(false)
 // Report Modal State
 const showReportModal = ref(false)
 const reportingJobId = ref(null)
+const activeJobMenuId = ref(null)
+const showModerationConfirm = ref(false)
+const pendingModeration = ref(null)
+const moderationSubmitting = ref(false)
 
 // Filter options from database
 const filterOptions = ref({
@@ -737,7 +781,12 @@ const currentPage = ref(1)
 const itemsPerPage = 10
 
 // Computed properties
+const isAdmin = computed(() => authStore.user?.role === 'admin')
+
 const filteredJobs = computed(() => {
+  if (isAdmin.value) {
+    return jobs.value.filter((job) => job?.status !== 'archived')
+  }
   return jobs.value.filter((job) => job?.status === 'approved')
 })
 
@@ -1014,6 +1063,70 @@ const viewAllCareerMatches = () => {
 const openReportModal = (job) => {
   reportingJobId.value = job.job_id
   showReportModal.value = true
+}
+
+const toggleJobMenu = (job) => {
+  activeJobMenuId.value = activeJobMenuId.value === job.job_id ? null : job.job_id
+}
+
+const openModerationConfirm = (action, job) => {
+  pendingModeration.value = { action, job }
+  showModerationConfirm.value = true
+  activeJobMenuId.value = null
+}
+
+const closeModerationConfirm = () => {
+  showModerationConfirm.value = false
+  pendingModeration.value = null
+}
+
+const moderationConfirmTitle = computed(() => {
+  if (!pendingModeration.value) return ''
+  switch (pendingModeration.value.action) {
+    case 'remove_content':
+      return 'Remove Content'
+    case 'suspend_user':
+      return 'Suspend User'
+    case 'issue_warning':
+      return 'Issue Warning'
+    default:
+      return 'Confirm Action'
+  }
+})
+
+const moderationConfirmMessage = computed(() => {
+  if (!pendingModeration.value) return ''
+  switch (pendingModeration.value.action) {
+    case 'remove_content':
+      return 'This will archive the job post and remove it from the feed.'
+    case 'suspend_user':
+      return 'This will immediately suspend the poster account.'
+    case 'issue_warning':
+      return 'This will issue a formal warning that must be acknowledged.'
+    default:
+      return 'Are you sure you want to proceed?'
+  }
+})
+
+const confirmModerationAction = async () => {
+  if (!pendingModeration.value) return
+  moderationSubmitting.value = true
+  const { action, job } = pendingModeration.value
+  try {
+    const response = await axios.post(`/api/job-posts/${job.job_id}/moderate`, { action })
+    if (response?.data?.success) {
+      toast.success('Action completed successfully', 'Success')
+      await fetchJobs()
+      closeModerationConfirm()
+    } else {
+      toast.error(response?.data?.message || 'Failed to complete action', 'Error')
+    }
+  } catch (error) {
+    console.error('Error moderating job:', error)
+    toast.error(error.response?.data?.message || error.message || 'Failed to complete action', 'Error')
+  } finally {
+    moderationSubmitting.value = false
+  }
 }
 
 const handleReportSubmitted = () => {

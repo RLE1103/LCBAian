@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\EventRsvp;
 use App\Models\AdminLog;
+use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class EventController extends Controller
@@ -266,6 +268,141 @@ class EventController extends Controller
                 'success' => false,
                 'message' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function moderate(Request $request, $id): JsonResponse
+    {
+        if (!$this->authorizeAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'action' => 'required|in:remove_content,suspend_user,issue_warning',
+            ]);
+
+            $event = Event::with('creator')->findOrFail($id);
+            $action = $validated['action'];
+            $admin = Auth::user();
+            $targetUser = $event->created_by ? User::find($event->created_by) : null;
+            $actionLabel = match ($action) {
+                'remove_content' => 'Remove Content',
+                'suspend_user' => 'Suspend User',
+                'issue_warning' => 'Issue Warning',
+                default => 'Moderate',
+            };
+
+            if ($action === 'remove_content') {
+                if (Schema::hasColumn('events', 'status')) {
+                    $event->status = 'archived';
+                    $event->save();
+                } else {
+                    $event->delete();
+                }
+            }
+
+            if ($action === 'suspend_user') {
+                $this->suspendUser($targetUser);
+            }
+
+            if ($action === 'issue_warning') {
+                $this->issueWarning($targetUser, $admin);
+            }
+
+            $entityId = $action === 'suspend_user' ? ($targetUser?->id ?? $event->id) : $event->id;
+            $modelType = $action === 'suspend_user' ? 'User' : 'Event';
+            $this->logFeedAction($request, $admin, $actionLabel, $entityId, $modelType, [
+                'action' => $action,
+                'event_id' => $event->id,
+                'target_user_id' => $targetUser?->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Action completed successfully',
+                'data' => $event->fresh('creator')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to perform action',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function authorizeAdmin(): bool
+    {
+        $user = Auth::user();
+        return $user && $user->role === 'admin';
+    }
+
+    private function suspendUser(?User $user): void
+    {
+        if (!$user) {
+            return;
+        }
+        if (Schema::hasColumn('users', 'is_active')) {
+            $user->is_active = false;
+        }
+        if (Schema::hasColumn('users', 'status')) {
+            $user->status = 'suspended';
+        }
+        if (Schema::hasColumn('users', 'is_active') || Schema::hasColumn('users', 'status')) {
+            $user->save();
+        }
+    }
+
+    private function issueWarning(?User $targetUser, $admin): void
+    {
+        if (!$targetUser || !Schema::hasTable('user_warnings')) {
+            return;
+        }
+        $warningMessage = 'You have received a formal warning regarding your recent post. Further violations may lead to permanent account suspension.';
+        $warningPayload = ['created_at' => now(), 'updated_at' => now()];
+        if (Schema::hasColumn('user_warnings', 'user_id')) {
+            $warningPayload['user_id'] = $targetUser->id;
+        }
+        if (Schema::hasColumn('user_warnings', 'issued_by_admin_id')) {
+            $warningPayload['issued_by_admin_id'] = Auth::id();
+        } elseif (Schema::hasColumn('user_warnings', 'admin_id')) {
+            $warningPayload['admin_id'] = Auth::id();
+        }
+        if (Schema::hasColumn('user_warnings', 'warning_message')) {
+            $warningPayload['warning_message'] = $warningMessage;
+        } elseif (Schema::hasColumn('user_warnings', 'message')) {
+            $warningPayload['message'] = $warningMessage;
+        }
+        if (Schema::hasColumn('user_warnings', 'is_acknowledged')) {
+            $warningPayload['is_acknowledged'] = false;
+        } elseif (Schema::hasColumn('user_warnings', 'is_read')) {
+            $warningPayload['is_read'] = false;
+        }
+        if (array_key_exists('user_id', $warningPayload) && (array_key_exists('warning_message', $warningPayload) || array_key_exists('message', $warningPayload))) {
+            DB::table('user_warnings')->insert($warningPayload);
+        }
+    }
+
+    private function logFeedAction(Request $request, $admin, string $actionLabel, int $entityId, string $modelType, array $details = []): void
+    {
+        if (!Schema::hasTable('admin_logs')) {
+            return;
+        }
+        $adminName = $admin ? trim(($admin->full_name ?? trim(($admin->first_name ?? '') . ' ' . ($admin->last_name ?? '')))) : '';
+        $logMessage = ($adminName !== '' ? 'Admin ' . $adminName : 'Admin') . ' performed ' . $actionLabel . ' on ' . $entityId . ' directly from the feed';
+        $logPayload = [];
+        if (Schema::hasColumn('admin_logs', 'user_id')) $logPayload['user_id'] = Auth::id();
+        if (Schema::hasColumn('admin_logs', 'action')) $logPayload['action'] = $logMessage;
+        if (Schema::hasColumn('admin_logs', 'model_type')) $logPayload['model_type'] = $modelType;
+        if (Schema::hasColumn('admin_logs', 'model_id')) $logPayload['model_id'] = $entityId;
+        if (Schema::hasColumn('admin_logs', 'ip_address')) $logPayload['ip_address'] = $request->ip();
+        if (Schema::hasColumn('admin_logs', 'user_agent')) $logPayload['user_agent'] = $request->userAgent();
+        if (Schema::hasColumn('admin_logs', 'details')) $logPayload['details'] = json_encode($details);
+        if (Schema::hasColumn('admin_logs', 'created_at')) $logPayload['created_at'] = now();
+        if (Schema::hasColumn('admin_logs', 'updated_at')) $logPayload['updated_at'] = now();
+        if (count($logPayload) > 0) {
+            AdminLog::create($logPayload);
         }
     }
 }

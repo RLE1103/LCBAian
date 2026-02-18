@@ -518,6 +518,57 @@
         </div>
       </div>
 
+    <div v-if="activeTab === 'data-tools'" class="p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-lg font-semibold text-gray-900">Data Tools</h2>
+      </div>
+      <div class="border border-gray-200 rounded-lg p-5">
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <p class="text-sm text-gray-600 mb-2">Import alumni users using the CSV exported from User Directory.</p>
+            <input
+              ref="importFileInput"
+              type="file"
+              accept=".csv,text/csv"
+              @change="handleImportFile"
+              class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+            />
+          </div>
+          <div class="flex items-end">
+            <button
+              @click="importDirectoryCsv"
+              :disabled="importSubmitting"
+              class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              Import CSV
+            </button>
+          </div>
+        </div>
+        <div v-if="importResult" class="mt-5 bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-700">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <p class="text-gray-500">Created</p>
+              <p class="text-lg font-semibold text-gray-900">{{ importResult.created }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500">Updated</p>
+              <p class="text-lg font-semibold text-gray-900">{{ importResult.updated }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500">Skipped</p>
+              <p class="text-lg font-semibold text-gray-900">{{ importResult.skipped }}</p>
+            </div>
+          </div>
+          <div v-if="importResult.errors && importResult.errors.length" class="mt-4">
+            <p class="text-gray-500 mb-2">Sample errors</p>
+            <ul class="list-disc pl-5 space-y-1">
+              <li v-for="(err, idx) in importResult.errors" :key="idx">{{ err }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
       <!-- Reports & Moderation Tab -->
       <div v-if="activeTab === 'reports'" class="p-6">
         <div class="flex items-center justify-between mb-6">
@@ -1213,6 +1264,10 @@ const loadingJobs = ref(false)
 
 const directoryUsers = ref([])
 const loadingDirectory = ref(false)
+const importFile = ref(null)
+const importFileInput = ref(null)
+const importSubmitting = ref(false)
+const importResult = ref(null)
 
 const reports = ref([])
 const loadingReports = ref(false)
@@ -1222,6 +1277,7 @@ const tabs = ref([
   { key: 'employee-verification', label: 'Employee/Faculty ID Queue', count: 0 },
   { key: 'job-approvals', label: 'Job Approvals', count: 0 },
   { key: 'directory', label: 'User Directory', count: 0 },
+  { key: 'data-tools', label: 'Data Tools', count: null },
   { key: 'reports', label: 'Reports & Moderation', count: 0 },
   // { key: 'analytics', label: 'Analytics', count: null }, // Temporarily hidden
 ])
@@ -1996,6 +2052,42 @@ const exportDirectoryCsv = () => {
   a.download = 'alumni_directory.csv'
   a.click()
   URL.revokeObjectURL(url)
+}
+
+const handleImportFile = (event) => {
+  importFile.value = event.target.files?.[0] || null
+}
+
+const importDirectoryCsv = async () => {
+  if (!importFile.value) {
+    toast.error('Please select a CSV file to import.', 'Error')
+    return
+  }
+  importSubmitting.value = true
+  importResult.value = null
+  try {
+    const formData = new FormData()
+    formData.append('file', importFile.value)
+    const response = await axios.post('/api/admin/users/import-csv', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    if (response.data.success) {
+      importResult.value = response.data.data
+      toast.success('CSV import completed', 'Success')
+      await fetchUsers()
+      if (importFileInput.value) {
+        importFileInput.value.value = ''
+      }
+      importFile.value = null
+    } else {
+      toast.error(response.data.message || 'CSV import failed', 'Error')
+    }
+  } catch (error) {
+    console.error('Error importing CSV:', error)
+    toast.error(error.response?.data?.message || error.message || 'CSV import failed', 'Error')
+  } finally {
+    importSubmitting.value = false
+  }
 }
 
 const handleDocumentClick = () => {

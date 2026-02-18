@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/job-posts/filter-options', [App\Http\Controllers\JobPostController::class , 'getFilterOptions']);
         Route::get('/job-posts/{id}', [App\Http\Controllers\JobPostController::class , 'show']);
         Route::post('/job-posts', [App\Http\Controllers\JobPostController::class , 'store']);
+        Route::post('/job-posts/{id}/moderate', [App\Http\Controllers\JobPostController::class , 'moderate']);
 
         // Saved Jobs routes
         Route::get('/saved-jobs', [App\Http\Controllers\SavedJobController::class , 'index']);
@@ -96,6 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/admin/users/{id}/status', [App\Http\Controllers\UserController::class , 'updateStatus']); // Admin only
         Route::post('/admin/users/{id}/role', [App\Http\Controllers\UserController::class , 'updateRole']); // Admin only
         Route::post('/admin/users/{id}/reset-password', [App\Http\Controllers\UserController::class , 'resetPassword']); // Admin only
+        Route::post('/admin/users/import-csv', [App\Http\Controllers\UserController::class , 'importCsv']); // Admin only
         Route::get('/admin-logs', [App\Http\Controllers\UserController::class , 'getAdminLogs']); // Admin only
     
         // System Health & Metrics (Admin only)
@@ -118,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/events', [App\Http\Controllers\EventController::class , 'store']);
         Route::post('/events/{id}/rsvp', [App\Http\Controllers\EventController::class , 'rsvp']);
         Route::post('/events/{id}/feature', [App\Http\Controllers\EventController::class , 'toggleFeatured']);
+        Route::post('/events/{id}/moderate', [App\Http\Controllers\EventController::class , 'moderate']);
 
         // Applications
         Route::post('/applications', [App\Http\Controllers\ApplicationController::class , 'store']);

@@ -933,6 +933,173 @@ class UserController extends Controller
         }
     }
 
+    public function importCsv(Request $request): JsonResponse
+    {
+        $authUser = Auth::user();
+        if (!$authUser || $authUser->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. Admin access required.'
+            ], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'file' => 'required|file|mimes:csv,txt'
+            ]);
+
+            $file = $validated['file'];
+            $handle = fopen($file->getRealPath(), 'r');
+            if (!$handle) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to read CSV file.'
+                ], 422);
+            }
+
+            $headers = fgetcsv($handle);
+            if (!$headers) {
+                fclose($handle);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'CSV header row is missing.'
+                ], 422);
+            }
+
+            $normalizedHeaders = array_map(fn ($h) => strtolower(trim($h ?? '')), $headers);
+            $required = ['email', 'first_name', 'last_name'];
+            foreach ($required as $req) {
+                if (!in_array($req, $normalizedHeaders, true)) {
+                    fclose($handle);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'CSV is missing required column: ' . $req
+                    ], 422);
+                }
+            }
+
+            $created = 0;
+            $updated = 0;
+            $skipped = 0;
+            $errors = [];
+
+            $hasIsActive = Schema::hasColumn('users', 'is_active');
+            $hasStatus = Schema::hasColumn('users', 'status');
+            $hasProgram = Schema::hasColumn('users', 'program');
+            $hasBatch = Schema::hasColumn('users', 'batch');
+            $hasHeadline = Schema::hasColumn('users', 'headline');
+            $hasIndustry = Schema::hasColumn('users', 'industry');
+            $hasExperience = Schema::hasColumn('users', 'experience_level');
+            $hasRole = Schema::hasColumn('users', 'role');
+
+            while (($row = fgetcsv($handle)) !== false) {
+                $row = array_pad($row, count($normalizedHeaders), '');
+                $data = [];
+                foreach ($normalizedHeaders as $i => $key) {
+                    $data[$key] = isset($row[$i]) ? trim($row[$i]) : '';
+                }
+
+                $email = $data['email'] ?? '';
+                if ($email === '') {
+                    $skipped++;
+                    continue;
+                }
+
+                $firstName = $data['first_name'] ?? '';
+                $lastName = $data['last_name'] ?? '';
+
+                if ($firstName === '' || $lastName === '') {
+                    $skipped++;
+                    continue;
+                }
+
+                $existing = User::where('email', $email)->first();
+                if ($existing && $existing->role === 'admin') {
+                    $skipped++;
+                    continue;
+                }
+
+                $payload = [
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                ];
+
+                if ($hasRole) {
+                    $payload['role'] = 'alumni';
+                }
+                if ($hasProgram && array_key_exists('program', $data)) {
+                    $payload['program'] = $data['program'];
+                }
+                if ($hasBatch && array_key_exists('batch', $data)) {
+                    $payload['batch'] = $data['batch'];
+                }
+                if ($hasHeadline && array_key_exists('headline', $data)) {
+                    $payload['headline'] = $data['headline'];
+                }
+                if ($hasIndustry && array_key_exists('industry', $data)) {
+                    $payload['industry'] = $data['industry'];
+                }
+                if ($hasExperience && array_key_exists('experience_level', $data)) {
+                    $payload['experience_level'] = $data['experience_level'];
+                }
+
+                if (!$existing) {
+                    $payload['email'] = $email;
+                    $payload['password'] = Hash::make(Str::random(12));
+                    if ($hasIsActive) {
+                        $payload['is_active'] = true;
+                    }
+                    if ($hasStatus) {
+                        $payload['status'] = 'active';
+                    }
+                }
+
+                try {
+                    if ($existing) {
+                        $existing->update($payload);
+                        $updated++;
+                    } else {
+                        User::create($payload);
+                        $created++;
+                    }
+                } catch (\Throwable $rowError) {
+                    $skipped++;
+                    if (count($errors) < 5) {
+                        $errors[] = $email . ': ' . $rowError->getMessage();
+                    }
+                }
+            }
+
+            fclose($handle);
+
+            AdminLog::create([
+                'user_id' => $authUser->id,
+                'action' => 'import_alumni_csv',
+                'details' => json_encode([
+                    'created' => $created,
+                    'updated' => $updated,
+                    'skipped' => $skipped
+                ])
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'CSV import completed.',
+                'data' => [
+                    'created' => $created,
+                    'updated' => $updated,
+                    'skipped' => $skipped,
+                    'errors' => $errors
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function resetPassword(Request $request, $id): JsonResponse
     {
         $authUser = Auth::user();

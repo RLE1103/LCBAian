@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\JobPost;
+use App\Models\User;
+use App\Models\AdminLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class JobPostController extends Controller
 {
@@ -124,10 +128,13 @@ class JobPostController extends Controller
                 'is_active' => 'boolean',
             ]);
 
+            $user = Auth::user();
+            $isAdmin = $user && $user->role === 'admin';
+
             $job = JobPost::create([
-                'posted_by_admin' => Auth::user()->role === 'admin',
+                'posted_by_admin' => $isAdmin,
                 'user_id' => Auth::id(),
-                'status' => 'pending',  // All new job posts are pending by default
+                'status' => $isAdmin ? 'approved' : 'pending',
                 ...$validated
             ]);
 
@@ -137,12 +144,76 @@ class JobPostController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $job,
-                'message' => 'Job post submitted and pending admin approval'
+                'message' => $isAdmin ? 'Job post created successfully' : 'Job post submitted and pending admin approval'
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function moderate(Request $request, $id): JsonResponse
+    {
+        if (!$this->authorizeAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'action' => 'required|in:remove_content,suspend_user,issue_warning',
+            ]);
+
+            $job = JobPost::with('poster')->findOrFail($id);
+            $action = $validated['action'];
+            $admin = Auth::user();
+            $targetUser = $job->user_id ? User::find($job->user_id) : null;
+            $actionLabel = match ($action) {
+                'remove_content' => 'Remove Content',
+                'suspend_user' => 'Suspend User',
+                'issue_warning' => 'Issue Warning',
+                default => 'Moderate',
+            };
+
+            if ($action === 'remove_content') {
+                if (Schema::hasColumn('job_posts', 'is_active')) {
+                    $job->is_active = false;
+                }
+                if (Schema::hasColumn('job_posts', 'status')) {
+                    $job->status = 'archived';
+                }
+                if (Schema::hasColumn('job_posts', 'is_active') || Schema::hasColumn('job_posts', 'status')) {
+                    $job->save();
+                }
+            }
+
+            if ($action === 'suspend_user') {
+                $this->suspendUser($targetUser);
+            }
+
+            if ($action === 'issue_warning') {
+                $this->issueWarning($targetUser, $admin);
+            }
+
+            $entityId = $action === 'suspend_user' ? ($targetUser?->id ?? $job->job_id) : $job->job_id;
+            $modelType = $action === 'suspend_user' ? 'User' : 'JobPost';
+            $this->logFeedAction($request, $admin, $actionLabel, $entityId, $modelType, [
+                'action' => $action,
+                'job_id' => $job->job_id,
+                'target_user_id' => $targetUser?->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Action completed successfully',
+                'data' => $job->fresh('poster')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to perform action',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
@@ -193,6 +264,80 @@ class JobPostController extends Controller
                 'success' => false,
                 'message' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    private function authorizeAdmin(): bool
+    {
+        $user = Auth::user();
+        return $user && $user->role === 'admin';
+    }
+
+    private function suspendUser(?User $user): void
+    {
+        if (!$user) {
+            return;
+        }
+        if (Schema::hasColumn('users', 'is_active')) {
+            $user->is_active = false;
+        }
+        if (Schema::hasColumn('users', 'status')) {
+            $user->status = 'suspended';
+        }
+        if (Schema::hasColumn('users', 'is_active') || Schema::hasColumn('users', 'status')) {
+            $user->save();
+        }
+    }
+
+    private function issueWarning(?User $targetUser, $admin): void
+    {
+        if (!$targetUser || !Schema::hasTable('user_warnings')) {
+            return;
+        }
+        $warningMessage = 'You have received a formal warning regarding your recent post. Further violations may lead to permanent account suspension.';
+        $warningPayload = ['created_at' => now(), 'updated_at' => now()];
+        if (Schema::hasColumn('user_warnings', 'user_id')) {
+            $warningPayload['user_id'] = $targetUser->id;
+        }
+        if (Schema::hasColumn('user_warnings', 'issued_by_admin_id')) {
+            $warningPayload['issued_by_admin_id'] = Auth::id();
+        } elseif (Schema::hasColumn('user_warnings', 'admin_id')) {
+            $warningPayload['admin_id'] = Auth::id();
+        }
+        if (Schema::hasColumn('user_warnings', 'warning_message')) {
+            $warningPayload['warning_message'] = $warningMessage;
+        } elseif (Schema::hasColumn('user_warnings', 'message')) {
+            $warningPayload['message'] = $warningMessage;
+        }
+        if (Schema::hasColumn('user_warnings', 'is_acknowledged')) {
+            $warningPayload['is_acknowledged'] = false;
+        } elseif (Schema::hasColumn('user_warnings', 'is_read')) {
+            $warningPayload['is_read'] = false;
+        }
+        if (array_key_exists('user_id', $warningPayload) && (array_key_exists('warning_message', $warningPayload) || array_key_exists('message', $warningPayload))) {
+            DB::table('user_warnings')->insert($warningPayload);
+        }
+    }
+
+    private function logFeedAction(Request $request, $admin, string $actionLabel, int $entityId, string $modelType, array $details = []): void
+    {
+        if (!Schema::hasTable('admin_logs')) {
+            return;
+        }
+        $adminName = $admin ? trim(($admin->full_name ?? trim(($admin->first_name ?? '') . ' ' . ($admin->last_name ?? '')))) : '';
+        $logMessage = ($adminName !== '' ? 'Admin ' . $adminName : 'Admin') . ' performed ' . $actionLabel . ' on ' . $entityId . ' directly from the feed';
+        $logPayload = [];
+        if (Schema::hasColumn('admin_logs', 'user_id')) $logPayload['user_id'] = Auth::id();
+        if (Schema::hasColumn('admin_logs', 'action')) $logPayload['action'] = $logMessage;
+        if (Schema::hasColumn('admin_logs', 'model_type')) $logPayload['model_type'] = $modelType;
+        if (Schema::hasColumn('admin_logs', 'model_id')) $logPayload['model_id'] = $entityId;
+        if (Schema::hasColumn('admin_logs', 'ip_address')) $logPayload['ip_address'] = $request->ip();
+        if (Schema::hasColumn('admin_logs', 'user_agent')) $logPayload['user_agent'] = $request->userAgent();
+        if (Schema::hasColumn('admin_logs', 'details')) $logPayload['details'] = json_encode($details);
+        if (Schema::hasColumn('admin_logs', 'created_at')) $logPayload['created_at'] = now();
+        if (Schema::hasColumn('admin_logs', 'updated_at')) $logPayload['updated_at'] = now();
+        if (count($logPayload) > 0) {
+            AdminLog::create($logPayload);
         }
     }
 }

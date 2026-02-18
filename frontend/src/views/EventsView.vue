@@ -144,12 +144,32 @@
                         <h4 class="text-sm font-medium text-gray-900">{{ event.title }}</h4>
                         <p class="text-xs text-gray-600">{{ formatTime(event.start_date) }} - {{ formatTime(event.end_date) }}</p>
                       </div>
-                  <span class="text-xs text-gray-500 flex items-center gap-2">
-                    <span>{{ event.location }}</span>
-                    <span v-if="event.user_rsvp === 'going'" class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded-full">
-                      Going
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 flex items-center gap-2">
+                      <span>{{ event.location }}</span>
+                      <span v-if="event.user_rsvp === 'going'" class="bg-green-100 text-green-800 text-[10px] px-2 py-0.5 rounded-full">
+                        Going
+                      </span>
                     </span>
-                  </span>
+                    <div v-if="isAdmin" class="relative">
+                      <button @click.stop="toggleEventMenu(event)" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" title="Moderate">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 7a2 2 0 110-4 2 2 0 010 4zm0 7a2 2 0 110-4 2 2 0 010 4zm0 7a2 2 0 110-4 2 2 0 010 4z"></path>
+                        </svg>
+                      </button>
+                      <div v-if="activeEventMenuId === event.id" class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                        <button @click.stop="openModerationConfirm('remove_content', event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Remove Content
+                        </button>
+                        <button @click.stop="openModerationConfirm('suspend_user', event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Suspend User
+                        </button>
+                        <button @click.stop="openModerationConfirm('issue_warning', event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Issue Warning
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                     </div>
                   </div>
                 </div>
@@ -204,6 +224,24 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l2.072 6.39a1 1 0 00.95.69h6.714c.969 0 1.371 1.24.588 1.81l-5.43 3.95a1 1 0 00-.364 1.118l2.072 6.39c.3.921-.755 1.688-1.54 1.118l-5.43-3.95a1 1 0 00-1.176 0l-5.43 3.95c-.784.57-1.838-.197-1.539-1.118l2.072-6.39a1 1 0 00-.364-1.118l-5.43-3.95c-.783-.57-.38-1.81.588-1.81h6.714a1 1 0 00.95-.69l2.072-6.39z"></path>
                       </svg>
                     </button>
+                    <div v-if="isAdmin" class="relative">
+                      <button @click.stop="toggleEventMenu(event)" class="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100" title="Moderate">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 7a2 2 0 110-4 2 2 0 010 4zm0 7a2 2 0 110-4 2 2 0 010 4zm0 7a2 2 0 110-4 2 2 0 010 4z"></path>
+                        </svg>
+                      </button>
+                      <div v-if="activeEventMenuId === event.id" class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                        <button @click.stop="openModerationConfirm('remove_content', event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Remove Content
+                        </button>
+                        <button @click.stop="openModerationConfirm('suspend_user', event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Suspend User
+                        </button>
+                        <button @click.stop="openModerationConfirm('issue_warning', event)" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          Issue Warning
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   </div>
 
@@ -600,6 +638,28 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showModerationConfirm" class="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-start md:items-center justify-center z-[100] px-4 pb-4 pt-20 md:pt-24 md:pl-64" @click.self="closeModerationConfirm">
+      <div class="bg-white rounded-lg p-6 w-full max-w-md border-2 border-black shadow-2xl" @click.stop>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">{{ moderationConfirmTitle }}</h3>
+          <button @click="closeModerationConfirm" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <p class="text-sm text-gray-600 mb-6">{{ moderationConfirmMessage }}</p>
+        <div class="flex justify-end space-x-2">
+          <button @click="closeModerationConfirm" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+            Cancel
+          </button>
+          <button @click="confirmModerationAction" :disabled="moderationSubmitting" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup>
@@ -695,6 +755,10 @@ const reportReason = ref('spam')
 const reportDescription = ref('')
 const reporting = ref(false)
 const rsvpSubmitting = ref({})
+const activeEventMenuId = ref(null)
+const showModerationConfirm = ref(false)
+const pendingModeration = ref(null)
+const moderationSubmitting = ref(false)
 
 // Pagination
 const currentPage = ref(1)
@@ -1042,6 +1106,70 @@ const toggleFeatured = async (event) => {
   } catch (error) {
     console.error('Error toggling featured:', error)
     toast.error(error.response?.data?.message || 'Failed to update featured status', 'Error')
+  }
+}
+
+const toggleEventMenu = (event) => {
+  activeEventMenuId.value = activeEventMenuId.value === event.id ? null : event.id
+}
+
+const openModerationConfirm = (action, event) => {
+  pendingModeration.value = { action, event }
+  showModerationConfirm.value = true
+  activeEventMenuId.value = null
+}
+
+const closeModerationConfirm = () => {
+  showModerationConfirm.value = false
+  pendingModeration.value = null
+}
+
+const moderationConfirmTitle = computed(() => {
+  if (!pendingModeration.value) return ''
+  switch (pendingModeration.value.action) {
+    case 'remove_content':
+      return 'Remove Content'
+    case 'suspend_user':
+      return 'Suspend User'
+    case 'issue_warning':
+      return 'Issue Warning'
+    default:
+      return 'Confirm Action'
+  }
+})
+
+const moderationConfirmMessage = computed(() => {
+  if (!pendingModeration.value) return ''
+  switch (pendingModeration.value.action) {
+    case 'remove_content':
+      return 'This will archive the event and remove it from the feed.'
+    case 'suspend_user':
+      return 'This will immediately suspend the host account.'
+    case 'issue_warning':
+      return 'This will issue a formal warning that must be acknowledged.'
+    default:
+      return 'Are you sure you want to proceed?'
+  }
+})
+
+const confirmModerationAction = async () => {
+  if (!pendingModeration.value) return
+  moderationSubmitting.value = true
+  const { action, event } = pendingModeration.value
+  try {
+    const response = await axios.post(`/api/events/${event.id}/moderate`, { action })
+    if (response?.data?.success) {
+      toast.success('Action completed successfully', 'Success')
+      await fetchEvents()
+      closeModerationConfirm()
+    } else {
+      toast.error(response?.data?.message || 'Failed to complete action', 'Error')
+    }
+  } catch (error) {
+    console.error('Error moderating event:', error)
+    toast.error(error.response?.data?.message || error.message || 'Failed to complete action', 'Error')
+  } finally {
+    moderationSubmitting.value = false
   }
 }
 

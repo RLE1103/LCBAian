@@ -528,7 +528,7 @@
                   </div>
                   <div v-if="selectedJob?.salary_range">
                     <span class="font-medium text-gray-900">Salary Range:</span>
-                    <span class="text-gray-700 ml-2">{{ selectedJob.salary_range }}</span>
+                    <span class="text-gray-700 ml-2">{{ formatSalaryRange(selectedJob.salary_range) }}</span>
                   </div>
                 </div>
                 
@@ -597,7 +597,26 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Salary Range</label>
-          <input v-model="newJob.salary_range" type="text" placeholder="e.g. 40k-60k" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Min</label>
+                <input v-model.number="jobSalaryMin" type="number" :min="jobSalaryRangeMin" :max="jobSalaryMax" :step="jobSalaryStep" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-500 mb-1">Max</label>
+                <input v-model.number="jobSalaryMax" type="number" :min="jobSalaryMin" :max="jobSalaryRangeMax" :step="jobSalaryStep" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-sm text-gray-600">
+              <span>{{ formatSalaryValue(jobSalaryMin) }}</span>
+              <span>{{ formatSalaryValue(jobSalaryMax) }}</span>
+            </div>
+            <div class="space-y-2">
+              <input v-model.number="jobSalaryMin" type="range" :min="jobSalarySliderMin" :max="jobSalarySliderMax" :step="jobSalaryStep" class="w-full" />
+              <input v-model.number="jobSalaryMax" type="range" :min="jobSalarySliderMin" :max="jobSalarySliderMax" :step="jobSalaryStep" class="w-full" />
+            </div>
+          </div>
         </div>
         <div class="md:col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-2">Application Link (Optional)</label>
@@ -768,6 +787,27 @@ const newJob = ref({
   salary_range: '',
   application_link: ''
 })
+const jobSalaryMin = ref(0)
+const jobSalaryMax = ref(0)
+const jobSalaryRangeMin = 0
+const jobSalaryRangeMax = 200000
+const jobSalaryStep = 1000
+const jobSalarySliderMin = computed(() => {
+  const min = Number(jobSalaryMin.value || 0)
+  const max = Number(jobSalaryMax.value || 0)
+  if (!newJob.value.salary_range && min === 0 && max === 0) {
+    return jobSalaryRangeMin
+  }
+  return Math.min(min, max)
+})
+const jobSalarySliderMax = computed(() => {
+  const min = Number(jobSalaryMin.value || 0)
+  const max = Number(jobSalaryMax.value || 0)
+  if (!newJob.value.salary_range && min === 0 && max === 0) {
+    return jobSalaryRangeMax
+  }
+  return Math.max(min, max)
+})
 const requiredSkillsInput = ref('')
 const preferredSkillsInput = ref('')
 
@@ -810,6 +850,74 @@ const isPostJobDisabled = computed(() => {
   if (!newJob.value.description) return true
   return false
 })
+
+const parseSalaryRange = (value) => {
+  if (!value) return { min: 0, max: 0 }
+  if (typeof value === 'number') return { min: value, max: value }
+  const numbers = String(value).match(/\d+/g)
+  if (!numbers || !numbers.length) return { min: 0, max: 0 }
+  const parsed = numbers.map((num) => Number(num)).filter((num) => !Number.isNaN(num))
+  if (parsed.length === 1) return { min: parsed[0], max: parsed[0] }
+  const min = Math.min(parsed[0], parsed[1])
+  const max = Math.max(parsed[0], parsed[1])
+  return { min, max }
+}
+
+const formatSalaryValue = (value) => `₱${Number(value || 0).toLocaleString()}`
+
+const formatSalaryRange = (value) => {
+  if (!value) return ''
+  const numbers = String(value).match(/\d+/g)
+  if (!numbers || !numbers.length) return String(value)
+  const { min, max } = parseSalaryRange(value)
+  if (min === max) return formatSalaryValue(min)
+  return `${formatSalaryValue(min)}–${formatSalaryValue(max)}`
+}
+
+const syncJobSalaryFromForm = () => {
+  const { min, max } = parseSalaryRange(newJob.value.salary_range)
+  jobSalaryMin.value = min
+  jobSalaryMax.value = max
+}
+
+watch(
+  () => newJob.value.salary_range,
+  (value) => {
+    const { min, max } = parseSalaryRange(value)
+    if (min !== jobSalaryMin.value) {
+      jobSalaryMin.value = min
+    }
+    if (max !== jobSalaryMax.value) {
+      jobSalaryMax.value = max
+    }
+  }
+)
+
+watch(
+  [jobSalaryMin, jobSalaryMax],
+  ([minValue, maxValue]) => {
+    let min = Number(minValue || 0)
+    let max = Number(maxValue || 0)
+    if (!newJob.value.salary_range && min === 0 && max === 0) {
+      return
+    }
+    if (min > max) {
+      const temp = min
+      min = max
+      max = temp
+    }
+    if (min !== jobSalaryMin.value) {
+      jobSalaryMin.value = min
+    }
+    if (max !== jobSalaryMax.value) {
+      jobSalaryMax.value = max
+    }
+    const formatted = `${min}-${max}`
+    if (newJob.value.salary_range !== formatted) {
+      newJob.value.salary_range = formatted
+    }
+  }
+)
 
 const goToPage = (page) => {
   if (page >= 1 && page <= totalPages.value) {
@@ -918,6 +1026,8 @@ const createJob = async () => {
         salary_range: '',
         application_link: ''
       }
+      jobSalaryMin.value = 0
+      jobSalaryMax.value = 0
       requiredSkillsInput.value = ''
       preferredSkillsInput.value = ''
       

@@ -865,8 +865,23 @@ class UserController extends Controller
             ], 422);
         }
 
-        $adminPassword = (string) $request->input('admin_password', '');
-        if ($adminPassword === '' || !Hash::check($adminPassword, $authUser->password)) {
+        $adminPassword = trim((string) $request->input('admin_password', ''));
+        $storedPassword = (string) ($authUser->password ?? '');
+        if ($adminPassword === '' || $storedPassword === '') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid admin password.'
+            ], 403);
+        }
+        $hashInfo = Hash::info($storedPassword);
+        if (($hashInfo['algo'] ?? 0) === 0) {
+            if (!hash_equals($storedPassword, $adminPassword)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid admin password.'
+                ], 403);
+            }
+        } elseif (!Hash::check($adminPassword, $storedPassword)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid admin password.'

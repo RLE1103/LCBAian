@@ -16,6 +16,7 @@ class EducationHistory extends Model
         'user_id',
         'level',
         'school_name',
+        'program',
         'year_graduated',
         'awards',
         'is_lcba',

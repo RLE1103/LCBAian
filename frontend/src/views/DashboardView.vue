@@ -267,6 +267,27 @@
             </div>
           </div>
         </div>
+        <div class="bg-white rounded-xl shadow-lg p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900">Latest News & Announcements</h2>
+            <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">Announcement</span>
+          </div>
+          <div v-if="latestAnnouncement" class="space-y-2">
+            <p class="text-xs text-gray-500">{{ latestAnnouncementDate }}</p>
+            <p class="text-base font-semibold text-gray-900">{{ latestAnnouncementTitle }}</p>
+            <p class="text-sm text-gray-600">{{ latestAnnouncementPreview }}</p>
+            <RouterLink
+              :to="{ path: '/news', query: { postId: latestAnnouncementId } }"
+              class="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800"
+            >
+              Read More
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </RouterLink>
+          </div>
+          <div v-else class="text-sm text-gray-500">No new announcements at this time. Check back later!</div>
+        </div>
 
         <!-- Birthday Corner -->
         <BirthdayCorner />
@@ -356,8 +377,41 @@ const upcomingEvents = ref([])
 // Network updates
 const networkUpdates = ref([])
 
+const latestAnnouncement = ref(null)
+
 // Loading state
 const loading = ref(false)
+
+const latestAnnouncementId = computed(() => latestAnnouncement.value?.post_id ?? latestAnnouncement.value?.id ?? null)
+
+const latestAnnouncementTitle = computed(() => {
+  const content = latestAnnouncement.value?.content?.trim() || ''
+  if (!content) return 'Announcement'
+  const firstLine = content.split(/\r?\n/)[0] || ''
+  const trimmed = firstLine.trim()
+  if (!trimmed) return 'Announcement'
+  return trimmed.length > 60 ? `${trimmed.slice(0, 60).trim()}...` : trimmed
+})
+
+const latestAnnouncementPreview = computed(() => {
+  const content = latestAnnouncement.value?.content?.trim() || ''
+  if (!content) return ''
+  const normalized = content.replace(/\s+/g, ' ').trim()
+  const limit = 140
+  return normalized.length > limit ? `${normalized.slice(0, limit).trim()}...` : normalized
+})
+
+const latestAnnouncementDate = computed(() => {
+  const dateValue = latestAnnouncement.value?.created_at
+  if (!dateValue) return ''
+  const parsed = new Date(dateValue)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+})
 
 // Fetch dashboard data
 const fetchDashboardData = async () => {
@@ -528,6 +582,7 @@ const fetchDashboardData = async () => {
     }
     
     if (postsResponse.data.success) {
+      latestAnnouncement.value = postsData[0] || null
       networkUpdates.value = postsData.slice(0, 3).map(post => ({
         id: post.post_id,
         user: {
@@ -538,6 +593,8 @@ const fetchDashboardData = async () => {
         action: 'shared a post',
         timestamp: new Date(post.created_at)
       }))
+    } else {
+      latestAnnouncement.value = null
     }
 
     const notificationsList = []

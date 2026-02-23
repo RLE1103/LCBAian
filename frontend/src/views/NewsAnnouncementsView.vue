@@ -189,11 +189,13 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { useRoute } from 'vue-router'
 import axios from '../config/api'
 import { useToast } from '../composables/useToast'
 
 const toast = useToast()
 const authStore = useAuthStore()
+const route = useRoute()
 const posts = ref([])
 const loading = ref(false)
 const posting = ref(false)
@@ -233,6 +235,7 @@ const loadPosts = async () => {
     const res = await axios.get('/api/posts')
     if (res?.data?.success) {
       posts.value = res.data.data.data || res.data.data || []
+      openPostFromQuery()
     } else {
       posts.value = []
     }
@@ -267,6 +270,16 @@ const removeImage = () => {
 const openPost = (post) => {
   selectedPost.value = post
   showPostModal.value = true
+}
+
+const openPostFromQuery = () => {
+  const queryId = route.query.postId
+  if (!queryId) return
+  const normalized = String(queryId)
+  const match = posts.value.find(post => String(post.post_id ?? post.id) === normalized)
+  if (match) {
+    openPost(match)
+  }
 }
 
 const submitPost = async () => {

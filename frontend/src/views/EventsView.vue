@@ -781,8 +781,7 @@ const fetchEvents = async () => {
   loading.value = true
   try {
     const params = {
-      search: searchQuery.value || undefined,
-      upcoming: selectedDateRange.value === 'upcoming' ? true : undefined
+      search: searchQuery.value || undefined
     }
     
     const response = await axios.get('/api/events', { params })
@@ -905,19 +904,37 @@ const submitReport = async () => {
   }
 }
 
+const normalizeText = (value) => (value ?? '').toString().toLowerCase()
+
+const normalizeDateOnly = (value) => {
+  if (!(value instanceof Date)) return null
+  if (Number.isNaN(value.getTime())) return null
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate())
+}
+
+const visibleEvents = computed(() => {
+  const today = normalizeDateOnly(new Date())
+  if (!today) return []
+  return events.value.filter(event => {
+    const endDate = normalizeDateOnly(event.end_date)
+    const startDate = normalizeDateOnly(event.start_date)
+    if (endDate) return endDate >= today
+    if (startDate) return startDate >= today
+    return false
+  })
+})
+
 const savedEvents = computed(() =>
-  events.value.filter(event => ['going', 'interested'].includes(event.user_rsvp))
+  visibleEvents.value.filter(event => ['going', 'interested'].includes(event.user_rsvp))
 )
 
 const featuredEvents = computed(() =>
-  events.value.filter(event => event.is_featured)
+  visibleEvents.value.filter(event => event.is_featured)
 )
-
-const normalizeText = (value) => (value ?? '').toString().toLowerCase()
 
 // Computed properties
 const filteredEvents = computed(() => {
-  let filtered = events.value
+  let filtered = visibleEvents.value
 
   // Apply search filter
   const query = searchQuery.value.trim().toLowerCase()
@@ -943,24 +960,25 @@ const filteredEvents = computed(() => {
     filtered = filtered.filter(event => normalizeText(event.location).includes(selectedLocationValue))
   }
 
-  // Apply date range filter
   if (selectedDateRange.value) {
-    const now = new Date()
+    const now = normalizeDateOnly(new Date())
     filtered = filtered.filter(event => {
+      const startDate = normalizeDateOnly(event.start_date)
+      const endDate = normalizeDateOnly(event.end_date)
       switch (selectedDateRange.value) {
         case 'upcoming':
-          return event.start_date > now
+          return startDate ? startDate >= now : false
         case 'ongoing':
-          return event.start_date <= now && event.end_date >= now
+          return startDate && endDate ? startDate <= now && endDate >= now : false
         case 'past':
-          return event.end_date < now
+          return false
         default:
           return true
       }
     })
   }
 
-  return filtered
+  return [...filtered].sort((a, b) => a.start_date - b.start_date)
 })
 
 const totalPages = computed(() => Math.ceil(filteredEvents.value.length / itemsPerPage))

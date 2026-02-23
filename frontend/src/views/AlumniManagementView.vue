@@ -136,23 +136,25 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div class="flex space-x-2">
                         <button 
-                          @click.stop="approveRequest(request)"
-                          class="text-green-600 hover:text-green-900"
-                        >
-                          Approve
-                        </button>
-                        <button 
-                          @click.stop="denyRequest(request)"
-                          class="text-red-600 hover:text-red-900"
-                        >
-                          Deny
-                        </button>
-                        <button 
                           @click.stop="viewDetails(request)"
                           class="text-blue-600 hover:text-blue-900"
                         >
                           View
                         </button>
+                        <template v-if="request.status !== 'approved'">
+                          <button 
+                            @click.stop="approveRequest(request)"
+                            class="text-green-600 hover:text-green-900"
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            @click.stop="denyRequest(request)"
+                            class="text-red-600 hover:text-red-900"
+                          >
+                            Deny
+                          </button>
+                        </template>
                       </div>
                     </td>
                   </tr>
@@ -525,7 +527,7 @@
       <div class="border border-gray-200 rounded-lg p-5">
         <div class="grid gap-4 md:grid-cols-2">
           <div>
-            <p class="text-sm text-gray-600 mb-2">Import alumni users using the CSV exported from User Directory.</p>
+            <p class="text-sm text-gray-600 mb-2">Import Alumni Data.</p>
             <input
               ref="importFileInput"
               type="file"

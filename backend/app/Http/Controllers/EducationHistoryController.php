@@ -41,6 +41,7 @@ class EducationHistoryController extends Controller
             $validated = $request->validate([
                 'level' => 'required|in:elementary,high_school,senior_high,college,masters,doctorate',
                 'school_name' => 'required|string|max:200',
+                'program' => 'required|string|max:200',
                 'year_graduated' => 'nullable|integer|min:1950|max:' . (date('Y') + 10),
                 'awards' => 'nullable|string|max:500',
                 'is_lcba' => 'nullable|boolean',
@@ -79,6 +80,7 @@ class EducationHistoryController extends Controller
             $validated = $request->validate([
                 'level' => 'sometimes|required|in:elementary,high_school,senior_high,college,masters,doctorate',
                 'school_name' => 'sometimes|required|string|max:200',
+                'program' => 'sometimes|required|string|max:200',
                 'year_graduated' => 'nullable|integer|min:1950|max:' . (date('Y') + 10),
                 'awards' => 'nullable|string|max:500',
                 'is_lcba' => 'nullable|boolean',

@@ -108,7 +108,7 @@
             </div>
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-2">Program</label>
-              <input v-model="form.program" type="text" placeholder="e.g., BS Computer Science" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <input v-model="form.program" type="text" readonly class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-2">Headline</label>
@@ -157,7 +157,6 @@
           </div>
         </div>
 
-        <!-- Education History -->
         <div class="bg-white rounded-lg shadow-md p-6">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-gray-900">Education History</h2>
@@ -166,7 +165,6 @@
             </button>
           </div>
 
-          <!-- Current LCBA Education (from program/batch fields) -->
           <div v-if="form.program || form.batch" class="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
             <div class="flex items-start justify-between">
               <div class="flex-1">
@@ -188,6 +186,7 @@
                     <span class="text-sm font-medium text-gray-900">{{ getLevelLabel(edu.level) }} - {{ edu.school_name }}</span>
                     <span v-if="edu.is_lcba" class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">LCBA</span>
                   </div>
+                  <p v-if="edu.program" class="text-xs text-gray-700">{{ edu.program }}</p>
                   <p v-if="edu.year_graduated" class="text-xs text-gray-600">Graduated: {{ edu.year_graduated }}</p>
                   <p v-if="edu.awards" class="text-xs text-gray-500 mt-1">🏆 {{ edu.awards }}</p>
                 </div>
@@ -231,15 +230,63 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Industry</label>
-              <input v-model="form.industry" type="text" placeholder="e.g., Technology, Finance, Healthcare" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <div class="relative">
+                <input
+                  v-model="form.industry"
+                  type="text"
+                  placeholder="Search industry"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  @focus="industryDropdownOpen = true"
+                  @input="onIndustryInput"
+                  @blur="closeIndustryDropdown"
+                />
+                <div v-if="industryDropdownOpen" class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <button
+                    v-for="industry in filteredIndustryOptions"
+                    :key="industry"
+                    type="button"
+                    class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                    @mousedown.prevent="selectIndustry(industry)"
+                  >
+                    <div class="text-sm text-gray-900">{{ industry }}</div>
+                  </button>
+                  <div v-if="filteredIndustryOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                    No matching industries.
+                  </div>
+                </div>
+              </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">City</label>
-              <input v-model="form.city" type="text" placeholder="e.g., Manila" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <input v-model="form.city" type="text" list="city-options" placeholder="Search city" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Country</label>
-              <input v-model="form.country" type="text" placeholder="e.g., Philippines" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <div class="relative">
+                <input
+                  v-model="form.country"
+                  type="text"
+                  placeholder="Search country"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  @focus="countryDropdownOpen = true"
+                  @input="onCountryInput"
+                  @blur="closeCountryDropdown"
+                />
+                <div v-if="countryDropdownOpen" class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <button
+                    v-for="country in filteredCountryOptions"
+                    :key="country"
+                    type="button"
+                    class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                    @mousedown.prevent="selectCountry(country)"
+                  >
+                    <div class="text-sm text-gray-900">{{ country }}</div>
+                  </button>
+                  <div v-if="filteredCountryOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                    No matching countries.
+                  </div>
+                </div>
+              </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Employment Status</label>
@@ -276,11 +323,30 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Years of Experience</label>
-              <input v-model="form.years_of_experience" type="number" min="0" max="100" step="1" placeholder="Enter years (e.g., 5)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <input v-model.number="form.years_of_experience" type="number" min="0" max="100" step="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Monthly Salary Range (PHP)</label>
-              <input v-model="form.salary_range" type="text" placeholder="e.g., 40,000 - 60,000" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+              <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Min</label>
+                    <input v-model.number="salaryMin" type="number" :min="salaryRangeMin" :max="salaryMax" :step="salaryStep" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Max</label>
+                    <input v-model.number="salaryMax" type="number" :min="salaryMin" :max="salaryRangeMax" :step="salaryStep" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                  </div>
+                </div>
+                <div class="flex items-center justify-between text-sm text-gray-600">
+                  <span>{{ formatSalaryValue(salaryMin) }}</span>
+                  <span>{{ formatSalaryValue(salaryMax) }}</span>
+                </div>
+                <div class="space-y-2">
+                  <input v-model.number="salaryMin" type="range" :min="salarySliderMin" :max="salarySliderMax" :step="salaryStep" class="w-full" />
+                  <input v-model.number="salaryMax" type="range" :min="salarySliderMin" :max="salarySliderMax" :step="salaryStep" class="w-full" />
+                </div>
+              </div>
             </div>
             <div class="md:col-span-2">
               <label class="flex items-center gap-2">
@@ -337,7 +403,6 @@
             </div>
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-2">Skills</label>
-              <!-- Tag Input for Skills -->
               <div class="border border-gray-300 rounded-lg p-2 min-h-[42px] focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
                 <div class="flex flex-wrap gap-2 mb-2">
                   <span
@@ -355,26 +420,32 @@
                     </button>
                   </span>
                 </div>
-                <input
-                  v-model="skillInput"
-                  @keydown.enter.prevent="addSkill"
-                  @input="searchSkills"
-                  type="text"
-                  placeholder="Type and press Enter to add skill"
-                  class="w-full px-2 py-1 border-0 focus:ring-0 focus:outline-none"
-                />
-                <!-- Autocomplete Dropdown -->
-                <div v-if="skillSuggestions.length > 0 && skillInput" class="mt-2 border border-gray-200 rounded-lg bg-white shadow-lg max-h-48 overflow-y-auto">
-                  <button
-                    v-for="suggestion in skillSuggestions"
-                    :key="suggestion.id"
-                    @click="selectSkill(suggestion.name)"
-                    type="button"
-                    class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between"
-                  >
-                    <span>{{ suggestion.name }}</span>
-                    <span class="text-xs text-gray-500">{{ suggestion.category }}</span>
-                  </button>
+                <div class="relative">
+                  <input
+                    v-model="skillInput"
+                    @keydown.enter.prevent="selectSkillFromInput"
+                    @focus="onSkillInput"
+                    @input="searchSkills"
+                    @blur="closeSkillDropdown"
+                    type="text"
+                    placeholder="Search and select from list"
+                    class="w-full px-2 py-1 border-0 focus:ring-0 focus:outline-none"
+                  />
+                  <div v-if="skillDropdownOpen" class="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <button
+                      v-for="suggestion in skillSuggestions"
+                      :key="suggestion.id"
+                      @mousedown.prevent="selectSkill(suggestion.name)"
+                      type="button"
+                      class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center justify-between"
+                    >
+                      <span>{{ suggestion.name }}</span>
+                      <span class="text-xs text-gray-500">{{ suggestion.category }}</span>
+                    </button>
+                    <div v-if="skillSuggestions.length === 0" class="px-4 py-2 text-sm text-gray-500">
+                      No matching skills.
+                    </div>
+                  </div>
                 </div>
               </div>
               <p class="text-xs text-gray-500 mt-1">Skills are standardized for better matching</p>
@@ -426,7 +497,6 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Industries of Interest</label>
-              <!-- Tag Input for Industries -->
               <div class="border border-gray-300 rounded-lg p-2 min-h-[42px] focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
                 <div class="flex flex-wrap gap-2 mb-2">
                   <span
@@ -444,13 +514,32 @@
                     </button>
                   </span>
                 </div>
-                <input
-                  v-model="industryInput"
-                  @keydown.enter.prevent="addIndustry"
-                  type="text"
-                  placeholder="Type and press Enter to add industry"
-                  class="w-full px-2 py-1 border-0 focus:ring-0 focus:outline-none"
-                />
+                <div class="relative">
+                  <input
+                    v-model="industryInput"
+                    @keydown.enter.prevent="addIndustry"
+                    @focus="interestDropdownOpen = true"
+                    @input="onInterestInput"
+                    @blur="closeInterestDropdown"
+                    type="text"
+                    placeholder="Search and press Enter to add"
+                    class="w-full px-2 py-1 border-0 focus:ring-0 focus:outline-none"
+                  />
+                  <div v-if="interestDropdownOpen" class="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <button
+                      v-for="industry in filteredInterestIndustryOptions"
+                      :key="industry"
+                      type="button"
+                      class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                      @mousedown.prevent="selectInterestIndustry(industry)"
+                    >
+                      <div class="text-sm text-gray-900">{{ industry }}</div>
+                    </button>
+                    <div v-if="filteredInterestIndustryOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                      No matching industries.
+                    </div>
+                  </div>
+                </div>
               </div>
               <p class="text-xs text-gray-500 mt-1">List industries you're interested in working in</p>
             </div>
@@ -586,8 +675,41 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">School Name <span class="text-red-500">*</span></label>
-            <input v-model="educationForm.school_name" required type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., Laguna College of Business and Arts">
+            <label class="block text-sm font-medium text-gray-700 mb-2">School <span class="text-red-500">*</span></label>
+            <input v-model="educationForm.school_name" required type="text" list="school-options" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Search school">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Program <span class="text-red-500">*</span></label>
+            <select v-model="educationForm.program" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+              <option value="">Select your program</option>
+              <optgroup label="Undergraduate Programs">
+                <option value="AB Political Science">AB Political Science</option>
+                <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
+                <option value="Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)">Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)</option>
+                <option value="BS Computer Science">BS Computer Science</option>
+                <option value="BS Psychology">BS Psychology</option>
+                <option value="BS Computer Engineering">BS Computer Engineering</option>
+                <option value="BS Accountancy">BS Accountancy</option>
+                <option value="BS Business Administration (Majors in Human Resources Management, Marketing Management)">BS Business Administration (Majors in Human Resources Management, Marketing Management)</option>
+                <option value="BS Entrepreneurship in Culinary Arts">BS Entrepreneurship in Culinary Arts</option>
+              </optgroup>
+              <optgroup label="Master's Programs">
+                <option value="Master of Arts in Education Major in Guidance and Counseling">Master of Arts in Education Major in Guidance and Counseling</option>
+                <option value="Master in Business Administration">Master in Business Administration</option>
+                <option value="Master of Science in Psychology">Master of Science in Psychology</option>
+                <option value="Master of Arts in Education Major in Administration and Supervision">Master of Arts in Education Major in Administration and Supervision</option>
+                <option value="Master of Arts in Education Major in English">Master of Arts in Education Major in English</option>
+                <option value="Master of Arts in Education Major in Filipino">Master of Arts in Education Major in Filipino</option>
+                <option value="Master of Arts in Education Major in Social Studies">Master of Arts in Education Major in Social Studies</option>
+                <option value="Master in Management major in Public Administration">Master in Management major in Public Administration</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="Senior High School Graduate">Senior High School Graduate</option>
+                <option value="High School Graduate">High School Graduate</option>
+                <option value="Elementary Graduate">Elementary Graduate</option>
+              </optgroup>
+            </select>
           </div>
 
           <div>
@@ -658,10 +780,18 @@
       </div>
     </div>
   </div>
+
+  <datalist id="city-options">
+    <option v-for="city in availableCityOptions" :key="city" :value="city"></option>
+  </datalist>
+  <datalist id="school-options">
+    <option v-for="school in schoolOptions" :key="school" :value="school"></option>
+  </datalist>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed, onBeforeUnmount } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import axios from '../config/api'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from '../composables/useToast'
@@ -670,10 +800,43 @@ const toast = useToast()
 const authStore = useAuthStore()
 const saving = ref(false)
 const skillInput = ref('')
+const skillDropdownOpen = ref(false)
 const industryInput = ref('')
+const industryDropdownOpen = ref(false)
+const countryDropdownOpen = ref(false)
+const interestDropdownOpen = ref(false)
 const skillSuggestions = ref([])
 let skillSearchTimeout = null
-
+const salaryMin = ref(0)
+const salaryMax = ref(0)
+const salaryRangeMin = 0
+const salaryRangeMax = 200000
+const salaryStep = 1000
+const salarySliderMin = computed(() => {
+  const min = Number(salaryMin.value || 0)
+  const max = Number(salaryMax.value || 0)
+  if (!form.value.salary_range && min === 0 && max === 0) {
+    return salaryRangeMin
+  }
+  return Math.min(min, max)
+})
+const salarySliderMax = computed(() => {
+  const min = Number(salaryMin.value || 0)
+  const max = Number(salaryMax.value || 0)
+  if (!form.value.salary_range && min === 0 && max === 0) {
+    return salaryRangeMax
+  }
+  return Math.max(min, max)
+})
+const filterOptions = ref({
+  cities: [],
+  industries: [],
+  programs: [],
+  batches: []
+})
+const schoolOptions = ref([
+  'Laguna College of Business and Arts'
+])
 // Profile Picture Upload
 const fileInput = ref(null)
 const employeeIdInput = ref(null)
@@ -693,6 +856,7 @@ const submittingEducation = ref(false)
 const educationForm = ref({
   level: '',
   school_name: '',
+  program: '',
   year_graduated: '',
   awards: '',
   is_lcba: false
@@ -750,6 +914,70 @@ const changePasswordForm = ref({
   current_password: '',
   password: '',
   password_confirmation: ''
+})
+
+const availableIndustryOptions = computed(() => {
+  const options = Array.isArray(filterOptions.value.industries) ? filterOptions.value.industries : []
+  const combined = [...options]
+  const addValue = (value) => {
+    if (value && !combined.includes(value)) {
+      combined.push(value)
+    }
+  }
+  addValue(form.value.industry)
+  if (Array.isArray(form.value.industries_of_interest)) {
+    form.value.industries_of_interest.forEach(addValue)
+  }
+  return combined
+})
+
+const availableCityOptions = computed(() => {
+  const options = Array.isArray(filterOptions.value.cities) ? filterOptions.value.cities : []
+  const combined = [...options]
+  if (form.value.city && !combined.includes(form.value.city)) {
+    combined.push(form.value.city)
+  }
+  return combined
+})
+
+const availableCountryOptions = computed(() => {
+  const defaults = ['Philippines']
+  const combined = [...defaults]
+  if (form.value.country && !combined.includes(form.value.country)) {
+    combined.push(form.value.country)
+  }
+  return combined
+})
+
+const industrySearchTerm = computed(() => (form.value.industry || '').toLowerCase().trim())
+const countrySearchTerm = computed(() => (form.value.country || '').toLowerCase().trim())
+const interestSearchTerm = computed(() => industryInput.value.toLowerCase().trim())
+
+const filteredIndustryOptions = computed(() => {
+  const options = availableIndustryOptions.value
+  if (!industrySearchTerm.value) return options
+  return options.filter((option) => option.toLowerCase().includes(industrySearchTerm.value))
+})
+
+const filteredCountryOptions = computed(() => {
+  const options = availableCountryOptions.value
+  if (!countrySearchTerm.value) return options
+  return options.filter((option) => option.toLowerCase().includes(countrySearchTerm.value))
+})
+
+const filteredInterestIndustryOptions = computed(() => {
+  const options = availableIndustryOptions.value.filter(
+    (option) => !form.value.industries_of_interest.includes(option)
+  )
+  if (!interestSearchTerm.value) return options
+  return options.filter((option) => option.toLowerCase().includes(interestSearchTerm.value))
+})
+
+const hasUnsavedChanges = computed(() => {
+  if (!initialForm.value || !initialPrivacySettings.value) return false
+  const formChanged = JSON.stringify(form.value) !== JSON.stringify(initialForm.value)
+  const privacyChanged = JSON.stringify(privacySettings.value) !== JSON.stringify(initialPrivacySettings.value)
+  return formChanged || privacyChanged
 })
 
 const loadProfile = async () => {
@@ -815,6 +1043,7 @@ const loadProfile = async () => {
         const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
         profilePictureUrl.value = baseUrl + '/uploads/profile_pictures/' + me.profile_picture
       }
+      syncSalaryFromForm()
       initialForm.value = JSON.parse(JSON.stringify(form.value))
       initialPrivacySettings.value = JSON.parse(JSON.stringify(privacySettings.value))
     }
@@ -822,6 +1051,85 @@ const loadProfile = async () => {
     console.error('Error loading profile:', error)
   }
 }
+
+const loadFilterOptions = async () => {
+  try {
+    const response = await axios.get('/api/users/filter-options')
+    if (response?.data?.success && response.data.data) {
+      filterOptions.value = {
+        ...filterOptions.value,
+        ...response.data.data
+      }
+    }
+  } catch (error) {
+    console.error('Error loading filter options:', error)
+  }
+}
+
+const parseSalaryRange = (value) => {
+  if (!value) return { min: 0, max: 0 }
+  if (typeof value === 'number') return { min: value, max: value }
+  const numbers = String(value).match(/\d+/g)
+  if (!numbers || !numbers.length) return { min: 0, max: 0 }
+  const parsed = numbers.map((num) => Number(num)).filter((num) => !Number.isNaN(num))
+  if (parsed.length === 1) return { min: parsed[0], max: parsed[0] }
+  const min = Math.min(parsed[0], parsed[1])
+  const max = Math.max(parsed[0], parsed[1])
+  return { min, max }
+}
+
+const syncSalaryFromForm = () => {
+  const { min, max } = parseSalaryRange(form.value.salary_range)
+  salaryMin.value = min
+  salaryMax.value = max
+}
+
+const formatSalaryValue = (value) => `₱${Number(value || 0).toLocaleString()}`
+
+const handleBeforeUnload = (event) => {
+  if (!hasUnsavedChanges.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+watch(
+  () => form.value.salary_range,
+  (value) => {
+    const { min, max } = parseSalaryRange(value)
+    if (min !== salaryMin.value) {
+      salaryMin.value = min
+    }
+    if (max !== salaryMax.value) {
+      salaryMax.value = max
+    }
+  }
+)
+
+watch(
+  [salaryMin, salaryMax],
+  ([minValue, maxValue]) => {
+    let min = Number(minValue || 0)
+    let max = Number(maxValue || 0)
+    if (!form.value.salary_range && min === 0 && max === 0) {
+      return
+    }
+    if (min > max) {
+      const temp = min
+      min = max
+      max = temp
+    }
+    if (min !== salaryMin.value) {
+      salaryMin.value = min
+    }
+    if (max !== salaryMax.value) {
+      salaryMax.value = max
+    }
+    const formatted = `${min}-${max}`
+    if (form.value.salary_range !== formatted) {
+      form.value.salary_range = formatted
+    }
+  }
+)
 
 const openChangePasswordModal = () => {
   changePasswordError.value = ''
@@ -992,12 +1300,22 @@ const searchSkills = async () => {
   }, 300)
 }
 
-const addSkill = () => {
-  const skill = skillInput.value.trim()
-  if (skill && !form.value.skills.includes(skill)) {
-    form.value.skills.push(skill)
-    skillInput.value = ''
-    skillSuggestions.value = []
+const onSkillInput = () => {
+  skillDropdownOpen.value = true
+}
+
+const closeSkillDropdown = () => {
+  setTimeout(() => {
+    skillDropdownOpen.value = false
+  }, 150)
+}
+
+const selectSkillFromInput = () => {
+  const query = skillInput.value.trim().toLowerCase()
+  if (!query) return
+  const match = skillSuggestions.value.find((skill) => skill?.name?.toLowerCase() === query)
+  if (match) {
+    selectSkill(match.name)
   }
 }
 
@@ -1007,10 +1325,59 @@ const selectSkill = (skillName) => {
   }
   skillInput.value = ''
   skillSuggestions.value = []
+  skillDropdownOpen.value = false
 }
 
 const removeSkill = (index) => {
   form.value.skills.splice(index, 1)
+}
+
+const onIndustryInput = () => {
+  industryDropdownOpen.value = true
+}
+
+const selectIndustry = (industry) => {
+  form.value.industry = industry
+  industryDropdownOpen.value = false
+}
+
+const closeIndustryDropdown = () => {
+  setTimeout(() => {
+    industryDropdownOpen.value = false
+  }, 150)
+}
+
+const onCountryInput = () => {
+  countryDropdownOpen.value = true
+}
+
+const selectCountry = (country) => {
+  form.value.country = country
+  countryDropdownOpen.value = false
+}
+
+const closeCountryDropdown = () => {
+  setTimeout(() => {
+    countryDropdownOpen.value = false
+  }, 150)
+}
+
+const onInterestInput = () => {
+  interestDropdownOpen.value = true
+}
+
+const selectInterestIndustry = (industry) => {
+  if (industry && !form.value.industries_of_interest.includes(industry)) {
+    form.value.industries_of_interest.push(industry)
+  }
+  industryInput.value = ''
+  interestDropdownOpen.value = false
+}
+
+const closeInterestDropdown = () => {
+  setTimeout(() => {
+    interestDropdownOpen.value = false
+  }, 150)
 }
 
 const addIndustry = () => {
@@ -1019,6 +1386,7 @@ const addIndustry = () => {
     form.value.industries_of_interest.push(industry)
     industryInput.value = ''
   }
+  interestDropdownOpen.value = false
 }
 
 const sanitizePhoneNumber = () => {
@@ -1224,6 +1592,29 @@ const attainmentValueMap = {
 
 const attainmentPriority = ['doctorate', 'masters', 'college', 'bachelors', 'senior_high', 'high_school', 'elementary']
 
+const attainmentRankMap = {
+  elementary: 1,
+  high_school: 2,
+  senior_high: 3,
+  bachelors: 4,
+  masters: 5,
+  doctorate: 6
+}
+
+const getAttainmentFromProgram = (program) => {
+  const value = (program || '').toString().toLowerCase()
+  if (!value) return null
+  if (value.includes('master')) return 'masters'
+  if (value.includes('doctor')) return 'doctorate'
+  if (value.includes('bachelor') || value.startsWith('bs ') || value.startsWith('bs') || value.startsWith('ab ')) {
+    return 'bachelors'
+  }
+  if (value.includes('senior high')) return 'senior_high'
+  if (value.includes('high school')) return 'high_school'
+  if (value.includes('elementary')) return 'elementary'
+  return null
+}
+
 const getHighestAttainmentFromHistory = (history) => {
   if (!Array.isArray(history) || history.length === 0) return null
   let best = null
@@ -1247,13 +1638,34 @@ const getHighestAttainmentFromHistory = (history) => {
   return attainmentValueMap[best.level] || null
 }
 
+const getHighestAttainment = (history, program) => {
+  const fromHistory = getHighestAttainmentFromHistory(history)
+  const fromProgram = getAttainmentFromProgram(program)
+  if (!fromHistory) return fromProgram
+  if (!fromProgram) return fromHistory
+  const historyRank = attainmentRankMap[fromHistory] || 0
+  const programRank = attainmentRankMap[fromProgram] || 0
+  return programRank > historyRank ? fromProgram : fromHistory
+}
+
+const latestEducationProgram = computed(() => {
+  if (!educationHistory.value.length) return form.value.program || ''
+  const sorted = [...educationHistory.value].sort((a, b) => {
+    const aYear = a.year_graduated ? Number(a.year_graduated) : 0
+    const bYear = b.year_graduated ? Number(b.year_graduated) : 0
+    if (aYear && bYear && aYear !== bYear) return bYear - aYear
+    return (b.id || 0) - (a.id || 0)
+  })
+  return sorted.find((edu) => edu.program)?.program || form.value.program || ''
+})
+
 watch(
   educationHistory,
   (history) => {
-    const derived = getHighestAttainmentFromHistory(history)
-    if (derived) {
-      form.value.highest_educational_attainment = derived
-    }
+    const derivedProgram = latestEducationProgram.value
+    form.value.program = derivedProgram
+    const derivedAttainment = getHighestAttainment(history, derivedProgram)
+    form.value.highest_educational_attainment = derivedAttainment || ''
   },
   { deep: true, immediate: true }
 )
@@ -1263,6 +1675,7 @@ const editEducation = (edu) => {
   educationForm.value = {
     level: edu.level,
     school_name: edu.school_name,
+    program: edu.program || '',
     year_graduated: edu.year_graduated || '',
     awards: edu.awards || '',
     is_lcba: edu.is_lcba || false
@@ -1276,6 +1689,7 @@ const closeEducationModal = () => {
   educationForm.value = {
     level: '',
     school_name: '',
+    program: '',
     year_graduated: '',
     awards: '',
     is_lcba: false
@@ -1288,6 +1702,7 @@ const saveEducation = async () => {
     const payload = {
       level: educationForm.value.level,
       school_name: educationForm.value.school_name,
+      program: educationForm.value.program,
       year_graduated: educationForm.value.year_graduated || null,
       awards: educationForm.value.awards || null,
       is_lcba: educationForm.value.is_lcba
@@ -1335,6 +1750,20 @@ const deleteEducation = async (id) => {
 
 onMounted(() => {
   loadProfile()
+  loadFilterOptions()
   loadEducationHistory()
+  syncSalaryFromForm()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeRouteLeave(() => {
+  if (!hasUnsavedChanges.value) {
+    return true
+  }
+  return confirm('You have unsaved changes. Are you sure you want to leave?')
 })
 </script>

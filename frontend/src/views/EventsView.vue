@@ -498,6 +498,9 @@
 
           <!-- Action Buttons -->
           <div class="flex justify-end space-x-4 mt-6">
+            <a v-if="selectedEvent?.link" :href="selectedEvent.link" target="_blank" rel="noopener" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              Visit Link
+            </a>
             <button @click="showEventModal = false" class="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
               Close
             </button>
@@ -582,6 +585,24 @@
                 <option value="seminar">Seminar</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Link (Optional)</label>
+            <input 
+              v-model="newEvent.link"
+              type="url"
+              placeholder="https://example.com/event-page"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Link (Optional)</label>
+            <input 
+              v-model="newEvent.link"
+              type="url"
+              placeholder="https://example.com/event-page"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
           </div>
         </div>
 
@@ -741,7 +762,7 @@ const toUtcFromTaipei = (value) => {
 const searchQuery = ref('')
 const selectedEventType = ref('')
 const selectedLocation = ref('')
-const selectedDateRange = ref('upcoming')
+const selectedDateRange = ref('')
 const viewMode = ref('list')
 const showEventModal = ref(false)
 const showCreateModal = ref(false)
@@ -770,6 +791,7 @@ const newEvent = ref({
   start_date: '',
   end_date: '',
   location: '',
+  link: '',
   type: 'webinar'
 })
 
@@ -857,6 +879,7 @@ const createEvent = async () => {
         start_date: '',
         end_date: '',
         location: '',
+        link: '',
         type: 'webinar'
       }
       
@@ -926,17 +949,45 @@ const visibleEvents = computed(() => {
   })
 })
 
-const savedEvents = computed(() =>
-  visibleEvents.value.filter(event => ['going', 'interested'].includes(event.user_rsvp))
-)
+const savedEvents = computed(() => {
+  const now = normalizeDateOnly(new Date())
+  const rank = (e) => {
+    const s = normalizeDateOnly(e.start_date)
+    const ed = normalizeDateOnly(e.end_date)
+    if (s && s >= now) return 0
+    if (s && ed && s <= now && ed >= now) return 1
+    return 2
+  }
+  const list = events.value.filter(e => ['going', 'interested'].includes(e.user_rsvp))
+  return [...list].sort((a, b) => {
+    const ra = rank(a)
+    const rb = rank(b)
+    if (ra !== rb) return ra - rb
+    return a.start_date - b.start_date
+  })
+})
 
-const featuredEvents = computed(() =>
-  visibleEvents.value.filter(event => event.is_featured)
-)
+const featuredEvents = computed(() => {
+  const now = normalizeDateOnly(new Date())
+  const rank = (e) => {
+    const s = normalizeDateOnly(e.start_date)
+    const ed = normalizeDateOnly(e.end_date)
+    if (s && s >= now) return 0
+    if (s && ed && s <= now && ed >= now) return 1
+    return 2
+  }
+  const list = events.value.filter(e => e.is_featured)
+  return [...list].sort((a, b) => {
+    const ra = rank(a)
+    const rb = rank(b)
+    if (ra !== rb) return ra - rb
+    return a.start_date - b.start_date
+  })
+})
 
 // Computed properties
 const filteredEvents = computed(() => {
-  let filtered = visibleEvents.value
+  let filtered = events.value
 
   // Apply search filter
   const query = searchQuery.value.trim().toLowerCase()
@@ -973,14 +1024,28 @@ const filteredEvents = computed(() => {
         case 'ongoing':
           return startDate && endDate ? startDate <= now && endDate >= now : false
         case 'past':
-          return false
+          return endDate ? endDate < now : (startDate ? startDate < now : false)
         default:
           return true
       }
     })
+    return [...filtered].sort((a, b) => a.start_date - b.start_date)
   }
 
-  return [...filtered].sort((a, b) => a.start_date - b.start_date)
+  const now = normalizeDateOnly(new Date())
+  const rank = (e) => {
+    const s = normalizeDateOnly(e.start_date)
+    const ed = normalizeDateOnly(e.end_date)
+    if (s && s >= now) return 0
+    if (s && ed && s <= now && ed >= now) return 1
+    return 2
+  }
+  return [...filtered].sort((a, b) => {
+    const ra = rank(a)
+    const rb = rank(b)
+    if (ra !== rb) return ra - rb
+    return a.start_date - b.start_date
+  })
 })
 
 const totalPages = computed(() => Math.ceil(filteredEvents.value.length / itemsPerPage))

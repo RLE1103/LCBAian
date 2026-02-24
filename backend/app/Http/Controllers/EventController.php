@@ -31,7 +31,7 @@ class EventController extends Controller
                 $query->where('status', '!=', 'archived');
             }
             $user = Auth::user();
-            if (!$user || $user->role !== 'admin') {
+            if ((!$user || $user->role !== 'admin') && Schema::hasColumn('events', 'status')) {
                 $query->where('status', 'active');
             }
 
@@ -87,7 +87,7 @@ class EventController extends Controller
                 $query->where('status', '!=', 'archived');
             }
             $user = Auth::user();
-            if (!$user || $user->role !== 'admin') {
+            if ((!$user || $user->role !== 'admin') && Schema::hasColumn('events', 'status')) {
                 $query->where('status', 'active');
             }
             $event = $query->findOrFail($id);
@@ -120,6 +120,7 @@ class EventController extends Controller
                 'start_date' => 'required|date',
                 'end_date' => 'required|date',
                 'location' => 'required|string|max:255',
+                'link' => 'nullable|url|max:2048',
                 'type' => 'nullable|string|max:50',
             ]);
 

@@ -17,6 +17,7 @@ class Event extends Model
         'start_date',
         'end_date',
         'location',
+        'link',
         'type',
         'created_by',
         'is_featured',

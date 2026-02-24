@@ -25,6 +25,7 @@ class User extends Authenticatable
         'status',
         'is_active',
         'profile_picture',
+        'profile_picture_public_id',
         'headline',
         'bio',
         'birthdate',

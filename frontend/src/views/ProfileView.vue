@@ -45,7 +45,7 @@
             
             <!-- Upload Controls -->
             <div class="flex-1 min-w-0">
-              <div class="mb-3">
+              <div class="mb-3 flex flex-wrap items-center gap-2">
                 <input 
                   ref="fileInput"
                   type="file" 
@@ -55,10 +55,18 @@
                 />
                 <button 
                   @click="$refs.fileInput.click()"
-                  :disabled="uploadingPicture"
+                  :disabled="uploadingPicture || deletingPicture"
                   class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
                 >
                   {{ uploadingPicture ? 'Uploading...' : (profilePictureUrl ? 'Change Picture' : 'Upload Picture') }}
+                </button>
+                <button
+                  v-if="profilePictureUrl"
+                  @click="deleteProfilePicture"
+                  :disabled="uploadingPicture || deletingPicture"
+                  class="border border-red-300 text-red-700 px-4 py-2 rounded-lg hover:bg-red-50 disabled:opacity-50 text-sm font-medium"
+                >
+                  {{ deletingPicture ? 'Removing...' : 'Remove Picture' }}
                 </button>
               </div>
               
@@ -68,6 +76,13 @@
               <p class="text-sm text-gray-600">
                 Maximum file size: 5MB
               </p>
+
+              <div v-if="uploadingPicture && uploadProgress > 0" class="mt-3">
+                <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div class="h-full bg-blue-600" :style="{ width: uploadProgress + '%' }"></div>
+                </div>
+                <p class="text-xs text-gray-600 mt-1">{{ uploadProgress }}%</p>
+              </div>
               
               <!-- Upload Error Message -->
               <div v-if="uploadError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
@@ -335,7 +350,7 @@
                   </div>
                   <div>
                     <label class="block text-xs text-gray-500 mb-1">Max</label>
-                    <input v-model.number="salaryMax" type="number" :min="salaryMin" :max="salaryRangeMax" :step="salaryStep" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    <input v-model.number="salaryMax" type="number" :min="salaryMin" :step="salaryStep" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                   </div>
                 </div>
                 <div class="flex items-center justify-between text-sm text-gray-600">
@@ -343,8 +358,8 @@
                   <span>{{ formatSalaryValue(salaryMax) }}</span>
                 </div>
                 <div class="space-y-2">
-                  <input v-model.number="salaryMin" type="range" :min="salarySliderMin" :max="salarySliderMax" :step="salaryStep" class="w-full" />
-                  <input v-model.number="salaryMax" type="range" :min="salarySliderMin" :max="salarySliderMax" :step="salaryStep" class="w-full" />
+                  <input v-model.number="salaryMin" type="range" :min="salaryRangeMin" :max="salaryVisualMax" :step="salaryStep" class="w-full" />
+                  <input v-model.number="salaryMax" type="range" :min="salaryRangeMin" :max="salaryVisualMax" :step="salaryStep" class="w-full" />
                 </div>
               </div>
             </div>
@@ -812,21 +827,9 @@ const salaryMax = ref(0)
 const salaryRangeMin = 0
 const salaryRangeMax = 200000
 const salaryStep = 1000
-const salarySliderMin = computed(() => {
-  const min = Number(salaryMin.value || 0)
+const salaryVisualMax = computed(() => {
   const max = Number(salaryMax.value || 0)
-  if (!form.value.salary_range && min === 0 && max === 0) {
-    return salaryRangeMin
-  }
-  return Math.min(min, max)
-})
-const salarySliderMax = computed(() => {
-  const min = Number(salaryMin.value || 0)
-  const max = Number(salaryMax.value || 0)
-  if (!form.value.salary_range && min === 0 && max === 0) {
-    return salaryRangeMax
-  }
-  return Math.max(min, max)
+  return Math.max(salaryRangeMax, max)
 })
 const filterOptions = ref({
   cities: [],
@@ -842,6 +845,8 @@ const fileInput = ref(null)
 const employeeIdInput = ref(null)
 const lcbaEmployeeIdFile = ref(null)
 const uploadingPicture = ref(false)
+const deletingPicture = ref(false)
+const uploadProgress = ref(0)
 const uploadError = ref('')
 const uploadSuccess = ref(false)
 const profilePictureUrl = ref('')
@@ -1038,10 +1043,10 @@ const loadProfile = async () => {
           privacySettings.value[key] = 'public'
         }
       })
-      // Load profile picture URL
       if (me.profile_picture) {
-        const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
-        profilePictureUrl.value = baseUrl + '/uploads/profile_pictures/' + me.profile_picture
+        profilePictureUrl.value = resolveProfilePictureUrl(me.profile_picture)
+      } else {
+        profilePictureUrl.value = ''
       }
       syncSalaryFromForm()
       initialForm.value = JSON.parse(JSON.stringify(form.value))
@@ -1217,31 +1222,37 @@ const getInitials = () => {
   return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'U'
 }
 
+const resolveProfilePictureUrl = (profilePicture) => {
+  if (!profilePicture) return ''
+  if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) return profilePicture
+  const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
+  if (profilePicture.startsWith('/uploads/')) return `${baseUrl}${profilePicture}`
+  if (profilePicture.startsWith('uploads/')) return `${baseUrl}/${profilePicture}`
+  return `${baseUrl}/uploads/profile_pictures/${profilePicture}`
+}
+
 const handleFileSelect = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  // Reset messages
   uploadError.value = ''
   uploadSuccess.value = false
+  uploadProgress.value = 0
 
-  // Validate file type
   const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
   if (!validTypes.includes(file.type)) {
     uploadError.value = 'Please select a valid image file (JPG, PNG, GIF, or WebP)'
     return
   }
 
-  // Validate file size (5MB = 5 * 1024 * 1024 bytes)
   const maxSize = 5 * 1024 * 1024
   if (file.size > maxSize) {
     uploadError.value = 'File size must be less than 5MB'
     return
   }
 
-  // Upload the file
   uploadingPicture.value = true
-  
+
   try {
     const formData = new FormData()
     formData.append('profile_picture', file)
@@ -1249,21 +1260,24 @@ const handleFileSelect = async (event) => {
     const response = await axios.post('/api/user/profile-picture', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        if (!progressEvent.total) return
+        uploadProgress.value = Math.round((progressEvent.loaded / progressEvent.total) * 100)
       }
     })
 
-    // Update profile picture URL
-    const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
-    profilePictureUrl.value = baseUrl + response.data.profile_picture_url
-    
-    // Update user in auth store
-    authStore.user = response.data.user
-    sessionStorage.setItem('user_data', JSON.stringify(response.data.user))
-    
+    const updatedUser = response.data.user || authStore.user
+    if (updatedUser) {
+      authStore.user = updatedUser
+      sessionStorage.setItem('user_data', JSON.stringify(updatedUser))
+    }
+
+    profilePictureUrl.value = resolveProfilePictureUrl(updatedUser?.profile_picture || response.data.profile_picture_url || '')
+
     uploadSuccess.value = true
     toast.success('Profile picture uploaded successfully!')
-    
-    // Clear success message after 3 seconds
+
     setTimeout(() => {
       uploadSuccess.value = false
     }, 3000)
@@ -1272,8 +1286,33 @@ const handleFileSelect = async (event) => {
     uploadError.value = error.response?.data?.message || 'Failed to upload profile picture. Please try again.'
   } finally {
     uploadingPicture.value = false
-    // Reset file input
     event.target.value = ''
+    setTimeout(() => {
+      uploadProgress.value = 0
+    }, 300)
+  }
+}
+
+const deleteProfilePicture = async () => {
+  if (!profilePictureUrl.value) return
+  deletingPicture.value = true
+  uploadError.value = ''
+  uploadSuccess.value = false
+
+  try {
+    const response = await axios.delete('/api/user/profile-picture')
+    const updatedUser = response.data.user || authStore.user
+    if (updatedUser) {
+      authStore.user = updatedUser
+      sessionStorage.setItem('user_data', JSON.stringify(updatedUser))
+    }
+    profilePictureUrl.value = ''
+    toast.success('Profile picture removed.')
+  } catch (error) {
+    console.error('Error deleting profile picture:', error)
+    uploadError.value = error.response?.data?.message || 'Failed to remove profile picture. Please try again.'
+  } finally {
+    deletingPicture.value = false
   }
 }
 

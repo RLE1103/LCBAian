@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/user/password', [AuthController::class , 'changePassword']);
     Route::post('/accept-guidelines', [AuthController::class , 'acceptGuidelines']);
     Route::post('/user/profile-picture', [AuthController::class , 'uploadProfilePicture']);
+    Route::delete('/user/profile-picture', [AuthController::class , 'deleteProfilePicture']);
     Route::get('/user/warnings/pending', [AuthController::class , 'pendingWarning']);
     Route::post('/user/warnings/{id}/acknowledge', [AuthController::class , 'acknowledgeWarning']);
 
@@ -74,6 +75,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Post routes (social posts)
         Route::post('/posts', [App\Http\Controllers\PostController::class , 'store']);
+        Route::put('/posts/{postId}', [App\Http\Controllers\PostController::class , 'update']);
+        Route::delete('/posts/{postId}', [App\Http\Controllers\PostController::class , 'destroy']);
 
         // Report routes
         Route::post('/reports', [App\Http\Controllers\ReportController::class , 'store']);

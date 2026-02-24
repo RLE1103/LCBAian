@@ -15,8 +15,10 @@ class Post extends Model
 
     protected $fillable = [
         'user_id',
+        'title',
         'content',
         'image_path',
+        'media',
         'visibility',
     ];
     
@@ -27,6 +29,7 @@ class Post extends Model
         return [
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
+            'media' => 'array',
         ];
     }
 

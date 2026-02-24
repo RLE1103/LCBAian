@@ -605,7 +605,7 @@
               </div>
               <div>
                 <label class="block text-xs text-gray-500 mb-1">Max</label>
-                <input v-model.number="jobSalaryMax" type="number" :min="jobSalaryMin" :max="jobSalaryRangeMax" :step="jobSalaryStep" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    <input v-model.number="jobSalaryMax" type="number" :min="jobSalaryMin" :step="jobSalaryStep" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
               </div>
             </div>
             <div class="flex items-center justify-between text-sm text-gray-600">
@@ -613,8 +613,8 @@
               <span>{{ formatSalaryValue(jobSalaryMax) }}</span>
             </div>
             <div class="space-y-2">
-              <input v-model.number="jobSalaryMin" type="range" :min="jobSalarySliderMin" :max="jobSalarySliderMax" :step="jobSalaryStep" class="w-full" />
-              <input v-model.number="jobSalaryMax" type="range" :min="jobSalarySliderMin" :max="jobSalarySliderMax" :step="jobSalaryStep" class="w-full" />
+                  <input v-model.number="jobSalaryMin" type="range" :min="jobSalaryRangeMin" :max="jobSalaryVisualMax" :step="jobSalaryStep" class="w-full" />
+                  <input v-model.number="jobSalaryMax" type="range" :min="jobSalaryRangeMin" :max="jobSalaryVisualMax" :step="jobSalaryStep" class="w-full" />
             </div>
           </div>
         </div>
@@ -792,21 +792,9 @@ const jobSalaryMax = ref(0)
 const jobSalaryRangeMin = 0
 const jobSalaryRangeMax = 200000
 const jobSalaryStep = 1000
-const jobSalarySliderMin = computed(() => {
-  const min = Number(jobSalaryMin.value || 0)
+const jobSalaryVisualMax = computed(() => {
   const max = Number(jobSalaryMax.value || 0)
-  if (!newJob.value.salary_range && min === 0 && max === 0) {
-    return jobSalaryRangeMin
-  }
-  return Math.min(min, max)
-})
-const jobSalarySliderMax = computed(() => {
-  const min = Number(jobSalaryMin.value || 0)
-  const max = Number(jobSalaryMax.value || 0)
-  if (!newJob.value.salary_range && min === 0 && max === 0) {
-    return jobSalaryRangeMax
-  }
-  return Math.max(min, max)
+  return Math.max(jobSalaryRangeMax, max)
 })
 const requiredSkillsInput = ref('')
 const preferredSkillsInput = ref('')

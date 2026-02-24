@@ -39,6 +39,13 @@
           
           <!-- Post Input -->
           <div class="flex-1">
+            <input
+              v-model="newPost.title"
+              @focus="isComposerExpanded = true"
+              type="text"
+              placeholder="Title"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
+            />
             <textarea
               v-model="newPost.content"
               @focus="isComposerExpanded = true"
@@ -47,17 +54,22 @@
               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all"
             ></textarea>
             
-            <!-- Image Preview -->
-            <div v-if="imagePreview" class="mt-3 relative">
-              <img :src="imagePreview" class="w-full rounded-lg max-h-96 object-cover border border-gray-200" />
-              <button 
-                @click="removeImage"
-                class="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 shadow-lg"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
+            <!-- Media Preview -->
+            <div v-if="mediaPreviews.length" class="mt-3 grid gap-3 md:grid-cols-2">
+              <div v-for="(preview, index) in mediaPreviews" :key="preview.id" class="relative">
+                <img v-if="preview.type === 'image'" :src="preview.url" class="w-full rounded-lg max-h-96 object-cover border border-gray-200" />
+                <video v-else class="w-full rounded-lg max-h-96 border border-gray-200" controls>
+                  <source :src="preview.url" />
+                </video>
+                <button 
+                  @click="removeMedia(index)"
+                  class="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 shadow-lg"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -65,30 +77,35 @@
         <!-- Composer Actions -->
         <div v-if="isComposerExpanded" class="flex items-center justify-between pt-3 border-t border-gray-200">
           <div class="flex items-center gap-2">
-            <!-- Image Upload Button -->
             <label class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition-colors">
               <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
               </svg>
-              <span class="text-sm font-medium text-gray-700">Photo</span>
+              <span class="text-sm font-medium text-gray-700">Photo/Video</span>
               <input 
                 type="file" 
-                ref="imageInput"
-                @change="handleImageSelect"
-                accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                ref="mediaInput"
+                @change="handleMediaSelect"
+                accept="image/jpeg,image/png,image/jpg,image/gif,image/webp,video/mp4,video/quicktime,video/webm,video/ogg"
+                multiple
                 class="hidden"
               />
             </label>
           </div>
 
-          <!-- Post Button -->
           <button 
             @click="submitPost"
-            :disabled="!newPost.content.trim() || posting"
+            :disabled="!newPost.title.trim() || !newPost.content.trim() || posting"
             class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
           >
             {{ posting ? 'Posting...' : 'Post' }}
           </button>
+        </div>
+        <div v-if="posting && uploadProgress > 0" class="mt-3">
+          <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div class="h-full bg-blue-600" :style="{ width: uploadProgress + '%' }"></div>
+          </div>
+          <p class="text-xs text-gray-600 mt-1">{{ uploadProgress }}%</p>
         </div>
       </div>
 
@@ -132,12 +149,20 @@
           </div>
 
           <!-- Post Content -->
-          <div class="px-4 pb-4">
+          <div class="px-4 pb-4 space-y-2">
+            <h3 v-if="post.title" class="text-lg font-semibold text-gray-900">{{ post.title }}</h3>
             <p class="text-gray-800 whitespace-pre-wrap">{{ post.content }}</p>
           </div>
 
-          <!-- Post Image -->
-          <div v-if="post.image_path" class="w-full">
+          <div v-if="post.media?.length" class="w-full grid gap-2 md:grid-cols-2">
+            <div v-for="(item, idx) in post.media" :key="item.public_id || idx">
+              <img v-if="item.resource_type === 'image'" :src="resolveMediaUrl(item)" class="w-full object-cover max-h-96" />
+              <video v-else class="w-full max-h-96" controls>
+                <source :src="resolveMediaUrl(item)" />
+              </video>
+            </div>
+          </div>
+          <div v-else-if="post.image_path" class="w-full">
             <img :src="getImageUrl(post.image_path)" class="w-full object-cover max-h-96" />
           </div>
 
@@ -176,8 +201,17 @@
         </div>
 
         <div class="space-y-4">
+          <h3 v-if="selectedPost?.title" class="text-xl font-semibold text-gray-900">{{ selectedPost?.title }}</h3>
           <p class="text-gray-800 whitespace-pre-wrap">{{ selectedPost?.content }}</p>
-          <div v-if="selectedPost?.image_path" class="w-full">
+          <div v-if="selectedPost?.media?.length" class="w-full grid gap-3 md:grid-cols-2">
+            <div v-for="(item, idx) in selectedPost.media" :key="item.public_id || idx">
+              <img v-if="item.resource_type === 'image'" :src="resolveMediaUrl(item)" class="w-full h-auto object-contain max-h-[80vh] rounded-lg border border-gray-200 bg-gray-50" />
+              <video v-else class="w-full h-auto rounded-lg border border-gray-200 bg-gray-50" controls>
+                <source :src="resolveMediaUrl(item)" />
+              </video>
+            </div>
+          </div>
+          <div v-else-if="selectedPost?.image_path" class="w-full">
             <img :src="getImageUrl(selectedPost.image_path)" class="w-full h-auto object-contain max-h-[80vh] rounded-lg border border-gray-200 bg-gray-50" />
           </div>
         </div>
@@ -199,10 +233,11 @@ const route = useRoute()
 const posts = ref([])
 const loading = ref(false)
 const posting = ref(false)
+const uploadProgress = ref(0)
 const isComposerExpanded = ref(false)
-const imageInput = ref(null)
-const imagePreview = ref(null)
-const selectedImage = ref(null)
+const mediaInput = ref(null)
+const mediaPreviews = ref([])
+const selectedMedia = ref([])
 const searchQuery = ref('')
 const selectedPost = ref(null)
 const showPostModal = ref(false)
@@ -218,15 +253,17 @@ const filteredPosts = computed(() => {
   
   const query = searchQuery.value.toLowerCase()
   return posts.value.filter(post => {
+    const title = post.title?.toLowerCase() || ''
     const content = post.content?.toLowerCase() || ''
     const authorName = `${post.user?.first_name || ''} ${post.user?.last_name || ''}`.toLowerCase()
-    return content.includes(query) || authorName.includes(query)
+    return title.includes(query) || content.includes(query) || authorName.includes(query)
   })
 })
 
 const newPost = ref({
+  title: '',
   content: '',
-  visibility: 'public'  // Changed to public so all users can see
+  visibility: 'public'
 })
 
 const loadPosts = async () => {
@@ -247,23 +284,48 @@ const loadPosts = async () => {
   }
 }
 
-const handleImageSelect = (event) => {
-  const file = event.target.files[0]
-  if (file) {
-    selectedImage.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      imagePreview.value = e.target.result
+const handleMediaSelect = (event) => {
+  const files = Array.from(event.target.files || [])
+  if (!files.length) return
+
+  files.forEach((file) => {
+    const isImage = file.type.startsWith('image/')
+    const isVideo = file.type.startsWith('video/')
+    if (!isImage && !isVideo) {
+      toast.warning('Only image or video files are allowed', 'Validation Error')
+      return
     }
-    reader.readAsDataURL(file)
-  }
+
+    const maxImageSize = 5 * 1024 * 1024
+    const maxVideoSize = 200 * 1024 * 1024
+    if (isImage && file.size > maxImageSize) {
+      toast.warning('Image files must be 5MB or smaller', 'Validation Error')
+      return
+    }
+    if (isVideo && file.size > maxVideoSize) {
+      toast.warning('Video files must be 200MB or smaller', 'Validation Error')
+      return
+    }
+
+    selectedMedia.value.push(file)
+    const previewUrl = URL.createObjectURL(file)
+    mediaPreviews.value.push({
+      id: `${file.name}-${file.size}-${file.lastModified}`,
+      url: previewUrl,
+      type: isVideo ? 'video' : 'image'
+    })
+  })
 }
 
-const removeImage = () => {
-  selectedImage.value = null
-  imagePreview.value = null
-  if (imageInput.value) {
-    imageInput.value.value = ''
+const removeMedia = (index) => {
+  const preview = mediaPreviews.value[index]
+  if (preview?.url) {
+    URL.revokeObjectURL(preview.url)
+  }
+  mediaPreviews.value.splice(index, 1)
+  selectedMedia.value.splice(index, 1)
+  if (!mediaPreviews.value.length && mediaInput.value) {
+    mediaInput.value.value = ''
   }
 }
 
@@ -283,50 +345,58 @@ const openPostFromQuery = () => {
 }
 
 const submitPost = async () => {
+  if (!newPost.value.title.trim()) {
+    toast.warning('Please enter a title for your post', 'Validation Error')
+    return
+  }
   if (!newPost.value.content.trim()) {
     toast.warning('Please enter some content for your post', 'Validation Error')
     return
   }
-  
+
   posting.value = true
+  uploadProgress.value = 0
   try {
-    console.log('Submitting post...', {
-      content: newPost.value.content,
-      visibility: newPost.value.visibility,
-      hasImage: !!selectedImage.value
-    })
-    
     const formData = new FormData()
+    formData.append('title', newPost.value.title)
     formData.append('content', newPost.value.content)
     formData.append('visibility', newPost.value.visibility)
-    
-    if (selectedImage.value) {
-      formData.append('image', selectedImage.value)
+
+    if (selectedMedia.value.length) {
+      selectedMedia.value.forEach((file) => {
+        formData.append('media[]', file)
+      })
     }
 
-    console.log('Sending request to /api/posts...')
     const res = await axios.post('/api/posts', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        if (!progressEvent.total) return
+        uploadProgress.value = Math.round((progressEvent.loaded / progressEvent.total) * 100)
       }
     })
-    
-    console.log('Response received:', res.data)
-    
+
     if (res?.data?.success) {
       toast.success('Post created successfully!', 'Success')
-      // Reset form
+      newPost.value.title = ''
       newPost.value.content = ''
-      newPost.value.visibility = 'public'  // Reset to public
-      removeImage()
+      newPost.value.visibility = 'public'
+      mediaPreviews.value.forEach((preview) => {
+        if (preview?.url) {
+          URL.revokeObjectURL(preview.url)
+        }
+      })
+      mediaPreviews.value = []
+      selectedMedia.value = []
+      if (mediaInput.value) {
+        mediaInput.value.value = ''
+      }
       isComposerExpanded.value = false
-      
-      // Reload posts
-      console.log('Reloading posts...')
+
       await loadPosts()
-      console.log('Posts reloaded, total:', posts.value.length)
     } else {
-      console.error('Post creation failed:', res?.data)
       throw new Error(res?.data?.message || 'Failed to create post')
     }
   } catch (e) {
@@ -335,6 +405,9 @@ const submitPost = async () => {
     toast.error('Failed to create post: ' + (e.response?.data?.message || e.message), 'Error')
   } finally {
     posting.value = false
+    setTimeout(() => {
+      uploadProgress.value = 0
+    }, 300)
   }
 }
 
@@ -353,14 +426,24 @@ const getPostUserInitials = (user) => {
 
 const getProfilePictureUrl = (profilePicture) => {
   if (!profilePicture) return ''
+  if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) return profilePicture
   const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
+  if (profilePicture.startsWith('/uploads/')) return `${baseUrl}${profilePicture}`
+  if (profilePicture.startsWith('uploads/')) return `${baseUrl}/${profilePicture}`
   return `${baseUrl}/uploads/profile_pictures/${profilePicture}`
 }
 
 const getImageUrl = (path) => {
   if (!path) return ''
-  // Path is stored as 'posts/filename.jpg', serve via storage link
   return `http://localhost:8000/storage/${path}`
+}
+
+const resolveMediaUrl = (item) => {
+  if (!item) return ''
+  if (typeof item === 'string') return getImageUrl(item)
+  if (item.secure_url) return item.secure_url
+  if (item.url) return item.url
+  return ''
 }
 
 const formatDate = (d) => {

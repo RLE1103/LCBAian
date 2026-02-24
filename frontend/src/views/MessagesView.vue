@@ -864,6 +864,7 @@ const getProfilePictureUrl = (profilePicture) => {
   if (profilePicture.startsWith('http://') || profilePicture.startsWith('https://')) return profilePicture
   const baseUrl = axios.defaults.baseURL || 'http://localhost:8000'
   if (profilePicture.startsWith('/uploads/')) return `${baseUrl}${profilePicture}`
+  if (profilePicture.startsWith('uploads/')) return `${baseUrl}/${profilePicture}`
   return `${baseUrl}/uploads/profile_pictures/${profilePicture}`
 }
 

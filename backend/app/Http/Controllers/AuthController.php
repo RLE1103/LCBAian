@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use Cloudinary\Cloudinary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -471,13 +472,35 @@ class AuthController extends Controller
         ]);
     }
 
+    private function cloudinary(): ?Cloudinary
+    {
+        $cloudName = config('services.cloudinary.cloud_name');
+        $apiKey = config('services.cloudinary.api_key');
+        $apiSecret = config('services.cloudinary.api_secret');
+
+        if (!$cloudName || !$apiKey || !$apiSecret) {
+            return null;
+        }
+
+        return new Cloudinary([
+            'cloud' => [
+                'cloud_name' => $cloudName,
+                'api_key' => $apiKey,
+                'api_secret' => $apiSecret,
+            ],
+            'url' => [
+                'secure' => true,
+            ],
+        ]);
+    }
+
     /**
      * Upload profile picture
      */
     public function uploadProfilePicture(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'profile_picture' => 'required|image|mimes:jpg,jpeg,png,gif,webp|max:5120', // 5MB max
+            'profile_picture' => 'required|image|mimes:jpg,jpeg,png,gif,webp|max:5120',
         ]);
 
         if ($validator->fails()) {
@@ -487,34 +510,77 @@ class AuthController extends Controller
             ], 422);
         }
 
+        $cloudinary = $this->cloudinary();
+        if (!$cloudinary) {
+            return response()->json([
+                'message' => 'Cloudinary configuration is missing.'
+            ], 500);
+        }
+
         $user = $request->user();
 
-        // Delete old profile picture if exists
-        if ($user->profile_picture) {
+        if ($user->profile_picture_public_id) {
+            try {
+                $cloudinary->uploadApi()->destroy($user->profile_picture_public_id, ['invalidate' => true]);
+            } catch (\Exception) {
+            }
+        } elseif ($user->profile_picture && !str_starts_with($user->profile_picture, 'http://') && !str_starts_with($user->profile_picture, 'https://')) {
             $oldPath = public_path('uploads/profile_pictures/' . $user->profile_picture);
             if (file_exists($oldPath)) {
                 unlink($oldPath);
             }
         }
 
-        // Create directory if it doesn't exist
-        $uploadPath = public_path('uploads/profile_pictures');
-        if (!file_exists($uploadPath)) {
-            mkdir($uploadPath, 0755, true);
-        }
-
-        // Store new profile picture
         $file = $request->file('profile_picture');
-        $filename = $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-        $file->move($uploadPath, $filename);
+        $upload = $cloudinary->uploadApi()->upload($file->getRealPath(), [
+            'folder' => 'profile_pictures',
+            'resource_type' => 'image',
+            'transformation' => [
+                [
+                    'width' => 300,
+                    'height' => 300,
+                    'crop' => 'fill',
+                    'gravity' => 'auto',
+                    'quality' => 'auto',
+                    'fetch_format' => 'auto',
+                ],
+            ],
+        ]);
 
-        // Update user record
-        $user->profile_picture = $filename;
+        $user->profile_picture = $upload['secure_url'] ?? null;
+        $user->profile_picture_public_id = $upload['public_id'] ?? null;
         $user->save();
 
         return response()->json([
             'message' => 'Profile picture uploaded successfully',
-            'profile_picture_url' => '/uploads/profile_pictures/' . $filename,
+            'profile_picture_url' => $user->profile_picture,
+            'user' => $user->fresh()
+        ]);
+    }
+
+    public function deleteProfilePicture(Request $request)
+    {
+        $user = $request->user();
+        $cloudinary = $this->cloudinary();
+
+        if ($user->profile_picture_public_id && $cloudinary) {
+            try {
+                $cloudinary->uploadApi()->destroy($user->profile_picture_public_id, ['invalidate' => true]);
+            } catch (\Exception) {
+            }
+        } elseif ($user->profile_picture && !str_starts_with($user->profile_picture, 'http://') && !str_starts_with($user->profile_picture, 'https://')) {
+            $oldPath = public_path('uploads/profile_pictures/' . $user->profile_picture);
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+
+        $user->profile_picture = null;
+        $user->profile_picture_public_id = null;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profile picture deleted successfully',
             'user' => $user->fresh()
         ]);
     }

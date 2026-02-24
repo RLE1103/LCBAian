@@ -54,7 +54,7 @@ class PostController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                'title' => 'required|string|max:255',
+                'title' => 'nullable|string|max:255',
                 'content' => 'required|string',
                 'visibility' => 'nullable|in:public,alumni_only,admin_only',
                 'media' => 'nullable|array',
@@ -131,7 +131,7 @@ class PostController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                'title' => 'sometimes|required|string|max:255',
+                'title' => 'sometimes|string|max:255',
                 'content' => 'sometimes|required|string',
                 'visibility' => 'nullable|in:public,alumni_only,admin_only',
                 'media' => 'nullable|array',

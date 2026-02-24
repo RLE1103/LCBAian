@@ -39,13 +39,7 @@
           
           <!-- Post Input -->
           <div class="flex-1">
-            <input
-              v-model="newPost.title"
-              @focus="isComposerExpanded = true"
-              type="text"
-              placeholder="Title"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3"
-            />
+
             <textarea
               v-model="newPost.content"
               @focus="isComposerExpanded = true"
@@ -95,7 +89,7 @@
 
           <button 
             @click="submitPost"
-            :disabled="!newPost.title.trim() || !newPost.content.trim() || posting"
+            :disabled="!newPost.content.trim() || posting"
             class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
           >
             {{ posting ? 'Posting...' : 'Post' }}
@@ -149,8 +143,7 @@
           </div>
 
           <!-- Post Content -->
-          <div class="px-4 pb-4 space-y-2">
-            <h3 v-if="post.title" class="text-lg font-semibold text-gray-900">{{ post.title }}</h3>
+          <div class="px-4 pb-4">
             <p class="text-gray-800 whitespace-pre-wrap">{{ post.content }}</p>
           </div>
 
@@ -201,7 +194,7 @@
         </div>
 
         <div class="space-y-4">
-          <h3 v-if="selectedPost?.title" class="text-xl font-semibold text-gray-900">{{ selectedPost?.title }}</h3>
+
           <p class="text-gray-800 whitespace-pre-wrap">{{ selectedPost?.content }}</p>
           <div v-if="selectedPost?.media?.length" class="w-full grid gap-3 md:grid-cols-2">
             <div v-for="(item, idx) in selectedPost.media" :key="item.public_id || idx">
@@ -253,15 +246,13 @@ const filteredPosts = computed(() => {
   
   const query = searchQuery.value.toLowerCase()
   return posts.value.filter(post => {
-    const title = post.title?.toLowerCase() || ''
     const content = post.content?.toLowerCase() || ''
     const authorName = `${post.user?.first_name || ''} ${post.user?.last_name || ''}`.toLowerCase()
-    return title.includes(query) || content.includes(query) || authorName.includes(query)
+    return content.includes(query) || authorName.includes(query)
   })
 })
 
 const newPost = ref({
-  title: '',
   content: '',
   visibility: 'public'
 })
@@ -345,10 +336,7 @@ const openPostFromQuery = () => {
 }
 
 const submitPost = async () => {
-  if (!newPost.value.title.trim()) {
-    toast.warning('Please enter a title for your post', 'Validation Error')
-    return
-  }
+
   if (!newPost.value.content.trim()) {
     toast.warning('Please enter some content for your post', 'Validation Error')
     return
@@ -358,7 +346,7 @@ const submitPost = async () => {
   uploadProgress.value = 0
   try {
     const formData = new FormData()
-    formData.append('title', newPost.value.title)
+
     formData.append('content', newPost.value.content)
     formData.append('visibility', newPost.value.visibility)
 
@@ -380,7 +368,7 @@ const submitPost = async () => {
 
     if (res?.data?.success) {
       toast.success('Post created successfully!', 'Success')
-      newPost.value.title = ''
+
       newPost.value.content = ''
       newPost.value.visibility = 'public'
       mediaPreviews.value.forEach((preview) => {

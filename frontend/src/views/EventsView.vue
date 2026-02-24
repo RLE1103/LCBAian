@@ -741,7 +741,7 @@ const toUtcFromTaipei = (value) => {
 const searchQuery = ref('')
 const selectedEventType = ref('')
 const selectedLocation = ref('')
-const selectedDateRange = ref('')
+const selectedDateRange = ref('upcoming')
 const viewMode = ref('list')
 const showEventModal = ref(false)
 const showCreateModal = ref(false)
@@ -785,9 +785,11 @@ const fetchEvents = async () => {
     }
     
     const response = await axios.get('/api/events', { params })
-    if (response?.data?.success && Array.isArray(response.data.data)) {
-      // Parse and format event dates
-      events.value = response.data.data.map(event => ({
+    if (response?.data?.success) {
+      const list = Array.isArray(response.data.data)
+        ? response.data.data
+        : (response.data.data?.data || [])
+      events.value = list.map(event => ({
         ...event,
         start_date: parseEventDate(event.start_date),
         end_date: parseEventDate(event.end_date),

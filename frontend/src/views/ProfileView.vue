@@ -38,7 +38,7 @@
                 <p class="text-sm font-semibold text-gray-900">Badges</p>
                 <div class="flex flex-wrap items-center gap-2 mt-2">
                   <span v-if="authStore.user?.is_verified" class="bg-yellow-100 text-yellow-800 text-sm px-3 py-1 rounded-full">🏅 Verified Alumni</span>
-                  <span v-if="form.lcba_verification_status === 'verified' || form.is_lcba_employee_faculty" class="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">🏢 LCBA Employee</span>
+                  <span v-if="form.lcba_verification_status === 'verified'" class="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">🏢 LCBA Employee</span>
                 </div>
               </div>
             </div>

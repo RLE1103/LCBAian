@@ -6,6 +6,7 @@ use App\Models\EducationHistory;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class EducationHistoryController extends Controller
 {
@@ -47,10 +48,11 @@ class EducationHistoryController extends Controller
                 'is_lcba' => 'nullable|boolean',
             ]);
 
-            $educationHistory = EducationHistory::create([
-                'user_id' => Auth::id(),
-                ...$validated
-            ]);
+            $payload = array_merge(['user_id' => Auth::id()], $validated);
+            if (!Schema::hasColumn('education_history', 'program')) {
+                unset($payload['program']);
+            }
+            $educationHistory = EducationHistory::create($payload);
 
             $this->updateHighestAttainmentIfHigher($validated['level']);
 
@@ -86,7 +88,11 @@ class EducationHistoryController extends Controller
                 'is_lcba' => 'nullable|boolean',
             ]);
 
-            $educationHistory->update($validated);
+            $updateData = $validated;
+            if (!Schema::hasColumn('education_history', 'program')) {
+                unset($updateData['program']);
+            }
+            $educationHistory->update($updateData);
 
             if (isset($validated['level'])) {
                 $this->updateHighestAttainmentIfHigher($validated['level']);

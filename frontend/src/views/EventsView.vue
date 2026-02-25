@@ -595,15 +595,6 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Link (Optional)</label>
-            <input 
-              v-model="newEvent.link"
-              type="url"
-              placeholder="https://example.com/event-page"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
         </div>
 
         <div class="flex justify-end space-x-2 mt-6">
@@ -762,7 +753,7 @@ const toUtcFromTaipei = (value) => {
 const searchQuery = ref('')
 const selectedEventType = ref('')
 const selectedLocation = ref('')
-const selectedDateRange = ref('')
+const selectedDateRange = ref('upcoming')
 const viewMode = ref('list')
 const showEventModal = ref(false)
 const showCreateModal = ref(false)

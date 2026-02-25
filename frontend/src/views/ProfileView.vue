@@ -696,35 +696,32 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Program <span class="text-red-500">*</span></label>
-            <select v-model="educationForm.program" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-              <option value="">Select your program</option>
-              <optgroup label="Undergraduate Programs">
-                <option value="AB Political Science">AB Political Science</option>
-                <option value="Bachelor of Elementary Education">Bachelor of Elementary Education</option>
-                <option value="Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)">Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)</option>
-                <option value="BS Computer Science">BS Computer Science</option>
-                <option value="BS Psychology">BS Psychology</option>
-                <option value="BS Computer Engineering">BS Computer Engineering</option>
-                <option value="BS Accountancy">BS Accountancy</option>
-                <option value="BS Business Administration (Majors in Human Resources Management, Marketing Management)">BS Business Administration (Majors in Human Resources Management, Marketing Management)</option>
-                <option value="BS Entrepreneurship in Culinary Arts">BS Entrepreneurship in Culinary Arts</option>
-              </optgroup>
-              <optgroup label="Master's Programs">
-                <option value="Master of Arts in Education Major in Guidance and Counseling">Master of Arts in Education Major in Guidance and Counseling</option>
-                <option value="Master in Business Administration">Master in Business Administration</option>
-                <option value="Master of Science in Psychology">Master of Science in Psychology</option>
-                <option value="Master of Arts in Education Major in Administration and Supervision">Master of Arts in Education Major in Administration and Supervision</option>
-                <option value="Master of Arts in Education Major in English">Master of Arts in Education Major in English</option>
-                <option value="Master of Arts in Education Major in Filipino">Master of Arts in Education Major in Filipino</option>
-                <option value="Master of Arts in Education Major in Social Studies">Master of Arts in Education Major in Social Studies</option>
-                <option value="Master in Management major in Public Administration">Master in Management major in Public Administration</option>
-              </optgroup>
-              <optgroup label="Other">
-                <option value="Senior High School Graduate">Senior High School Graduate</option>
-                <option value="High School Graduate">High School Graduate</option>
-                <option value="Elementary Graduate">Elementary Graduate</option>
-              </optgroup>
-            </select>
+            <div class="relative">
+              <input
+                v-model="educationForm.program"
+                required
+                type="text"
+                placeholder="Search program"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                @focus="programDropdownOpen = true"
+                @input="onProgramInput"
+                @blur="closeProgramDropdown"
+              />
+              <div v-if="programDropdownOpen" class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <button
+                  v-for="prog in filteredProgramOptions"
+                  :key="prog"
+                  type="button"
+                  class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                  @mousedown.prevent="selectProgram(prog)"
+                >
+                  <div class="text-sm text-gray-900">{{ prog }}</div>
+                </button>
+                <div v-if="filteredProgramOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                  No matching programs.
+                </div>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -921,19 +918,29 @@ const changePasswordForm = ref({
   password_confirmation: ''
 })
 
+const staticIndustryOptions = [
+  'Accounting','Advertising','Aerospace','Agriculture','Automotive','Banking','Biotechnology','Chemical','Civil Engineering',
+  'Construction','Consulting','Consumer Goods','Design','E-commerce','Education','Energy','Entertainment','Environmental Services',
+  'Fashion','Finance','Food & Beverage','Gaming','Government','Healthcare','Hospitality','Human Resources','Information Technology',
+  'Insurance','Internet','Investment Management','Legal Services','Logistics & Supply Chain','Manufacturing','Marketing & PR',
+  'Media & Communications','Mining & Metals','Nonprofit','Oil & Gas','Pharmaceuticals','Printing','Real Estate',
+  'Renewables & Environment','Research','Retail','Security & Investigations','Telecommunications','Transportation',
+  'Travel & Tourism','Utilities','Wholesale'
+]
 const availableIndustryOptions = computed(() => {
-  const options = Array.isArray(filterOptions.value.industries) ? filterOptions.value.industries : []
-  const combined = [...options]
+  const apiOptions = Array.isArray(filterOptions.value.industries) ? filterOptions.value.industries : []
+  const base = [...staticIndustryOptions, ...apiOptions]
+  const unique = Array.from(new Set(base))
   const addValue = (value) => {
-    if (value && !combined.includes(value)) {
-      combined.push(value)
+    if (value && !unique.includes(value)) {
+      unique.push(value)
     }
   }
   addValue(form.value.industry)
   if (Array.isArray(form.value.industries_of_interest)) {
     form.value.industries_of_interest.forEach(addValue)
   }
-  return combined
+  return unique
 })
 
 const availableCityOptions = computed(() => {
@@ -945,9 +952,68 @@ const availableCityOptions = computed(() => {
   return combined
 })
 
+const programDropdownOpen = ref(false)
+const staticProgramOptions = [
+  'AB Political Science',
+  'Bachelor of Elementary Education',
+  'Bachelor of Secondary Education (Majors in English, Mathematics, Social Studies, Science, Filipino)',
+  'BS Computer Science',
+  'BS Psychology',
+  'BS Computer Engineering',
+  'BS Accountancy',
+  'BS Business Administration (Majors in Human Resources Management, Marketing Management)',
+  'BS Entrepreneurship in Culinary Arts',
+  'Master of Arts in Education Major in Guidance and Counseling',
+  'Master in Business Administration',
+  'Master of Science in Psychology',
+  'Master of Arts in Education Major in Administration and Supervision',
+  'Master of Arts in Education Major in English',
+  'Master of Arts in Education Major in Filipino',
+  'Master of Arts in Education Major in Social Studies',
+  'Master in Management major in Public Administration',
+  'Senior High School Graduate',
+  'High School Graduate',
+  'Elementary Graduate'
+]
+const availableProgramOptions = computed(() => {
+  const apiOptions = Array.isArray(filterOptions.value.programs) ? filterOptions.value.programs : []
+  const base = [...staticProgramOptions, ...apiOptions]
+  const unique = Array.from(new Set(base))
+  if (educationForm.value.program && !unique.includes(educationForm.value.program)) {
+    unique.push(educationForm.value.program)
+  }
+  return unique
+})
+const programSearchTerm = computed(() => (educationForm.value.program || '').toLowerCase().trim())
+const filteredProgramOptions = computed(() => {
+  const options = availableProgramOptions.value
+  if (!programSearchTerm.value) return options
+  return options.filter((option) => option.toLowerCase().includes(programSearchTerm.value))
+})
+
+const countriesList = ref([
+  'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua & Deps','Argentina','Armenia','Australia','Austria','Azerbaijan',
+  'Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia Herzegovina','Botswana',
+  'Brazil','Brunei','Bulgaria','Burkina','Burundi','Cambodia','Cameroon','Canada','Cape Verde','Central African Rep','Chad','Chile',
+  'China','Colombia','Comoros','Congo','Congo {Democratic Rep}','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic','Denmark',
+  'Djibouti','Dominica','Dominican Republic','East Timor','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia',
+  'Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea',
+  'Guinea-Bissau','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland {Republic}','Israel',
+  'Italy','Ivory Coast','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Korea North','Korea South','Kosovo','Kuwait',
+  'Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Macedonia',
+  'Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia',
+  'Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar, {Burma}','Namibia','Nauru','Nepal','Netherlands',
+  'New Zealand','Nicaragua','Niger','Nigeria','Norway','Oman','Pakistan','Palau','Panama','Papua New Guinea','Paraguay','Peru',
+  'Philippines','Poland','Portugal','Qatar','Romania','Russian Federation','Rwanda','St Kitts & Nevis','St Lucia',
+  'Saint Vincent & the Grenadines','Samoa','San Marino','Sao Tome & Principe','Saudi Arabia','Senegal','Serbia','Seychelles',
+  'Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Sudan','Spain','Sri Lanka',
+  'Sudan','Suriname','Swaziland','Sweden','Switzerland','Syria','Taiwan','Tajikistan','Tanzania','Thailand','Togo','Tonga',
+  'Trinidad & Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom',
+  'United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'
+])
 const availableCountryOptions = computed(() => {
-  const defaults = ['Philippines']
-  const combined = [...defaults]
+  const base = Array.isArray(countriesList.value) && countriesList.value.length ? countriesList.value : ['Philippines']
+  const combined = [...base]
   if (form.value.country && !combined.includes(form.value.country)) {
     combined.push(form.value.country)
   }
@@ -1386,6 +1452,19 @@ const closeIndustryDropdown = () => {
   }, 150)
 }
 
+const onProgramInput = () => {
+  programDropdownOpen.value = true
+}
+const selectProgram = (prog) => {
+  educationForm.value.program = prog
+  programDropdownOpen.value = false
+}
+const closeProgramDropdown = () => {
+  setTimeout(() => {
+    programDropdownOpen.value = false
+  }, 150)
+}
+
 const onCountryInput = () => {
   countryDropdownOpen.value = true
 }
@@ -1793,6 +1872,7 @@ onMounted(() => {
   loadEducationHistory()
   syncSalaryFromForm()
   window.addEventListener('beforeunload', handleBeforeUnload)
+  countriesList.value = countriesList.value
 })
 
 onBeforeUnmount(() => {

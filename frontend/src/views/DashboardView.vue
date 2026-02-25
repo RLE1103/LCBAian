@@ -518,7 +518,25 @@ const fetchDashboardData = async () => {
     
     if (usersResponse.data.success) {
       stats.value.connections = usersData.length
-      stats.value.newConnections = Math.floor(usersData.length * 0.1) // 10% as "new connections"
+      const nowMs = Date.now()
+      const sevenDaysAgoMs = nowMs - (7 * 24 * 60 * 60 * 1000)
+      const parseUserCreatedAt = (u) => {
+        const raw = u?.created_at ?? u?.createdAt ?? u?.registered_at ?? u?.registeredAt
+        if (!raw) return null
+        const dt = new Date(raw)
+        if (!Number.isNaN(dt.getTime())) return dt
+        const s = String(raw)
+        const m = s.match(/(\d{4})-(\d{2})-(\d{2})/)
+        if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+        return null
+      }
+      const weeklyCount = usersData.filter(u => {
+        const d = parseUserCreatedAt(u)
+        if (!d) return false
+        const t = d.getTime()
+        return Number.isFinite(t) && t >= sevenDaysAgoMs && t <= nowMs
+      }).length
+      stats.value.newConnections = weeklyCount
     }
 
     // Fetch recent activity (messages, job applications, etc.)

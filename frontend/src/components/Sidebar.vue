@@ -17,7 +17,7 @@
     ]"
   >
     <div class="flex flex-col h-full overflow-hidden">
-      <div class="md:hidden flex items-center justify-end px-4 pt-4">
+      <div class="md:hidden flex items-center justify-start px-4 pt-4">
         <button
           v-if="isMobileMenuOpen"
           @click="emit('close')"
@@ -74,11 +74,12 @@
           <li>
             <RouterLink to="/alumni" :class="linkClasses('/alumni')" @click="handleNavClick" :title="isCollapsed ? 'Alumni' : ''">
               <svg aria-hidden="true" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-1a3 3 0 00-3-3h-2"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20H2v-1a3 3 0 013-3h2"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13a5 5 0 0110 0v1"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13a5 5 0 00-10 0v1"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6l6 2-6 2-6-2 6-2z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v3"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20h6v-1a4 4 0 00-4-4H5a3 3 0 00-1 5z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 20h6v-1a4 4 0 00-4-4h-1a3 3 0 00-1 5z"></path>
               </svg>
               <span v-if="!isCollapsed">Alumni</span>
             </RouterLink>

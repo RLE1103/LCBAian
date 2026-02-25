@@ -271,10 +271,34 @@
                 </div>
               </div>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">City</label>
-              <input v-model="form.city" type="text" list="city-options" placeholder="Search city" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">City</label>
+            <div class="relative">
+              <input
+                v-model="form.city"
+                type="text"
+                placeholder="Search city"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                @focus="cityDropdownOpen = true"
+                @input="onCityInput"
+                @blur="closeCityDropdown"
+              />
+              <div v-if="cityDropdownOpen" class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <button
+                  v-for="city in filteredCityOptions"
+                  :key="city"
+                  type="button"
+                  class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                  @mousedown.prevent="selectCity(city)"
+                >
+                  <div class="text-sm text-gray-900">{{ city }}</div>
+                </button>
+                <div v-if="filteredCityOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                  No matching cities.
+                </div>
+              </div>
             </div>
+          </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Country</label>
               <div class="relative">
@@ -947,13 +971,33 @@ const availableIndustryOptions = computed(() => {
   return unique
 })
 
+const cityDropdownOpen = ref(false)
+const staticCityOptions = [
+  'Alaminos','Angeles','Antipolo','Bacolod','Bacoor','Bago','Baguio','Bais','Balanga','Baliwag','Batac','Batangas City',
+  'Bayawan','Baybay','Bayugan','Biñan','Bislig','Bogo','Borongan','Butuan','Cabadbaran','Cabanatuan','Cabuyao','Cadiz',
+  'Cagayan de Oro','Calaca','Calamba','Calapan','Calbayog','Caloocan','Candon','Canlaon','Carcar','Carmona','Catbalogan',
+  'Cauayan','Cavite City','Cebu City','Cotabato City','Dagupan','Danao','Dapitan','Dasmariñas','Davao City','Digos',
+  'Dipolog','Dumaguete','El Salvador','Escalante','Gapan','General Santos','General Trias','Gingoog','Guihulngan',
+  'Himamaylan','Ilagan','Iligan','Iloilo City','Imus','Iriga','Isabela City','Kabankalan','Kidapawan','Koronadal',
+  'La Carlota','Lamitan','Laoag','Lapu-Lapu City','Las Piñas','Legazpi','Ligao','Lipa','Lucena','Maasin','Mabalacat',
+  'Makati','Malabon','Malaybalay','Malolos','Mandaluyong','Mandaue','Manila','Marawi','Marikina','Masbate City','Mati',
+  'Meycauayan','Muñoz','Muntinlupa','Naga (Camarines Sur)','Naga (Cebu)','Navotas','Olongapo','Ormoc','Oroquieta',
+  'Ozamiz','Pagadian','Palayan','Panabo','Parañaque','Pasay','Pasig','Passi','Puerto Princesa','Quezon City','Roxas',
+  'Sagay','Samal','San Carlos (Negros Occidental)','San Carlos (Pangasinan)','San Fernando (La Union)','San Fernando (Pampanga)',
+  'San Jose (Nueva Ecija)','San Jose (Occidental Mindoro)','San Jose del Monte','San Juan','San Pablo','San Pedro',
+  'Santa Rosa','Santiago','Silay','Sipalay','Sorsogon City','Surigao City','Tabaco','Tabuk','Tacloban','Tacurong','Tagaytay',
+  'Tagbilaran','Taguig','Tagum','Talisay (Cebu)','Talisay (Negros Occidental)','Tanauan','Tandag','Tangub','Tanjay',
+  'Tarlac City','Tayabas','Toledo','Trece Martires','Tuguegarao','Urdaneta','Valencia','Valenzuela','Victorias','Vigan',
+  'Zamboanga City'
+]
 const availableCityOptions = computed(() => {
-  const options = Array.isArray(filterOptions.value.cities) ? filterOptions.value.cities : []
-  const combined = [...options]
-  if (form.value.city && !combined.includes(form.value.city)) {
-    combined.push(form.value.city)
+  const apiOptions = Array.isArray(filterOptions.value.cities) ? filterOptions.value.cities : []
+  const base = [...staticCityOptions, ...apiOptions]
+  const unique = Array.from(new Set(base))
+  if (form.value.city && !unique.includes(form.value.city)) {
+    unique.push(form.value.city)
   }
-  return combined
+  return unique
 })
 
 const programDropdownOpen = ref(false)
@@ -1048,6 +1092,24 @@ const filteredInterestIndustryOptions = computed(() => {
   return options.filter((option) => option.toLowerCase().includes(interestSearchTerm.value))
 })
 
+const citySearchTerm = computed(() => (form.value.city || '').toLowerCase().trim())
+const filteredCityOptions = computed(() => {
+  const options = availableCityOptions.value
+  if (!citySearchTerm.value) return options
+  return options.filter((option) => option.toLowerCase().includes(citySearchTerm.value))
+})
+const onCityInput = () => {
+  cityDropdownOpen.value = true
+}
+const selectCity = (city) => {
+  form.value.city = city
+  cityDropdownOpen.value = false
+}
+const closeCityDropdown = () => {
+  setTimeout(() => {
+    cityDropdownOpen.value = false
+  }, 150)
+}
 const isLcbaSchool = (name) => {
   if (!name) return false
   const n = String(name).trim().toLowerCase()

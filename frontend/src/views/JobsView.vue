@@ -811,11 +811,28 @@ const itemsPerPage = 10
 // Computed properties
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
-const filteredJobs = computed(() => {
-  if (isAdmin.value) {
-    return jobs.value.filter((job) => job?.status !== 'archived')
+const isExpired = (date, days = 30) => {
+  if (!date) return false
+  try {
+    const created = new Date(date).getTime()
+    if (!Number.isFinite(created)) return false
+    const now = Date.now()
+    const msInDay = 24 * 60 * 60 * 1000
+    return (now - created) > (days * msInDay)
+  } catch {
+    return false
   }
-  return jobs.value.filter((job) => job?.status === 'approved')
+}
+
+const filteredJobs = computed(() => {
+  const base = jobs.value.filter((job) => {
+    // Respect backend status first
+    const statusOk = isAdmin.value ? job?.status !== 'archived' : job?.status === 'approved'
+    if (!statusOk) return false
+    // Auto-hide if expired (>30 days since created_at)
+    return !isExpired(job?.created_at, 30)
+  })
+  return base
 })
 
 const totalPages = computed(() => Math.ceil(filteredJobs.value.length / itemsPerPage))
@@ -1113,7 +1130,11 @@ const loadCareerMatching = async () => {
     
     if (response.data.success) {
       // Detailed recommendations already have all the match information
-      careerMatches.value = dedupeCareerMatches(response.data.data || [])
+      const items = dedupeCareerMatches(response.data.data || [])
+      careerMatches.value = items.filter((m) => {
+        const j = m?.job || m
+        return !isExpired(j?.created_at, 30)
+      })
     } else {
       // Fallback to quick recommendations if detailed fails
       const quickResponse = await axios.get('/api/jobs/quick-recommendations', {
@@ -1143,7 +1164,11 @@ const loadCareerMatching = async () => {
             }
           }
         })
-        careerMatches.value = dedupeCareerMatches(normalizedMatches)
+        const deduped = dedupeCareerMatches(normalizedMatches)
+        careerMatches.value = deduped.filter((m) => {
+          const j = m?.job || m
+          return !isExpired(j?.created_at, 30)
+        })
       }
     }
   } catch (error) {

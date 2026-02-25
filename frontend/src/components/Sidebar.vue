@@ -73,13 +73,8 @@
           </li>
           <li>
             <RouterLink to="/alumni" :class="linkClasses('/alumni')" @click="handleNavClick" :title="isCollapsed ? 'Alumni' : ''">
-              <svg aria-hidden="true" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6l6 2-6 2-6-2 6-2z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v3"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20h6v-1a4 4 0 00-4-4H5a3 3 0 00-1 5z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 20h6v-1a4 4 0 00-4-4h-1a3 3 0 00-1 5z"></path>
+              <svg aria-hidden="true" class="w-5 h-5 flex-shrink-0" viewBox="0 0 11 13" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7.84241 8.14087L5.5 10.5631L3.15759 8.14087C1.40201 8.21958 0 9.70493 0 11.5381V11.7819C0 12.4547 0.527902 13.0006 1.17857 13.0006H9.82143C10.4721 13.0006 11 12.4547 11 11.7819V11.5381C11 9.70493 9.59799 8.21958 7.84241 8.14087ZM0.333929 2.02681L0.491071 2.06489V3.5477C0.319196 3.65435 0.196429 3.8397 0.196429 4.06313C0.196429 4.27642 0.309375 4.45415 0.468973 4.56333L0.0859375 6.14517C0.0441964 6.32036 0.1375 6.50063 0.272545 6.50063H1.29888C1.43393 6.50063 1.52723 6.32036 1.48549 6.14517L1.10246 4.56333C1.26205 4.45415 1.375 4.27642 1.375 4.06313C1.375 3.8397 1.25223 3.65435 1.08036 3.5477V2.21216L2.70089 2.61587C2.48973 3.05259 2.35714 3.54009 2.35714 4.06313C2.35714 5.85825 3.76406 7.31313 5.5 7.31313C7.23594 7.31313 8.64286 5.85825 8.64286 4.06313C8.64286 3.54009 8.51272 3.05259 8.29911 2.61587L10.6636 2.02681C11.1105 1.91509 11.1105 1.33872 10.6636 1.227L5.98862 0.0590332C5.66942 -0.0196777 5.33304 -0.0196777 5.01384 0.0590332L0.333929 1.22446C-0.110491 1.33618 -0.110491 1.91509 0.333929 2.02681Z"/>
               </svg>
               <span v-if="!isCollapsed">Alumni</span>
             </RouterLink>

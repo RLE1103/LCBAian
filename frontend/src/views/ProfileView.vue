@@ -735,8 +735,12 @@
           </div>
 
           <div class="flex items-center">
-            <input v-model="educationForm.is_lcba" type="checkbox" class="rounded border-gray-300 text-blue-600">
-            <label class="ml-2 text-sm text-gray-700">This is from LCBA</label>
+            <span 
+              v-if="isLcbaSchool(educationForm.school_name)" 
+              class="inline-flex items-center text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
+            >
+              LCBA
+            </span>
           </div>
         </div>
 
@@ -1043,6 +1047,12 @@ const filteredInterestIndustryOptions = computed(() => {
   if (!interestSearchTerm.value) return options
   return options.filter((option) => option.toLowerCase().includes(interestSearchTerm.value))
 })
+
+const isLcbaSchool = (name) => {
+  if (!name) return false
+  const n = String(name).trim().toLowerCase()
+  return n === 'lcba' || n === 'laguna college of business and arts'
+}
 
 const hasUnsavedChanges = computed(() => {
   if (!initialForm.value || !initialPrivacySettings.value) return false
@@ -1823,7 +1833,7 @@ const saveEducation = async () => {
       program: educationForm.value.program,
       year_graduated: educationForm.value.year_graduated || null,
       awards: educationForm.value.awards || null,
-      is_lcba: educationForm.value.is_lcba
+      is_lcba: isLcbaSchool(educationForm.value.school_name)
     }
 
     if (editingEducation.value) {

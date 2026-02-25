@@ -897,8 +897,25 @@ const filteredLocationOptions = computed(() => {
   if (!locationSearchTerm.value) return list
   return list.filter((s) => String(s).toLowerCase().includes(locationSearchTerm.value))
 })
+const staticIndustryOptions = [
+  'Accounting','Advertising','Aerospace','Agriculture','Automotive','Banking','Biotechnology','Chemical','Civil Engineering',
+  'Construction','Consulting','Consumer Goods','Design','E-commerce','Education','Energy','Entertainment','Environmental Services',
+  'Fashion','Finance','Food & Beverage','Gaming','Government','Healthcare','Hospitality','Human Resources','Information Technology',
+  'Insurance','Internet','Investment Management','Legal Services','Logistics & Supply Chain','Manufacturing','Marketing & PR',
+  'Media & Communications','Mining & Metals','Nonprofit','Oil & Gas','Pharmaceuticals','Printing','Real Estate',
+  'Renewables & Environment','Research','Retail','Security & Investigations','Telecommunications','Transportation',
+  'Travel & Tourism','Utilities','Wholesale'
+]
+const availableIndustryOptionsForJob = computed(() => {
+  const api = Array.isArray(filterOptions.value.industries) ? filterOptions.value.industries : []
+  const base = [...staticIndustryOptions, ...api]
+  const unique = Array.from(new Set(base))
+  const val = newJob.value.industry
+  if (val && !unique.includes(val)) unique.push(val)
+  return unique
+})
 const filteredIndustryOptionsForJob = computed(() => {
-  const list = Array.isArray(filterOptions.value.industries) ? filterOptions.value.industries : []
+  const list = availableIndustryOptionsForJob.value
   if (!industrySearchTerm.value) return list
   return list.filter((s) => String(s).toLowerCase().includes(industrySearchTerm.value))
 })

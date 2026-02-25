@@ -715,7 +715,7 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">School <span class="text-red-500">*</span></label>
-            <input v-model="educationForm.school_name" required type="text" list="school-options" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Search school">
+            <input v-model="educationForm.school_name" required type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Search school">
           </div>
 
           <div>
@@ -824,9 +824,6 @@
   <datalist id="city-options">
     <option v-for="city in availableCityOptions" :key="city" :value="city"></option>
   </datalist>
-  <datalist id="school-options">
-    <option v-for="school in schoolOptions" :key="school" :value="school"></option>
-  </datalist>
 </template>
 
 <script setup>
@@ -862,9 +859,6 @@ const filterOptions = ref({
   programs: [],
   batches: []
 })
-const schoolOptions = ref([
-  'Laguna College of Business and Arts'
-])
 // Profile Picture Upload
 const fileInput = ref(null)
 const employeeIdInput = ref(null)

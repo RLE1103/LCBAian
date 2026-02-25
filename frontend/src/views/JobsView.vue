@@ -892,10 +892,42 @@ const fetchSkillOptions = async () => {
 
 const locationSearchTerm = computed(() => (newJob.value.location || '').toLowerCase().trim())
 const industrySearchTerm = computed(() => (newJob.value.industry || '').toLowerCase().trim())
+const extractCity = (value) => {
+  const s = String(value || '')
+  if (!s.includes(',')) return s.trim()
+  return s.split(',')[0].trim()
+}
+const staticCityOptionsForJob = [
+  'Alaminos','Angeles','Antipolo','Bacolod','Bacoor','Bago','Baguio','Bais','Balanga','Baliwag','Batac','Batangas City',
+  'Bayawan','Baybay','Bayugan','Biñan','Bislig','Bogo','Borongan','Butuan','Cabadbaran','Cabanatuan','Cabuyao','Cadiz',
+  'Cagayan de Oro','Calaca','Calamba','Calapan','Calbayog','Caloocan','Candon','Canlaon','Carcar','Carmona','Catbalogan',
+  'Cauayan','Cavite City','Cebu City','Cotabato City','Dagupan','Danao','Dapitan','Dasmariñas','Davao City','Digos',
+  'Dipolog','Dumaguete','El Salvador','Escalante','Gapan','General Santos','General Trias','Gingoog','Guihulngan',
+  'Himamaylan','Ilagan','Iligan','Iloilo City','Imus','Iriga','Isabela City','Kabankalan','Kidapawan','Koronadal',
+  'La Carlota','Lamitan','Laoag','Lapu-Lapu City','Las Piñas','Legazpi','Ligao','Lipa','Lucena','Maasin','Mabalacat',
+  'Makati','Malabon','Malaybalay','Malolos','Mandaluyong','Mandaue','Manila','Marawi','Marikina','Masbate City','Mati',
+  'Meycauayan','Muñoz','Muntinlupa','Naga (Camarines Sur)','Naga (Cebu)','Navotas','Olongapo','Ormoc','Oroquieta',
+  'Ozamiz','Pagadian','Palayan','Panabo','Parañaque','Pasay','Pasig','Passi','Puerto Princesa','Quezon City','Roxas',
+  'Sagay','Samal','San Carlos (Negros Occidental)','San Carlos (Pangasinan)','San Fernando (La Union)','San Fernando (Pampanga)',
+  'San Jose (Nueva Ecija)','San Jose (Occidental Mindoro)','San Jose del Monte','San Juan','San Pablo','San Pedro',
+  'Santa Rosa','Santiago','Silay','Sipalay','Sorsogon City','Surigao City','Tabaco','Tabuk','Tacloban','Tacurong','Tagaytay',
+  'Tagbilaran','Taguig','Tagum','Talisay (Cebu)','Talisay (Negros Occidental)','Tanauan','Tandag','Tangub','Tanjay',
+  'Tarlac City','Tayabas','Toledo','Trece Martires','Tuguegarao','Urdaneta','Valencia','Valenzuela','Victorias','Vigan',
+  'Zamboanga City'
+]
+const availableCityOptionsForJob = computed(() => {
+  const api = Array.isArray(filterOptions.value.locations) ? filterOptions.value.locations : []
+  const fromApi = api.map(extractCity).filter(Boolean)
+  const base = [...staticCityOptionsForJob, ...fromApi]
+  const unique = Array.from(new Set(base))
+  const val = extractCity(newJob.value.location)
+  if (val && !unique.includes(val)) unique.push(val)
+  return unique
+})
 const filteredLocationOptions = computed(() => {
-  const list = Array.isArray(filterOptions.value.locations) ? filterOptions.value.locations : []
+  const list = availableCityOptionsForJob.value
   if (!locationSearchTerm.value) return list
-  return list.filter((s) => String(s).toLowerCase().includes(locationSearchTerm.value))
+  return list.filter((s) => s.toLowerCase().includes(locationSearchTerm.value))
 })
 const staticIndustryOptions = [
   'Accounting','Advertising','Aerospace','Agriculture','Automotive','Banking','Biotechnology','Chemical','Civil Engineering',
@@ -922,7 +954,10 @@ const filteredIndustryOptionsForJob = computed(() => {
 
 const closeLocationDropdown = () => { setTimeout(() => { locationDropdownOpen.value = false }, 150) }
 const closeIndustryDropdown = () => { setTimeout(() => { industryDropdownOpen.value = false }, 150) }
-const selectLocation = (val) => { newJob.value.location = val; locationDropdownOpen.value = false }
+const selectLocation = (val) => {
+  newJob.value.location = extractCity(val)
+  locationDropdownOpen.value = false
+}
 const selectIndustry = (val) => { newJob.value.industry = val; industryDropdownOpen.value = false }
 
 const parseSkillInput = (input) => String(input || '').split(',').map(s => s.trim()).filter(Boolean)

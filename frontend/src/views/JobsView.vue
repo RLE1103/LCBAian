@@ -575,7 +575,34 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-          <input v-model="newJob.location" type="text" placeholder="Location (e.g. Manila, Remote)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <div class="relative">
+            <input
+              v-model="newJob.location"
+              type="text"
+              placeholder="Location (e.g. Manila, Remote)"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              @focus="locationDropdownOpen = true"
+              @input="locationDropdownOpen = true"
+              @blur="closeLocationDropdown"
+            />
+            <div
+              v-if="locationDropdownOpen"
+              class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              <button
+                v-for="loc in filteredLocationOptions"
+                :key="loc"
+                type="button"
+                class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                @mousedown.prevent="selectLocation(loc)"
+              >
+                <div class="text-sm text-gray-900">{{ loc }}</div>
+              </button>
+              <div v-if="filteredLocationOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                No matching locations.
+              </div>
+            </div>
+          </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Work Type</label>
@@ -589,7 +616,34 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Industry</label>
-          <input v-model="newJob.industry" type="text" placeholder="Industry" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <div class="relative">
+            <input
+              v-model="newJob.industry"
+              type="text"
+              placeholder="Industry"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              @focus="industryDropdownOpen = true"
+              @input="industryDropdownOpen = true"
+              @blur="closeIndustryDropdown"
+            />
+            <div
+              v-if="industryDropdownOpen"
+              class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              <button
+                v-for="ind in filteredIndustryOptionsForJob"
+                :key="ind"
+                type="button"
+                class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                @mousedown.prevent="selectIndustry(ind)"
+              >
+                <div class="text-sm text-gray-900">{{ ind }}</div>
+              </button>
+              <div v-if="filteredIndustryOptionsForJob.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                No matching industries.
+              </div>
+            </div>
+          </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Experience Level (Years)</label>
@@ -625,11 +679,65 @@
         </div>
         <div class="md:col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-2">Required Skills (comma-separated)</label>
-          <input v-model="requiredSkillsInput" type="text" placeholder="e.g. Vue, Laravel, MySQL" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <div class="relative">
+            <input
+              v-model="requiredSkillsInput"
+              type="text"
+              placeholder="e.g. Vue, Laravel, MySQL"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              @focus="reqSkillsDropdownOpen = true"
+              @input="onReqSkillsInput"
+              @blur="closeReqSkillsDropdown"
+            />
+            <div
+              v-if="reqSkillsDropdownOpen"
+              class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              <button
+                v-for="skill in filteredRequiredSkillOptions"
+                :key="skill"
+                type="button"
+                class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                @mousedown.prevent="addRequiredSkill(skill)"
+              >
+                <div class="text-sm text-gray-900">{{ skill }}</div>
+              </button>
+              <div v-if="filteredRequiredSkillOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                No matching skills.
+              </div>
+            </div>
+          </div>
         </div>
         <div class="md:col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-2">Preferred Skills (comma-separated, optional)</label>
-          <input v-model="preferredSkillsInput" type="text" placeholder="e.g. Docker, AWS" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <div class="relative">
+            <input
+              v-model="preferredSkillsInput"
+              type="text"
+              placeholder="e.g. Docker, AWS"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              @focus="prefSkillsDropdownOpen = true"
+              @input="onPrefSkillsInput"
+              @blur="closePrefSkillsDropdown"
+            />
+            <div
+              v-if="prefSkillsDropdownOpen"
+              class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+            >
+              <button
+                v-for="skill in filteredPreferredSkillOptions"
+                :key="skill"
+                type="button"
+                class="w-full text-left px-3 py-2 hover:bg-gray-50"
+                @mousedown.prevent="addPreferredSkill(skill)"
+              >
+                <div class="text-sm text-gray-900">{{ skill }}</div>
+              </button>
+              <div v-if="filteredPreferredSkillOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">
+                No matching skills.
+              </div>
+            </div>
+          </div>
         </div>
         <div class="md:col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-2">Description (contact information required)</label>
@@ -720,6 +828,11 @@ const filterOptions = ref({
   industries: [],
   workTypes: []
 })
+const skillOptions = ref([])
+const locationDropdownOpen = ref(false)
+const industryDropdownOpen = ref(false)
+const reqSkillsDropdownOpen = ref(false)
+const prefSkillsDropdownOpen = ref(false)
 
 // Fetch jobs from API
 const jobs = ref([])
@@ -763,6 +876,88 @@ const fetchFilterOptions = async () => {
   } catch (error) {
     console.error('Error fetching filter options:', error)
   }
+}
+
+const fetchSkillOptions = async () => {
+  try {
+    const response = await axios.get('/api/skills')
+    const raw = response?.data?.data || response?.data || []
+    const names = Array.isArray(raw) ? raw.map((s) => (typeof s === 'string' ? s : s?.name)).filter(Boolean) : []
+    skillOptions.value = names
+  } catch (error) {
+    console.error('Error fetching skills:', error)
+    skillOptions.value = []
+  }
+}
+
+const locationSearchTerm = computed(() => (newJob.value.location || '').toLowerCase().trim())
+const industrySearchTerm = computed(() => (newJob.value.industry || '').toLowerCase().trim())
+const filteredLocationOptions = computed(() => {
+  const list = Array.isArray(filterOptions.value.locations) ? filterOptions.value.locations : []
+  if (!locationSearchTerm.value) return list
+  return list.filter((s) => String(s).toLowerCase().includes(locationSearchTerm.value))
+})
+const filteredIndustryOptionsForJob = computed(() => {
+  const list = Array.isArray(filterOptions.value.industries) ? filterOptions.value.industries : []
+  if (!industrySearchTerm.value) return list
+  return list.filter((s) => String(s).toLowerCase().includes(industrySearchTerm.value))
+})
+
+const closeLocationDropdown = () => { setTimeout(() => { locationDropdownOpen.value = false }, 150) }
+const closeIndustryDropdown = () => { setTimeout(() => { industryDropdownOpen.value = false }, 150) }
+const selectLocation = (val) => { newJob.value.location = val; locationDropdownOpen.value = false }
+const selectIndustry = (val) => { newJob.value.industry = val; industryDropdownOpen.value = false }
+
+const parseSkillInput = (input) => String(input || '').split(',').map(s => s.trim()).filter(Boolean)
+const reqSkillTokens = computed(() => parseSkillInput(requiredSkillsInput.value))
+const prefSkillTokens = computed(() => parseSkillInput(preferredSkillsInput.value))
+const reqCurrentFragment = computed(() => {
+  const parts = String(requiredSkillsInput.value || '').split(',')
+  return parts[parts.length - 1].trim().toLowerCase()
+})
+const prefCurrentFragment = computed(() => {
+  const parts = String(preferredSkillsInput.value || '').split(',')
+  return parts[parts.length - 1].trim().toLowerCase()
+})
+const filteredRequiredSkillOptions = computed(() => {
+  const term = reqCurrentFragment.value
+  const selected = new Set(reqSkillTokens.value.map(s => s.toLowerCase()))
+  return (skillOptions.value || []).filter((sk) => {
+    const s = String(sk)
+    if (selected.has(s.toLowerCase())) return false
+    if (!term) return true
+    return s.toLowerCase().includes(term)
+  }).slice(0, 20)
+})
+const filteredPreferredSkillOptions = computed(() => {
+  const term = prefCurrentFragment.value
+  const selected = new Set(prefSkillTokens.value.map(s => s.toLowerCase()))
+  return (skillOptions.value || []).filter((sk) => {
+    const s = String(sk)
+    if (selected.has(s.toLowerCase())) return false
+    if (!term) return true
+    return s.toLowerCase().includes(term)
+  }).slice(0, 20)
+})
+const onReqSkillsInput = () => { reqSkillsDropdownOpen.value = true }
+const onPrefSkillsInput = () => { prefSkillsDropdownOpen.value = true }
+const closeReqSkillsDropdown = () => { setTimeout(() => { reqSkillsDropdownOpen.value = false }, 150) }
+const closePrefSkillsDropdown = () => { setTimeout(() => { prefSkillsDropdownOpen.value = false }, 150) }
+const addRequiredSkill = (skill) => {
+  const parts = String(requiredSkillsInput.value || '').split(',')
+  parts[parts.length - 1] = skill
+  let tokens = parts.map(s => s.trim()).filter(Boolean)
+  tokens = Array.from(new Set(tokens))
+  requiredSkillsInput.value = tokens.join(', ') + ', '
+  reqSkillsDropdownOpen.value = false
+}
+const addPreferredSkill = (skill) => {
+  const parts = String(preferredSkillsInput.value || '').split(',')
+  parts[parts.length - 1] = skill
+  let tokens = parts.map(s => s.trim()).filter(Boolean)
+  tokens = Array.from(new Set(tokens))
+  preferredSkillsInput.value = tokens.join(', ') + ', '
+  prefSkillsDropdownOpen.value = false
 }
 
 const savedJobs = ref([])
@@ -1260,6 +1455,7 @@ const handleReportSubmitted = () => {
 onMounted(() => {
   fetchJobs()
   fetchFilterOptions()
+  fetchSkillOptions()
   loadSavedJobs()
   loadCareerMatching()
 })

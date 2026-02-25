@@ -889,25 +889,8 @@ const viewProfile = async (alumni) => {
 }
 
 const sendMessage = async (alumni) => {
-  // Navigate to messages and create/select conversation with this alumni
-  try {
-    // First, try to send an initial message or find existing conversation
-    // This will create a conversation if it doesn't exist
-    const response = await axios.post('/api/messages', {
-      receiver_id: alumni.id,
-      content: 'Hi'
-    })
-    
-    if (response.data.success) {
-      // Navigate to messages page
-      router.push('/messages')
-      // The MessagesView will automatically load conversations
-      // and the new conversation will appear in the list
-    }
-  } catch (error) {
-    // If message already exists or other error, just navigate
-    router.push('/messages')
-  }
+  // Navigate to Messages with intent; MessagesView will auto-open or create and send "Hi."
+  router.push({ path: '/messages', query: { other_user_id: String(alumni.id), autohi: '1' } })
 }
 
 

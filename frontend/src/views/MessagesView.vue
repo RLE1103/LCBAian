@@ -497,10 +497,13 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from '../config/api'
 import { useAuthStore } from '../stores/auth'
 
 const authStore = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 
 // Current user ID
 const currentUserId = computed(() => authStore.user?.id)
@@ -941,6 +944,58 @@ onMounted(() => {
   loadAvailableUsers()
   startPolling()
 })
+
+// Watch for route query to auto-open or create conversation and send "Hi."
+watch(
+  () => route.query,
+  async (q) => {
+    const otherIdRaw = q?.other_user_id
+    if (!otherIdRaw) return
+    const otherUserId = Number(otherIdRaw)
+    if (!Number.isFinite(otherUserId)) return
+    // Ensure conversations are loaded
+    if (!Array.isArray(conversations.value) || conversations.value.length === 0) {
+      await fetchConversations()
+    }
+    // Find existing conversation
+    const conv = conversations.value.find(c => c?.other_user?.id === otherUserId)
+    if (conv) {
+      selectConversation(conv)
+      return
+    }
+    // Create new conversation and optionally send "Hi."
+    try {
+      if (q?.autohi) {
+        const res = await axios.post('/api/messages', {
+          receiver_id: otherUserId,
+          content: 'Hi.'
+        })
+        if (res?.data?.success) {
+          await fetchConversations()
+          const created = conversations.value.find(c => c?.other_user?.id === otherUserId)
+          if (created) {
+            selectConversation(created)
+          }
+        }
+      } else {
+        // If autohi not requested, just open an empty/new conversation by ensuring it exists
+        await axios.post('/api/messages', { receiver_id: otherUserId, content: '' })
+        await fetchConversations()
+        const created = conversations.value.find(c => c?.other_user?.id === otherUserId)
+        if (created) selectConversation(created)
+      }
+    } catch (e) {
+      // Fallback: fetch and try again
+      await fetchConversations()
+      const created = conversations.value.find(c => c?.other_user?.id === otherUserId)
+      if (created) selectConversation(created)
+    } finally {
+      // Clean up the query to avoid re-trigger
+      router.replace({ query: { ...route.query, other_user_id: undefined, autohi: undefined } })
+    }
+  },
+  { immediate: true }
+)
 
 onUnmounted(() => {
   stopPolling()
